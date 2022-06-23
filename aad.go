@@ -32,12 +32,12 @@ type aadErr struct {
 
 func authenticateAAD(ctx context.Context, tenantID, appID, username, password string) error {
 	authority := fmt.Sprintf("%s/%s", endpoint, tenantID)
-	pamDebug(ctx, "Connecting to %q, with clientID %q for user %q", authority, appID, username)
+	pamLogDebug(ctx, "Connecting to %q, with clientID %q for user %q", authority, appID, username)
 
 	// Get client from network
 	app, errAcquireToken := public.New(appID, public.WithAuthority(authority))
 	if errAcquireToken != nil {
-		pamErr(ctx, "Connection to authority failed: %v", errAcquireToken)
+		pamLogErr(ctx, "Connection to authority failed: %v", errAcquireToken)
 		return noNetworkErr
 	}
 
@@ -48,41 +48,41 @@ func authenticateAAD(ctx context.Context, tenantID, appID, username, password st
 	if errors.As(errAcquireToken, &callErr) {
 		data, err := io.ReadAll(callErr.Resp.Body)
 		if err != nil {
-			pamErr(ctx, "Can't read server response: %v", err)
+			pamLogErr(ctx, "Can't read server response: %v", err)
 			return pamDenyErr
 		}
 		var addErrWithCodes aadErr
 		if err := json.Unmarshal(data, &addErrWithCodes); err != nil {
-			pamErr(ctx, "Invalid server response, not a json object: %v", err)
+			pamLogErr(ctx, "Invalid server response, not a json object: %v", err)
 			return pamDenyErr
 		}
 		for _, errcode := range addErrWithCodes.ErrorCodes {
 			if errcode == invalidCredCode {
-				pamDebug(ctx, "Got response: Invalid credentials")
+				pamLogDebug(ctx, "Got response: Invalid credentials")
 				return pamDenyErr
 			}
 			if errcode == noSuchUserCode {
-				pamDebug(ctx, "Got response: User doesn't exist")
+				pamLogDebug(ctx, "Got response: User doesn't exist")
 				return pamDenyErr
 			}
 			if errcode == requiresMFACode {
-				pamDebug(ctx, "Authentication successful even if requiring MFA")
+				pamLogDebug(ctx, "Authentication successful even if requiring MFA")
 				return nil
 			}
 		}
 	}
 
 	if errAcquireToken != nil {
-		pamDebug(ctx, "Unknown error type: %v", errAcquireToken)
+		pamLogDebug(ctx, "Unknown error type: %v", errAcquireToken)
 		return pamDenyErr
 	}
 
-	pamDebug(ctx, "Authentication successful with user/password")
+	pamLogDebug(ctx, "Authentication successful with user/password")
 	return nil
 }
 
 func tenantAndAppIDFromConfig(ctx context.Context, p string) (string, string, error) {
-	pamDebug(ctx, "Loading configuration from %s", p)
+	pamLogDebug(ctx, "Loading configuration from %s", p)
 
 	cfg, err := ini.Load(p)
 	if err != nil {

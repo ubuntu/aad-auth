@@ -5,8 +5,8 @@ package main
 #include <syslog.h>
 #include <stdlib.h>
 
-void pam_syslog_no_variadic(const pam_handle_t *pamh, int priority, const char *fmt) {
-	pam_syslog(pamh, priority, "%s", fmt);
+void pam_syslog_no_variadic(const pam_handle_t *pamh, int priority, const char *msg) {
+	pam_syslog(pamh, priority, "%s", msg);
 }
 */
 import "C"
@@ -16,23 +16,23 @@ import (
 	"unsafe"
 )
 
-func pamDebug(ctx context.Context, format string, a ...any) {
+func pamLogDebug(ctx context.Context, format string, a ...any) {
 	pamSyslog(ctx, C.LOG_DEBUG, format, a...)
 }
 
-func pamInfo(ctx context.Context, format string, a ...any) {
+func pamLogInfo(ctx context.Context, format string, a ...any) {
 	pamSyslog(ctx, C.LOG_INFO, format, a...)
 }
 
-func pamWarn(ctx context.Context, format string, a ...any) {
+func pamLogWarn(ctx context.Context, format string, a ...any) {
 	pamSyslog(ctx, C.LOG_WARNING, format, a...)
 }
 
-func pamErr(ctx context.Context, format string, a ...any) {
+func pamLogErr(ctx context.Context, format string, a ...any) {
 	pamSyslog(ctx, C.LOG_ERR, format, a...)
 }
 
-func pamCrit(ctx context.Context, format string, a ...any) {
+func pamLogCrit(ctx context.Context, format string, a ...any) {
 	pamSyslog(ctx, C.LOG_CRIT, format, a...)
 }
 

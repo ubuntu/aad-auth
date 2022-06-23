@@ -32,26 +32,26 @@ func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 		case "conf":
 			conf = opt[1]
 		default:
-			pamWarn(ctx, "unknown option: %s\n", opt[0])
+			pamLogWarn(ctx, "unknown option: %s\n", opt[0])
 		}
 	}
 
 	// Load configuration.
 	tenantID, appID, err := tenantAndAppIDFromConfig(ctx, conf)
 	if err != nil {
-		pamErr(ctx, "No valid configuration found: %v", err)
+		pamLogErr(ctx, "No valid configuration found: %v", err)
 		return C.PAM_SYSTEM_ERR
 	}
 
 	// Get connection information
 	user, err := getUser(ctx)
 	if err != nil {
-		pamErr(ctx, "Could not get user from stdin")
+		pamLogErr(ctx, "Could not get user from stdin")
 		return C.PAM_SYSTEM_ERR
 	}
 	pass, err := getPassword(ctx)
 	if err != nil {
-		pamErr(ctx, "Could not read password from stdin")
+		pamLogErr(ctx, "Could not read password from stdin")
 		return C.PAM_SYSTEM_ERR
 	}
 
@@ -61,7 +61,7 @@ func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 	} else if errors.Is(err, pamDenyErr) {
 		return C.PAM_AUTH_ERR
 	} else if err != nil {
-		pamWarn(ctx, "Unhandled error of type: %v. Denying access.", err)
+		pamLogWarn(ctx, "Unhandled error of type: %v. Denying access.", err)
 		return C.PAM_AUTH_ERR
 	}
 
