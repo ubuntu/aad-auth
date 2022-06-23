@@ -2,6 +2,7 @@
 *.exe
 *.exe~
 *.dll
+*.h
 *.so
 *.dylib
 
@@ -17,3 +18,4 @@ vendor/
 # Various files
 conf/aad.conf
 TODO
+.vsls.json
