@@ -8,6 +8,10 @@ package main
 void pam_syslog_no_variadic(const pam_handle_t *pamh, int priority, const char *msg) {
 	pam_syslog(pamh, priority, "%s", msg);
 }
+
+int pam_info_no_variadic(pam_handle_t *pamh, const char *msg) {
+	return pam_info(pamh, "%s", msg);
+}
 */
 import "C"
 import (
@@ -45,4 +49,16 @@ func pamSyslog(ctx context.Context, priority int, format string, a ...any) {
 
 	p := C.int(priority)
 	C.pam_syslog_no_variadic(pamh, p, cMsg)
+}
+
+func pamInfo(ctx context.Context, format string, a ...any) {
+	pamh := ctx.Value(pamhCtxKey).(*C.pam_handle_t)
+
+	msg := fmt.Sprintf(format, a...)
+	cMsg := C.CString(msg)
+	defer C.free(unsafe.Pointer(cMsg))
+
+	if errInt := C.pam_info_no_variadic(pamh, cMsg); errInt != C.PAM_SUCCESS {
+		pamLogWarn(ctx, "Failed to display message to user (error %d): %v", errInt, msg)
+	}
 }
