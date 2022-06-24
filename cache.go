@@ -6,13 +6,16 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"math"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strconv"
 	"syscall"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type cache struct {
@@ -118,6 +121,56 @@ func (c *cache) Close() error {
 	return c.db.Close()
 }
 
+type userRecord struct {
+	login            string
+	uid              int
+	gid              int
+	gecos            string
+	home             string
+	shell            string
+	last_online_auth time.Time
+
+	// if shadow is opened
+	shadowPasswd string
+}
+
+// Update creates and update user nss cache when there has been an online verification.
+func (c *cache) Update(ctx context.Context, username, password string) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("can not create/open cache for nss database: %v", err)
+		}
+	}()
+
+	user, err := c.getUserByName(ctx, username)
+	if errors.Is(err, sql.ErrNoRows) {
+		// Try creating the user
+		id, err := c.generateUidForUser(ctx, username)
+		if err != nil {
+			return err
+		}
+		user = userRecord{
+			login: username,
+			uid:   int(id),
+			gid:   int(id),
+			home:  filepath.Join("/home", username),
+			shell: "/bin/bash", // TODO, check for system default
+		}
+
+		if err := c.insertUser(ctx, user); err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	}
+
+	encryptedPassword, err := encryptPassword(ctx, username, password)
+	if err != nil {
+		return err
+	}
+	return c.updateOnlineAuthAndPassword(ctx, user.uid, username, encryptedPassword)
+}
+
 // checkFilePermission ensure that the file has correct ownership and permissions.
 func checkFilePermission(ctx context.Context, p string, owner, gOwner int, permission fs.FileMode) (err error) {
 	defer func() {
@@ -144,4 +197,49 @@ func checkFilePermission(ctx context.Context, p string, owner, gOwner int, permi
 	}
 
 	return nil
+}
+
+// encryptPassword returns an encrypted version of password
+func encryptPassword(ctx context.Context, username, password string) (string, error) {
+	pamLogDebug(ctx, "encrypt password for user %q", username)
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(username), bcrypt.DefaultCost)
+	if err != nil {
+		return "", fmt.Errorf("failed to encrypt password: %v", err)
+	}
+	return string(hash), nil
+}
+
+func (c *cache) generateUidForUser(ctx context.Context, username string) (uid uint32, err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("failed to generate uid for user %q: %v", username, err)
+		}
+	}()
+
+	pamLogDebug(ctx, "generate user id for user %q", username)
+
+	// compute uid for user
+	var offset uint32 = 100000
+	uid = 1
+	for _, c := range []rune(username) {
+		uid = (uid * uint32(c)) % math.MaxUint32
+	}
+	uid = uid%(math.MaxUint32-offset) + offset
+
+	// check collision or increment
+	for {
+		if exists, err := uidExists(c.db, uid, username); err != nil {
+			return 0, err
+		} else if exists {
+			uid += 1
+			continue
+		}
+
+		break
+	}
+
+	pamLogInfo(ctx, "user id for %q is %d", username, uid)
+
+	return uid, nil
 }
