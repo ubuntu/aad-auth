@@ -17,6 +17,7 @@ import "C"
 import (
 	"context"
 	"fmt"
+	"os"
 	"unsafe"
 )
 
@@ -41,9 +42,25 @@ func pamLogCrit(ctx context.Context, format string, a ...any) {
 }
 
 func pamSyslog(ctx context.Context, priority int, format string, a ...any) {
-	pamh := ctx.Value(pamhCtxKey).(*C.pam_handle_t)
-
 	msg := fmt.Sprintf(format, a...)
+
+	pamh, ok := ctx.Value(pamhCtxKey).(*C.pam_handle_t)
+	if !ok {
+		prefix := "DEBUG:"
+		switch priority {
+		case C.LOG_INFO:
+			prefix = "INFO:"
+		case C.LOG_WARNING:
+			prefix = "WARNING:"
+		case C.LOG_ERR:
+			prefix = "ERROR:"
+		case C.LOG_CRIT:
+			prefix = "CRITICAL:"
+		}
+		fmt.Fprintf(os.Stderr, "%s %s\n", prefix, msg)
+		return
+	}
+
 	cMsg := C.CString(msg)
 	defer C.free(unsafe.Pointer(cMsg))
 
