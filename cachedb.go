@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/exp/slices"
@@ -155,3 +156,137 @@ func initDB(ctx context.Context, cacheDir string, rootUid, rootGid, shadowGid in
 
 	return db, hasShadow, nil
 }
+
+// getUserByName returns given user struct by its name.
+// It returns an error if we couldn’t fetch the user (does not exist or not connected).
+// shadowPasswd is populated only if the shadow database is accessible.
+func (c *cache) getUserByName(ctx context.Context, username string) (user userRecord, err error) {
+	pamLogDebug(ctx, "getting user information from cache for %q", username)
+
+	// This query is dynamically extended whether we have can query the shadow database or not
+	queryFmt := `
+SELECT login,
+	%s,
+	p.uid,
+	gid,
+	gecos,
+	home,
+	shell,
+	last_online_auth
+FROM   passwd p
+%s
+WHERE login = ?
+%s`
+
+	query := fmt.Sprintf(queryFmt, "'' as password", "", "")
+	if c.hasShadow {
+		query = fmt.Sprintf(queryFmt, "s.password", ", shadow.shadow s", "AND   p.uid = s.uid")
+	}
+
+	var u userRecord
+	var lastlogin int64
+	row := c.db.QueryRow(query, username)
+	if err := row.Scan(&u.login, &u.shadowPasswd, &u.uid, &u.gid, &u.gecos, &u.home, &u.shell, &lastlogin); err != nil {
+		return u, fmt.Errorf("error when getting user %q from cache: %w", username, err)
+	}
+
+	u.last_online_auth = time.Unix(lastlogin, 0)
+
+	return u, nil
+}
+
+// insertUser insert newUser in cache databases.
+func (c *cache) insertUser(ctx context.Context, newUser userRecord) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("failed to insert user %q in local cache: %v", newUser.login, err)
+		}
+	}()
+	pamLogDebug(ctx, "inserting in cache user %q", newUser.login)
+
+	if !c.hasShadow {
+		return errors.New("shadow database is not accessible")
+	}
+
+	tx, err := c.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback() // The rollback will be ignored if the tx has been committed later in the function.
+
+	lastLoginAuth := newUser.last_online_auth.Unix()
+	// passwd table
+	if _, err = tx.Exec("INSERT INTO passwd (login, uid, gid, home, shell, last_online_auth) VALUES(?,?,?,?,?,?)",
+		newUser.login, newUser.uid, newUser.gid, newUser.home, newUser.shell, lastLoginAuth); err != nil {
+		return err
+	}
+	// shadow db table
+	if _, err = tx.Exec("INSERT INTO shadow.shadow (uid, password) VALUES (?,?)",
+		newUser.uid, newUser.shadowPasswd); err != nil {
+		return err
+	}
+	// groups table
+	if _, err = tx.Exec("INSERT INTO groups (name, gid) VALUES (?,?)",
+		newUser.login, newUser.gid); err != nil {
+		return err
+	}
+	// uid <-> group pivot table
+	if _, err = tx.Exec("INSERT INTO uid_gid (uid, gid) VALUES (?,?)",
+		newUser.uid, newUser.gid); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+// updateOnlineAuthAndPassword updates password and last_online_auth.
+func (c *cache) updateOnlineAuthAndPassword(ctx context.Context, uid int, username, shadowPasswd string) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("failed to update user %q in local cache: %v", username, err)
+		}
+	}()
+	pamLogDebug(ctx, "updating from last online login information for user %q", username)
+
+	if !c.hasShadow {
+		return errors.New("shadow database is not accessible")
+	}
+
+	tx, err := c.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback() // The rollback will be ignored if the tx has been committed later in the function.
+
+	if _, err = tx.Exec("UPDATE passwd SET last_online_auth = ? WHERE uid = ?", time.Now().Unix(), uid); err != nil {
+		return err
+	}
+	if _, err = tx.Exec("UPDATE shadow.shadow SET password = ? WHERE uid = ?", shadowPasswd, uid); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func uidExists(db *sql.DB, uid uint32, username string) (bool, error) {
+	row := db.QueryRow("SELECT login from passwd where uid = ?", uid)
+	var login string
+	if err := row.Scan(&login); errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	} else if err != nil {
+		return true, fmt.Errorf("failed to verify that %d is unique: %v", uid, err)
+	}
+
+	// We found one entry, check db inconsistency
+	if login == username {
+		return true, fmt.Errorf("user already exists in cache")
+	}
+
+	return true, nil
+}
+
+/*func updateUid()   {}
+func updateGid()   {}*/
+// TODO: add user to local groups
+func updateShell() {}
+func updateHome()  {}
