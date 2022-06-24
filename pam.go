@@ -44,24 +44,36 @@ func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 	}
 
 	// Get connection information
-	user, err := getUser(ctx)
+	username, err := getUser(ctx)
 	if err != nil {
 		pamLogErr(ctx, "Could not get user from stdin")
 		return C.PAM_SYSTEM_ERR
 	}
-	pass, err := getPassword(ctx)
+	password, err := getPassword(ctx)
 	if err != nil {
 		pamLogErr(ctx, "Could not read password from stdin")
 		return C.PAM_SYSTEM_ERR
 	}
 
 	// AAD authentication
-	if err := authenticateAAD(ctx, tenantID, appID, user, pass); errors.Is(err, noNetworkErr) {
+	if err := authenticateAAD(ctx, tenantID, appID, username, password); errors.Is(err, noNetworkErr) {
 		return C.PAM_IGNORE
 	} else if errors.Is(err, pamDenyErr) {
 		return C.PAM_AUTH_ERR
 	} else if err != nil {
 		pamLogWarn(ctx, "Unhandled error of type: %v. Denying access.", err)
+		return C.PAM_AUTH_ERR
+	}
+
+	// Successful online login, update cache
+	c, err := NewCache(ctx)
+	if err != nil {
+		pamLogErr(ctx, "%v. Denying access.", err)
+		return C.PAM_AUTH_ERR
+	}
+
+	if err := c.Update(ctx, username, password); err != nil {
+		pamLogErr(ctx, "%v. Denying access.", err)
 		return C.PAM_AUTH_ERR
 	}
 
