@@ -73,11 +73,13 @@ func Authenticate(ctx context.Context, tenantID, appID, username, password strin
 				return nil
 			}
 		}
+		pam.LogErr(ctx, "Unknown error code(s) from server: %v", addErrWithCodes.ErrorCodes)
+		return DenyErr
 	}
 
 	if errAcquireToken != nil {
-		pam.LogDebug(ctx, "Unknown error type: %v", errAcquireToken)
-		return DenyErr
+		pam.LogDebug(ctx, "acquiring token failed: %v", errAcquireToken)
+		return NoNetworkErr
 	}
 
 	pam.LogDebug(ctx, "Authentication successful with user/password")
