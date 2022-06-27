@@ -270,27 +270,31 @@ func (c *Cache) updateOnlineAuthAndPassword(ctx context.Context, uid int, userna
 	return tx.Commit()
 }
 
-func cleanUpDB(db *sql.DB, validPeriod int) error {
+func cleanUpDB(ctx context.Context, db *sql.DB, validPeriod time.Duration) error {
+	pam.LogDebug(ctx, "Clean up database")
+
 	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback() // The rollback will be ignored if the tx has been committed later in the function.
 
+	expiration := time.Now().Add(-validPeriod)
+
 	// Shadow cleanup
-	if _, err := db.Exec("DELETE FROM shadow.shadow WHERE uid IN (SELECT uid FROM password WHERE last_online_auth < (unixepoch() - ?))", validPeriod); err != nil {
+	if _, err := tx.Exec("DELETE FROM shadow.shadow WHERE uid IN (SELECT uid FROM passwd WHERE last_online_auth < ?)", expiration); err != nil {
 		return err
 	}
 	// uid_gid cleanup
-	if _, err := db.Exec("DELETE FROM uid_gid WHERE uid IN (SELECT uid FROM password WHERE last_online_auth < (unixepoch() - ?))", validPeriod); err != nil {
+	if _, err := tx.Exec("DELETE FROM uid_gid WHERE uid IN (SELECT uid FROM passwd WHERE last_online_auth < ?)", expiration); err != nil {
 		return err
 	}
 	// passwd cleanup
-	if _, err := db.Exec("DELETE FROM passwd WHERE last_online_auth < (unixepoch() - ?)", validPeriod); err != nil {
+	if _, err := tx.Exec("DELETE FROM passwd WHERE last_online_auth < ?", expiration); err != nil {
 		return err
 	}
 	// empty groups cleanup
-	if _, err := db.Exec("DELETE FROM groups WHERE gid NOT IN (SELECT DISTINCT gid FROM uid_gid)"); err != nil {
+	if _, err := tx.Exec("DELETE FROM groups WHERE gid NOT IN (SELECT DISTINCT gid FROM uid_gid)"); err != nil {
 		return err
 	}
 
