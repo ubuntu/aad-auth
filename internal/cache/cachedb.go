@@ -271,7 +271,12 @@ func (c *Cache) updateOnlineAuthAndPassword(ctx context.Context, uid int, userna
 	return tx.Commit()
 }
 
-func cleanUpDB(ctx context.Context, db *sql.DB, validPeriod time.Duration) error {
+func cleanUpDB(ctx context.Context, db *sql.DB, revalidationPeriodDuration time.Duration) error {
+	if revalidationPeriodDuration == 0 {
+		pam.LogDebug(ctx, "Do not clean up database as revalidation period is set to 0")
+		return nil
+	}
+
 	pam.LogDebug(ctx, "Clean up database")
 
 	tx, err := db.Begin()
@@ -280,18 +285,18 @@ func cleanUpDB(ctx context.Context, db *sql.DB, validPeriod time.Duration) error
 	}
 	defer tx.Rollback() // The rollback will be ignored if the tx has been committed later in the function.
 
-	expiration := time.Now().Add(-validPeriod)
+	revalidationTime := time.Now().Add(-revalidationPeriodDuration)
 
 	// Shadow cleanup
-	if _, err := tx.Exec("DELETE FROM shadow.shadow WHERE uid IN (SELECT uid FROM passwd WHERE last_online_auth < ?)", expiration); err != nil {
+	if _, err := tx.Exec("DELETE FROM shadow.shadow WHERE uid IN (SELECT uid FROM passwd WHERE last_online_auth < ?)", revalidationTime); err != nil {
 		return err
 	}
 	// uid_gid cleanup
-	if _, err := tx.Exec("DELETE FROM uid_gid WHERE uid IN (SELECT uid FROM passwd WHERE last_online_auth < ?)", expiration); err != nil {
+	if _, err := tx.Exec("DELETE FROM uid_gid WHERE uid IN (SELECT uid FROM passwd WHERE last_online_auth < ?)", revalidationTime); err != nil {
 		return err
 	}
 	// passwd cleanup
-	if _, err := tx.Exec("DELETE FROM passwd WHERE last_online_auth < ?", expiration); err != nil {
+	if _, err := tx.Exec("DELETE FROM passwd WHERE last_online_auth < ?", revalidationTime); err != nil {
 		return err
 	}
 	// empty groups cleanup
