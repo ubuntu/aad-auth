@@ -232,7 +232,7 @@ func checkFilePermission(ctx context.Context, p string, owner, gOwner int, permi
 func encryptPassword(ctx context.Context, username, password string) (string, error) {
 	pam.LogDebug(ctx, "encrypt password for user %q", username)
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(username), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return "", fmt.Errorf("failed to encrypt password: %v", err)
 	}
