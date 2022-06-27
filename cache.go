@@ -21,6 +21,10 @@ import (
 type cache struct {
 	db        *sql.DB
 	hasShadow bool
+
+	// offlineLoginValidateFor is the number of days we allow to user to login without online verification.
+	// Note that users will be purged from cache when exceeding twice this time.
+	offlineLoginValidateFor uint
 }
 
 type options struct {
@@ -28,6 +32,8 @@ type options struct {
 	rootUid   int
 	rootGid   int
 	shadowGid int // this bypass group lookup
+
+	offlineLoginValidateFor uint
 }
 type option func(*options) error
 
@@ -65,6 +71,15 @@ func WithShadowGid(shadowGid int) func(o *options) error {
 	}
 }
 
+// WithOfflineLoginValidateFor allows to change the number of days the user can log in without online verification.
+// Note that users will be purged from cache when exceeding twice this time.
+func WithOfflineLoginValidateFor(days uint) func(o *options) error {
+	return func(o *options) error {
+		o.offlineLoginValidateFor = days
+		return nil
+	}
+}
+
 // NewCache returns a new cache handler with the database opens. The cache should be closed once unused with .Close()
 // There are 2 caches files: one for passwd/group and one for shadow.
 // If both does not exists, NewCache will create them with proper permissions only if you are the root user, otherwise
@@ -96,6 +111,8 @@ func NewCache(ctx context.Context, opts ...option) (c *cache, err error) {
 		rootUid:   0,
 		rootGid:   0,
 		shadowGid: shadowGid,
+
+		offlineLoginValidateFor: 90,
 	}
 	// applied options
 	for _, opt := range opts {
@@ -108,11 +125,19 @@ func NewCache(ctx context.Context, opts ...option) (c *cache, err error) {
 	if err != nil {
 		return nil, err
 	}
+
+	validPeriod := int(time.Duration(2 * c.offlineLoginValidateFor * 24 * uint(time.Hour)))
+	if err := cleanUpDB(db, validPeriod); err != nil {
+		return nil, err
+	}
+
 	pamLogDebug(ctx, "Attaching shadow db: %v", hasShadow)
 
 	return &cache{
 		db:        db,
 		hasShadow: hasShadow,
+
+		offlineLoginValidateFor: o.offlineLoginValidateFor,
 	}, nil
 }
 

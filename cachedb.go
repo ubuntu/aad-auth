@@ -268,6 +268,33 @@ func (c *cache) updateOnlineAuthAndPassword(ctx context.Context, uid int, userna
 	return tx.Commit()
 }
 
+func cleanUpDB(db *sql.DB, validPeriod int) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback() // The rollback will be ignored if the tx has been committed later in the function.
+
+	// Shadow cleanup
+	if _, err := db.Exec("DELETE FROM shadow.shadow WHERE uid IN (SELECT uid FROM password WHERE last_online_auth < (unixepoch() - ?))", validPeriod); err != nil {
+		return err
+	}
+	// uid_gid cleanup
+	if _, err := db.Exec("DELETE FROM uid_gid WHERE uid IN (SELECT uid FROM password WHERE last_online_auth < (unixepoch() - ?))", validPeriod); err != nil {
+		return err
+	}
+	// passwd cleanup
+	if _, err := db.Exec("DELETE FROM passwd WHERE last_online_auth < (unixepoch() - ?)", validPeriod); err != nil {
+		return err
+	}
+	// empty groups cleanup
+	if _, err := db.Exec("DELETE FROM groups WHERE gid NOT IN (SELECT DISTINCT gid FROM uid_gid)"); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
 //  uidOrGidExists check if uid in passwd or gid in groups does exists.
 func uidOrGidExists(db *sql.DB, id uint32, username string) (bool, error) {
 	row := db.QueryRow("SELECT login from passwd where uid = ? UNION SELECT name from groups where gid = ?", id, id)
