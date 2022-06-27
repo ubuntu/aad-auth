@@ -37,22 +37,31 @@ func authenticate(ctx context.Context, conf string) error {
 	}
 
 	// AAD authentication
-	if err := aad.Authenticate(ctx, tenantID, appID, username, password); errors.Is(err, aad.NoNetworkErr) {
-		return pamIgnore
-	} else if errors.Is(err, aad.DenyErr) {
+	errAAD := aad.Authenticate(ctx, tenantID, appID, username, password)
+	if errors.Is(errAAD, aad.DenyErr) {
 		return pamAuthErr
-	} else if err != nil {
-		pam.LogWarn(ctx, "Unhandled error of type: %v. Denying access.", err)
+	} else if errAAD != nil && !errors.Is(errAAD, aad.NoNetworkErr) {
+		pam.LogWarn(ctx, "Unhandled error of type: %v. Denying access.", errAAD)
 		return pamAuthErr
 	}
 
-	// Successful online login, update cache
 	c, err := cache.New(ctx)
 	if err != nil {
 		pam.LogErr(ctx, "%v. Denying access.", err)
 		return pamAuthErr
 	}
+	defer c.Close()
 
+	// No network: try validate user from cache.
+	if errors.Is(errAAD, aad.NoNetworkErr) {
+		if err := c.CanAuthenticate(ctx, username, password); err != nil {
+			pam.LogErr(ctx, "%v. Denying access.", err)
+			return pamAuthErr
+		}
+		return nil
+	}
+
+	// Successful online login, update cache.
 	if err := c.Update(ctx, username, password); err != nil {
 		pam.LogErr(ctx, "%v. Denying access.", err)
 		return pamAuthErr

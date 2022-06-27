@@ -163,6 +163,38 @@ type userRecord struct {
 	shadowPasswd string
 }
 
+// CanAuthenticate tries to authenticates user from cache and check it hasn't expired.
+// It returns an error if it can’t authenticate
+func (c *Cache) CanAuthenticate(ctx context.Context, username, password string) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("authenticating user %q from cache failed: %v", username, err)
+		}
+	}()
+
+	pam.LogInfo(ctx, "try to authenticate %q from cache", username)
+
+	if !c.hasShadow {
+		return errors.New("shadow database is not available")
+	}
+
+	user, err := c.getUserByName(ctx, username)
+	if err != nil {
+		return err
+	}
+
+	// ensure that we checked credential online recently.
+	if time.Now().After(user.last_online_auth.Add(time.Duration(c.offlineLoginValidateFor * 24 * uint(time.Hour)))) {
+		return errors.New("cache expired")
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.shadowPasswd), []byte(password)); err != nil {
+		return errors.New("password does not match: %v")
+	}
+
+	return nil
+}
+
 // Update creates and update user nss cache when there has been an online verification.
 func (c *Cache) Update(ctx context.Context, username, password string) (err error) {
 	defer func() {
