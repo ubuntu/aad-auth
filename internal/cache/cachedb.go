@@ -148,6 +148,7 @@ func initDB(ctx context.Context, cacheDir string, rootUid, rootGid, shadowGid in
 	if err != nil {
 		return nil, false, fmt.Errorf("could not get current user groups: %v", err)
 	}
+
 	if os.Geteuid() == rootUid || slices.Contains(grps, "shadow") {
 		_, err = db.Exec(fmt.Sprintf("attach database '%s' as shadow;", shadowPath))
 		if err != nil {

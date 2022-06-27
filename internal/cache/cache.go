@@ -130,9 +130,11 @@ func New(ctx context.Context, opts ...option) (c *Cache, err error) {
 
 	pam.LogDebug(ctx, "Attaching shadow db: %v", hasShadow)
 
-	validPeriod := time.Duration(2 * o.offlineLoginValidateFor * 24 * uint(time.Hour))
-	if err := cleanUpDB(ctx, db, validPeriod); err != nil {
-		return nil, err
+	if hasShadow {
+		validPeriod := time.Duration(2 * o.offlineLoginValidateFor * 24 * uint(time.Hour))
+		if err := cleanUpDB(ctx, db, validPeriod); err != nil {
+			return nil, err
+		}
 	}
 
 	return &Cache{
