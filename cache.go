@@ -210,6 +210,7 @@ func encryptPassword(ctx context.Context, username, password string) (string, er
 	return string(hash), nil
 }
 
+// generateUidForUser returns an unique uid for the user to create.
 func (c *cache) generateUidForUser(ctx context.Context, username string) (uid uint32, err error) {
 	defer func() {
 		if err != nil {
@@ -229,7 +230,7 @@ func (c *cache) generateUidForUser(ctx context.Context, username string) (uid ui
 
 	// check collision or increment
 	for {
-		if exists, err := uidExists(c.db, uid, username); err != nil {
+		if exists, err := uidOrGidExists(c.db, uid, username); err != nil {
 			return 0, err
 		} else if exists {
 			uid += 1

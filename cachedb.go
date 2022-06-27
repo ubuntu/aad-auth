@@ -268,13 +268,15 @@ func (c *cache) updateOnlineAuthAndPassword(ctx context.Context, uid int, userna
 	return tx.Commit()
 }
 
-func uidExists(db *sql.DB, uid uint32, username string) (bool, error) {
-	row := db.QueryRow("SELECT login from passwd where uid = ?", uid)
+//  uidOrGidExists check if uid in passwd or gid in groups does exists.
+func uidOrGidExists(db *sql.DB, id uint32, username string) (bool, error) {
+	row := db.QueryRow("SELECT login from passwd where uid = ? UNION SELECT name from groups where gid = ?", id, id)
+
 	var login string
 	if err := row.Scan(&login); errors.Is(err, sql.ErrNoRows) {
 		return false, nil
 	} else if err != nil {
-		return true, fmt.Errorf("failed to verify that %d is unique: %v", uid, err)
+		return true, fmt.Errorf("failed to verify that %d is unique: %v", id, err)
 	}
 
 	// We found one entry, check db inconsistency
