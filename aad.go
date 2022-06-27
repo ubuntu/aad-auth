@@ -22,8 +22,7 @@ const (
 
 var (
 	noNetworkErr = errors.New("NO NETWORK")
-	pamDenyErr   = errors.New("DENY")
-	pamSystemErr = errors.New("SYSTEM ERROR")
+	denyErr      = errors.New("DENY")
 )
 
 type aadErr struct {
@@ -49,21 +48,21 @@ func authenticateAAD(ctx context.Context, tenantID, appID, username, password st
 		data, err := io.ReadAll(callErr.Resp.Body)
 		if err != nil {
 			pamLogErr(ctx, "Can't read server response: %v", err)
-			return pamDenyErr
+			return denyErr
 		}
 		var addErrWithCodes aadErr
 		if err := json.Unmarshal(data, &addErrWithCodes); err != nil {
 			pamLogErr(ctx, "Invalid server response, not a json object: %v", err)
-			return pamDenyErr
+			return denyErr
 		}
 		for _, errcode := range addErrWithCodes.ErrorCodes {
 			if errcode == invalidCredCode {
 				pamLogDebug(ctx, "Got response: Invalid credentials")
-				return pamDenyErr
+				return denyErr
 			}
 			if errcode == noSuchUserCode {
 				pamLogDebug(ctx, "Got response: User doesn't exist")
-				return pamDenyErr
+				return denyErr
 			}
 			if errcode == requiresMFACode {
 				pamLogDebug(ctx, "Authentication successful even if requiring MFA")
@@ -74,7 +73,7 @@ func authenticateAAD(ctx context.Context, tenantID, appID, username, password st
 
 	if errAcquireToken != nil {
 		pamLogDebug(ctx, "Unknown error type: %v", errAcquireToken)
-		return pamDenyErr
+		return denyErr
 	}
 
 	pamLogDebug(ctx, "Authentication successful with user/password")

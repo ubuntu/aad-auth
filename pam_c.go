@@ -1,72 +1,70 @@
 package main
 
 /*
+#cgo LDFLAGS: -lpam -fPIC
 #include <security/pam_appl.h>
+#include <security/pam_ext.h>
 #include <stdlib.h>
 #include <string.h>
 
-char *get_user(pam_handle_t *pamh) {
-  if (!pamh)
-    return NULL;
-  int pam_err = 0;
-  const char *user;
-  if ((pam_err = pam_get_item(pamh, PAM_USER, (const void**)&user)) != PAM_SUCCESS)
-    return NULL;
-  return strdup(user);
-}
-
-char *get_password(pam_handle_t *pamh) {
-  if (!pamh)
-    return NULL;
-  int pam_err = 0;
-  const char *passwd;
-  if ((pam_err = pam_get_item(pamh, PAM_AUTHTOK, (const void**)&passwd)) != PAM_SUCCESS)
-    return NULL;
-  return strdup(passwd);
-}
-
-char *string_from_argv(int i, char **argv) {
-  return strdup(argv[i]);
-}
+char *get_user(pam_handle_t *pamh);
+char *get_password(pam_handle_t *pamh);
+char *string_from_argv(int i, char **argv);
 */
 import "C"
 import (
 	"context"
-	"unsafe"
+	"strings"
 )
 
 const (
-	pamhCtxKey = "pamhCtxKey"
+	defaultConfigPath = "/etc/aad.conf"
 )
 
-func getUser(ctx context.Context) (string, error) {
-	pamh := ctx.Value(pamhCtxKey).(*C.pam_handle_t)
+//go:generate go build -buildmode=c-shared -o pam_aad.so
 
-	cUsername := C.get_user(pamh)
-	if cUsername == nil {
-		return "", pamSystemErr
+//export pam_sm_authenticate
+func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char) C.int {
+
+	ctx := context.WithValue(context.Background(), pamhCtxKey, pamh)
+
+	// Get options.
+	conf := defaultConfigPath
+	for _, arg := range sliceFromArgv(argc, argv) {
+		opt := strings.Split(arg, "=")
+		switch opt[0] {
+		case "conf":
+			conf = opt[1]
+		default:
+			pamLogWarn(ctx, "unknown option: %s\n", opt[0])
+		}
 	}
-	defer C.free(unsafe.Pointer(cUsername))
-	return C.GoString(cUsername), nil
+
+	if err := authenticate(ctx, conf); err != nil {
+		switch err {
+		case pamSystemErr:
+			return C.PAM_SYSTEM_ERR
+		case pamAuthErr:
+			return C.PAM_AUTH_ERR
+		case pamIgnore:
+			return C.PAM_IGNORE
+		}
+	}
+
+	return C.PAM_SUCCESS
 }
 
-func getPassword(ctx context.Context) (string, error) {
-	pamh := ctx.Value(pamhCtxKey).(*C.pam_handle_t)
-
-	cPasswd := C.get_password(pamh)
-	if cPasswd == nil {
-		return "", pamSystemErr
-	}
-	defer C.free(unsafe.Pointer(cPasswd))
-	return C.GoString(cPasswd), nil
+//export pam_sm_setcred
+func pam_sm_setcred(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char) C.int {
+	return C.PAM_IGNORE
 }
 
-func sliceFromArgv(argc C.int, argv **C.char) []string {
-	r := make([]string, 0, argc)
-	for i := 0; i < int(argc); i++ {
-		s := C.string_from_argv(C.int(i), argv)
-		defer C.free(unsafe.Pointer(s))
-		r = append(r, C.GoString(s))
-	}
-	return r
+//export pam_sm_open_session
+func pam_sm_open_session(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char) C.int {
+	return C.PAM_SUCCESS
+}
+
+//export pam_sm_close_session
+func pam_sm_close_session(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char) C.int {
+	return C.PAM_SUCCESS
 }
