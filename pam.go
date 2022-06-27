@@ -3,6 +3,10 @@ package main
 import (
 	"context"
 	"errors"
+
+	"github.com/ubuntu/aad-auth/internal/aad"
+	"github.com/ubuntu/aad-auth/internal/cache"
+	"github.com/ubuntu/aad-auth/internal/pam"
 )
 
 var (
@@ -14,43 +18,43 @@ var (
 //export pam_sm_authenticate
 func authenticate(ctx context.Context, conf string) error {
 	// Load configuration.
-	tenantID, appID, err := tenantAndAppIDFromConfig(ctx, conf)
+	tenantID, appID, err := loadConfig(ctx, conf)
 	if err != nil {
-		pamLogErr(ctx, "No valid configuration found: %v", err)
+		pam.LogErr(ctx, "No valid configuration found: %v", err)
 		return pamSystemErr
 	}
 
 	// Get connection information
-	username, err := getUser(ctx)
+	username, err := pam.GetUser(ctx)
 	if err != nil {
-		pamLogErr(ctx, "Could not get user from stdin")
+		pam.LogErr(ctx, "Could not get user from stdin")
 		return pamSystemErr
 	}
-	password, err := getPassword(ctx)
+	password, err := pam.GetPassword(ctx)
 	if err != nil {
-		pamLogErr(ctx, "Could not read password from stdin")
+		pam.LogErr(ctx, "Could not read password from stdin")
 		return pamSystemErr
 	}
 
 	// AAD authentication
-	if err := authenticateAAD(ctx, tenantID, appID, username, password); errors.Is(err, noNetworkErr) {
+	if err := aad.Authenticate(ctx, tenantID, appID, username, password); errors.Is(err, aad.NoNetworkErr) {
 		return pamIgnore
-	} else if errors.Is(err, denyErr) {
+	} else if errors.Is(err, aad.DenyErr) {
 		return pamAuthErr
 	} else if err != nil {
-		pamLogWarn(ctx, "Unhandled error of type: %v. Denying access.", err)
+		pam.LogWarn(ctx, "Unhandled error of type: %v. Denying access.", err)
 		return pamAuthErr
 	}
 
 	// Successful online login, update cache
-	c, err := NewCache(ctx)
+	c, err := cache.New(ctx)
 	if err != nil {
-		pamLogErr(ctx, "%v. Denying access.", err)
+		pam.LogErr(ctx, "%v. Denying access.", err)
 		return pamAuthErr
 	}
 
 	if err := c.Update(ctx, username, password); err != nil {
-		pamLogErr(ctx, "%v. Denying access.", err)
+		pam.LogErr(ctx, "%v. Denying access.", err)
 		return pamAuthErr
 	}
 

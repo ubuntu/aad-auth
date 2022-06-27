@@ -1,6 +1,7 @@
-package main
+package pam
 
 /*
+#cgo LDFLAGS: -lpam -fPIC
 #include <security/pam_ext.h>
 #include <syslog.h>
 #include <stdlib.h>
@@ -21,30 +22,41 @@ import (
 	"unsafe"
 )
 
-func pamLogDebug(ctx context.Context, format string, a ...any) {
+const (
+	ctxKey = "pamhCtxKey"
+)
+
+// Handle allows to pass C.pam_handle_t to this package.
+type Handle = *C.pam_handle_t
+
+func CtxWithPamh(ctx context.Context, pamh Handle) context.Context {
+	return context.WithValue(ctx, ctxKey, pamh)
+}
+
+func LogDebug(ctx context.Context, format string, a ...any) {
 	pamSyslog(ctx, C.LOG_DEBUG, format, a...)
 }
 
-func pamLogInfo(ctx context.Context, format string, a ...any) {
+func LogInfo(ctx context.Context, format string, a ...any) {
 	pamSyslog(ctx, C.LOG_INFO, format, a...)
 }
 
-func pamLogWarn(ctx context.Context, format string, a ...any) {
+func LogWarn(ctx context.Context, format string, a ...any) {
 	pamSyslog(ctx, C.LOG_WARNING, format, a...)
 }
 
-func pamLogErr(ctx context.Context, format string, a ...any) {
+func LogErr(ctx context.Context, format string, a ...any) {
 	pamSyslog(ctx, C.LOG_ERR, format, a...)
 }
 
-func pamLogCrit(ctx context.Context, format string, a ...any) {
+func LogCrit(ctx context.Context, format string, a ...any) {
 	pamSyslog(ctx, C.LOG_CRIT, format, a...)
 }
 
 func pamSyslog(ctx context.Context, priority int, format string, a ...any) {
 	msg := fmt.Sprintf(format, a...)
 
-	pamh, ok := ctx.Value(pamhCtxKey).(*C.pam_handle_t)
+	pamh, ok := ctx.Value(ctxKey).(*C.pam_handle_t)
 	if !ok {
 		prefix := "DEBUG:"
 		switch priority {
@@ -68,14 +80,14 @@ func pamSyslog(ctx context.Context, priority int, format string, a ...any) {
 	C.pam_syslog_no_variadic(pamh, p, cMsg)
 }
 
-func pamInfo(ctx context.Context, format string, a ...any) {
-	pamh := ctx.Value(pamhCtxKey).(*C.pam_handle_t)
+func Info(ctx context.Context, format string, a ...any) {
+	pamh := ctx.Value(ctxKey).(*C.pam_handle_t)
 
 	msg := fmt.Sprintf(format, a...)
 	cMsg := C.CString(msg)
 	defer C.free(unsafe.Pointer(cMsg))
 
 	if errInt := C.pam_info_no_variadic(pamh, cMsg); errInt != C.PAM_SUCCESS {
-		pamLogWarn(ctx, "Failed to display message to user (error %d): %v", errInt, msg)
+		LogWarn(ctx, "Failed to display message to user (error %d): %v", errInt, msg)
 	}
 }

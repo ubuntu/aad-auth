@@ -1,4 +1,4 @@
-package main
+package cache
 
 import (
 	"context"
@@ -13,6 +13,8 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/exp/slices"
+
+	"github.com/ubuntu/aad-auth/internal/pam"
 )
 
 const (
@@ -68,7 +70,7 @@ func initDB(ctx context.Context, cacheDir string, rootUid, rootGid, shadowGid in
 			err = fmt.Errorf("can’t initiate database: %v", err)
 		}
 	}()
-	pamLogDebug(ctx, "Opening cache in %s", cacheDir)
+	pam.LogDebug(ctx, "Opening cache in %s", cacheDir)
 
 	passwdPath := filepath.Join(cacheDir, passwdDB)
 	var passwdPermission fs.FileMode = 0644
@@ -160,8 +162,8 @@ func initDB(ctx context.Context, cacheDir string, rootUid, rootGid, shadowGid in
 // getUserByName returns given user struct by its name.
 // It returns an error if we couldn’t fetch the user (does not exist or not connected).
 // shadowPasswd is populated only if the shadow database is accessible.
-func (c *cache) getUserByName(ctx context.Context, username string) (user userRecord, err error) {
-	pamLogDebug(ctx, "getting user information from cache for %q", username)
+func (c *Cache) getUserByName(ctx context.Context, username string) (user userRecord, err error) {
+	pam.LogDebug(ctx, "getting user information from cache for %q", username)
 
 	// This query is dynamically extended whether we have can query the shadow database or not
 	queryFmt := `
@@ -196,13 +198,13 @@ WHERE login = ?
 }
 
 // insertUser insert newUser in cache databases.
-func (c *cache) insertUser(ctx context.Context, newUser userRecord) (err error) {
+func (c *Cache) insertUser(ctx context.Context, newUser userRecord) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("failed to insert user %q in local cache: %v", newUser.login, err)
 		}
 	}()
-	pamLogDebug(ctx, "inserting in cache user %q", newUser.login)
+	pam.LogDebug(ctx, "inserting in cache user %q", newUser.login)
 
 	if !c.hasShadow {
 		return errors.New("shadow database is not accessible")
@@ -240,13 +242,13 @@ func (c *cache) insertUser(ctx context.Context, newUser userRecord) (err error) 
 }
 
 // updateOnlineAuthAndPassword updates password and last_online_auth.
-func (c *cache) updateOnlineAuthAndPassword(ctx context.Context, uid int, username, shadowPasswd string) (err error) {
+func (c *Cache) updateOnlineAuthAndPassword(ctx context.Context, uid int, username, shadowPasswd string) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("failed to update user %q in local cache: %v", username, err)
 		}
 	}()
-	pamLogDebug(ctx, "updating from last online login information for user %q", username)
+	pam.LogDebug(ctx, "updating from last online login information for user %q", username)
 
 	if !c.hasShadow {
 		return errors.New("shadow database is not accessible")

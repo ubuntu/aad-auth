@@ -1,4 +1,4 @@
-package main
+package cache
 
 import (
 	"context"
@@ -16,9 +16,11 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/ubuntu/aad-auth/internal/pam"
 )
 
-type cache struct {
+type Cache struct {
 	db        *sql.DB
 	hasShadow bool
 
@@ -87,14 +89,14 @@ func WithOfflineLoginValidateFor(days uint) func(o *options) error {
 // If the cache exists, root or members of shadow will open passwd/group and shadow database. Other users will only open
 // passwd/group.
 // Every open will check for cache ownership and validity permission. If it has been tempered, NewCache will fail.
-func NewCache(ctx context.Context, opts ...option) (c *cache, err error) {
+func New(ctx context.Context, opts ...option) (c *Cache, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("can't open/create cache: %v", err)
 		}
 	}()
 
-	pamLogDebug(ctx, "Cache initialization")
+	pam.LogDebug(ctx, "Cache initialization")
 	var hasShadow bool
 
 	shadowGrp, err := user.LookupGroup("shadow")
@@ -131,9 +133,9 @@ func NewCache(ctx context.Context, opts ...option) (c *cache, err error) {
 		return nil, err
 	}
 
-	pamLogDebug(ctx, "Attaching shadow db: %v", hasShadow)
+	pam.LogDebug(ctx, "Attaching shadow db: %v", hasShadow)
 
-	return &cache{
+	return &Cache{
 		db:        db,
 		hasShadow: hasShadow,
 
@@ -142,7 +144,7 @@ func NewCache(ctx context.Context, opts ...option) (c *cache, err error) {
 }
 
 // Close closes the underlying db.
-func (c *cache) Close() error {
+func (c *Cache) Close() error {
 	return c.db.Close()
 }
 
@@ -160,7 +162,7 @@ type userRecord struct {
 }
 
 // Update creates and update user nss cache when there has been an online verification.
-func (c *cache) Update(ctx context.Context, username, password string) (err error) {
+func (c *Cache) Update(ctx context.Context, username, password string) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("can not create/open cache for nss database: %v", err)
@@ -203,7 +205,7 @@ func checkFilePermission(ctx context.Context, p string, owner, gOwner int, permi
 			err = fmt.Errorf("failed checking file permission for %v: %v", p, err)
 		}
 	}()
-	pamLogDebug(ctx, "check file permissions on %v", p)
+	pam.LogDebug(ctx, "check file permissions on %v", p)
 
 	info, err := os.Stat(p)
 	if err != nil {
@@ -226,7 +228,7 @@ func checkFilePermission(ctx context.Context, p string, owner, gOwner int, permi
 
 // encryptPassword returns an encrypted version of password
 func encryptPassword(ctx context.Context, username, password string) (string, error) {
-	pamLogDebug(ctx, "encrypt password for user %q", username)
+	pam.LogDebug(ctx, "encrypt password for user %q", username)
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(username), bcrypt.DefaultCost)
 	if err != nil {
@@ -236,14 +238,14 @@ func encryptPassword(ctx context.Context, username, password string) (string, er
 }
 
 // generateUidForUser returns an unique uid for the user to create.
-func (c *cache) generateUidForUser(ctx context.Context, username string) (uid uint32, err error) {
+func (c *Cache) generateUidForUser(ctx context.Context, username string) (uid uint32, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("failed to generate uid for user %q: %v", username, err)
 		}
 	}()
 
-	pamLogDebug(ctx, "generate user id for user %q", username)
+	pam.LogDebug(ctx, "generate user id for user %q", username)
 
 	// compute uid for user
 	var offset uint32 = 100000
@@ -265,7 +267,7 @@ func (c *cache) generateUidForUser(ctx context.Context, username string) (uid ui
 		break
 	}
 
-	pamLogInfo(ctx, "user id for %q is %d", username, uid)
+	pam.LogInfo(ctx, "user id for %q is %d", username, uid)
 
 	return uid, nil
 }

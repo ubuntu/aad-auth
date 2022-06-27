@@ -1,4 +1,4 @@
-package main
+package pam
 
 /*
 #include <security/pam_appl.h>
@@ -24,49 +24,32 @@ char *get_password(pam_handle_t *pamh) {
     return NULL;
   return strdup(passwd);
 }
-
-char *string_from_argv(int i, char **argv) {
-  return strdup(argv[i]);
-}
 */
 import "C"
 import (
 	"context"
+	"fmt"
 	"unsafe"
 )
 
-const (
-	pamhCtxKey = "pamhCtxKey"
-)
-
-func getUser(ctx context.Context) (string, error) {
-	pamh := ctx.Value(pamhCtxKey).(*C.pam_handle_t)
+func GetUser(ctx context.Context) (string, error) {
+	pamh := ctx.Value(ctxKey).(*C.pam_handle_t)
 
 	cUsername := C.get_user(pamh)
 	if cUsername == nil {
-		return "", pamSystemErr
+		return "", fmt.Errorf("no user found")
 	}
 	defer C.free(unsafe.Pointer(cUsername))
 	return C.GoString(cUsername), nil
 }
 
-func getPassword(ctx context.Context) (string, error) {
-	pamh := ctx.Value(pamhCtxKey).(*C.pam_handle_t)
+func GetPassword(ctx context.Context) (string, error) {
+	pamh := ctx.Value(ctxKey).(*C.pam_handle_t)
 
 	cPasswd := C.get_password(pamh)
 	if cPasswd == nil {
-		return "", pamSystemErr
+		return "", fmt.Errorf("no password found")
 	}
 	defer C.free(unsafe.Pointer(cPasswd))
 	return C.GoString(cPasswd), nil
-}
-
-func sliceFromArgv(argc C.int, argv **C.char) []string {
-	r := make([]string, 0, argc)
-	for i := 0; i < int(argc); i++ {
-		s := C.string_from_argv(C.int(i), argv)
-		defer C.free(unsafe.Pointer(s))
-		r = append(r, C.GoString(s))
-	}
-	return r
 }

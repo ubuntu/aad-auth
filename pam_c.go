@@ -15,6 +15,8 @@ import "C"
 import (
 	"context"
 	"strings"
+
+	"github.com/ubuntu/aad-auth/internal/pam"
 )
 
 const (
@@ -26,7 +28,7 @@ const (
 //export pam_sm_authenticate
 func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char) C.int {
 
-	ctx := context.WithValue(context.Background(), pamhCtxKey, pamh)
+	ctx := pam.CtxWithPamh(context.Background(), pam.Handle(pamh))
 
 	// Get options.
 	conf := defaultConfigPath
@@ -36,7 +38,7 @@ func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 		case "conf":
 			conf = opt[1]
 		default:
-			pamLogWarn(ctx, "unknown option: %s\n", opt[0])
+			pam.LogWarn(ctx, "unknown option: %s\n", opt[0])
 		}
 	}
 
