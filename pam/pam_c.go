@@ -23,7 +23,7 @@ const (
 	defaultConfigPath = "/etc/aad.conf"
 )
 
-//go:generate go build -buildmode=c-shared -o pam_aad.so
+//go:generate go build -ldflags="-s -w" -buildmode=c-shared -o pam_aad.so
 
 //export pam_sm_authenticate
 func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char) C.int {
