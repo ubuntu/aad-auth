@@ -215,13 +215,10 @@ WHERE p.uid = ?
 	}
 
 	var u UserRecord
-	var lastlogin int64
 	row := c.db.QueryRow(query, uid)
-	if err := row.Scan(&u.Name, &u.ShadowPasswd, &u.UID, &u.GID, &u.Gecos, &u.Home, &u.Shell, &lastlogin); err != nil {
+	if u, err := newUserFromScanner(row); err != nil {
 		return u, fmt.Errorf("error when getting uid %d from cache: %w", uid, err)
 	}
-
-	u.LastOnlineAuth = time.Unix(lastlogin, 0)
 
 	return u, nil
 }
@@ -268,6 +265,21 @@ func (c *Cache) insertUser(ctx context.Context, newUser UserRecord) (err error) 
 	}
 
 	return tx.Commit()
+}
+
+type rowScanner interface {
+	Scan(...any) error
+}
+
+// newUserFromScanner abstracts the row request deserialization to u.
+func newUserFromScanner(s rowScanner) (u UserRecord, err error) {
+	var lastlogin int64
+	if err := s.Scan(&u.Name, &u.ShadowPasswd, &u.UID, &u.GID, &u.Gecos, &u.Home, &u.Shell, &lastlogin); err != nil {
+		return UserRecord{}, err
+	}
+
+	u.LastOnlineAuth = time.Unix(lastlogin, 0)
+	return u, nil
 }
 
 // updateOnlineAuthAndPassword updates password and last_online_auth.
@@ -337,17 +349,18 @@ func cleanUpDB(ctx context.Context, db *sql.DB, revalidationPeriodDuration time.
 
 //  uidOrGidExists check if uid in passwd or gid in groups does exists.
 func uidOrGidExists(db *sql.DB, id uint32, username string) (bool, error) {
+	// TODO: check with the amount of return parameters vs newUserFromScanner
 	row := db.QueryRow("SELECT login from passwd where uid = ? UNION SELECT name from groups where gid = ?", id, id)
 
-	var login string
-	if err := row.Scan(&login); errors.Is(err, sql.ErrNoRows) {
+	u, err := newUserFromScanner(row)
+	if errors.Is(err, sql.ErrNoRows) {
 		return false, nil
 	} else if err != nil {
 		return true, fmt.Errorf("failed to verify that %d is unique: %v", id, err)
 	}
 
 	// We found one entry, check db inconsistency
-	if login == username {
+	if u.Name == username {
 		return true, fmt.Errorf("user already exists in cache")
 	}
 
