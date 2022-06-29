@@ -267,6 +267,37 @@ func (c *Cache) insertUser(ctx context.Context, newUser UserRecord) (err error) 
 	return tx.Commit()
 }
 
+// NextPasswdEntry returns next passwd from the current position within this cache.
+// It initializes the passwd query on first run and return ErrNoEnt once done.
+func (c *Cache) NextPasswdEntry() (u UserRecord, err error) {
+	defer func() {
+		if err != nil && !errors.Is(err, ErrNoEnt) {
+			err = fmt.Errorf("failed to read passwd entry in db: %v", err)
+		}
+	}()
+	pam.LogDebug(context.Background(), "request next passwd entry in db")
+
+	if c.cursorPasswd == nil {
+		query := `
+		SELECT login, 'unused', uid, gid, gecos, home, shell, last_online_auth
+		FROM passwd
+		ORDER BY login`
+		c.cursorPasswd, err = c.db.Query(query)
+		if err != nil {
+			return u, err
+		}
+	}
+	if !c.cursorPasswd.Next() {
+		if err := c.cursorPasswd.Close(); err != nil {
+			return u, err
+		}
+		c.cursorPasswd = nil
+		return u, ErrNoEnt
+	}
+
+	return newUserFromScanner(c.cursorPasswd)
+}
+
 type rowScanner interface {
 	Scan(...any) error
 }

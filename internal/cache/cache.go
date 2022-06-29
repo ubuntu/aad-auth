@@ -20,6 +20,11 @@ import (
 	"github.com/ubuntu/aad-auth/internal/pam"
 )
 
+var (
+	// ErrNoEnt is returned when there is no entries
+	ErrNoEnt = errors.New("No entries")
+)
+
 type Cache struct {
 	db        *sql.DB
 	hasShadow bool
@@ -27,6 +32,8 @@ type Cache struct {
 	// revalidationPeriod is the number of days we allow to user to login without online verification.
 	// Note that users will be purged from cache when exceeding twice this time.
 	revalidationPeriod int
+
+	cursorPasswd *sql.Rows
 }
 
 type options struct {
@@ -150,6 +157,9 @@ func New(ctx context.Context, opts ...option) (c *Cache, err error) {
 
 // Close closes the underlying db.
 func (c *Cache) Close() error {
+	if c.cursorPasswd != nil {
+		_ = c.cursorPasswd.Close()
+	}
 	return c.db.Close()
 }
 
