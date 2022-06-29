@@ -7,12 +7,10 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/user"
 	"path/filepath"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
-	"golang.org/x/exp/slices"
 
 	"github.com/ubuntu/aad-auth/internal/pam"
 )
@@ -139,17 +137,9 @@ func initDB(ctx context.Context, cacheDir string, rootUid, rootGid, shadowGid in
 		return nil, false, err
 	}
 
-	// Attach shadow if our user is root or part of the shadow group
-	u, err := user.Current()
-	if err != nil {
-		return nil, false, fmt.Errorf("could not get current user: %v", err)
-	}
-	grps, err := u.GroupIds()
-	if err != nil {
-		return nil, false, fmt.Errorf("could not get current user groups: %v", err)
-	}
-
-	if os.Geteuid() == rootUid || slices.Contains(grps, "shadow") {
+	// Attach shadow if our user has access to the file (even read-only)
+	if f, err := os.Open(shadowPath); err == nil {
+		f.Close()
 		_, err = db.Exec(fmt.Sprintf("attach database '%s' as shadow;", shadowPath))
 		if err != nil {
 			return nil, false, err
