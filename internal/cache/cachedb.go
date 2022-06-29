@@ -313,7 +313,7 @@ func cleanUpDB(ctx context.Context, db *sql.DB, revalidationPeriodDuration time.
 	}
 	defer tx.Rollback() // The rollback will be ignored if the tx has been committed later in the function.
 
-	revalidationTime := time.Now().Add(-revalidationPeriodDuration)
+	revalidationTime := time.Now().Add(-revalidationPeriodDuration).Unix()
 
 	// Shadow cleanup
 	if _, err := tx.Exec("DELETE FROM shadow.shadow WHERE uid IN (SELECT uid FROM passwd WHERE last_online_auth < ?)", revalidationTime); err != nil {
