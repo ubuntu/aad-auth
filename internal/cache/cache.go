@@ -153,17 +153,17 @@ func (c *Cache) Close() error {
 	return c.db.Close()
 }
 
-type userRecord struct {
-	login            string
-	uid              int
-	gid              int
-	gecos            string
-	home             string
-	shell            string
-	last_online_auth time.Time
+type UserRecord struct {
+	Name           string
+	UID            int
+	GID            int
+	Gecos          string
+	Home           string
+	Shell          string
+	LastOnlineAuth time.Time
 
 	// if shadow is opened
-	shadowPasswd string
+	ShadowPasswd string
 }
 
 // CanAuthenticate tries to authenticates user from cache and check it hasn't expired.
@@ -181,17 +181,17 @@ func (c *Cache) CanAuthenticate(ctx context.Context, username, password string) 
 		return errors.New("shadow database is not available")
 	}
 
-	user, err := c.getUserByName(ctx, username)
+	user, err := c.GetUserByName(ctx, username)
 	if err != nil {
 		return err
 	}
 
 	// ensure that we checked credential online recently.
-	if time.Now().After(user.last_online_auth.Add(time.Duration(uint(c.revalidationPeriod) * 24 * uint(time.Hour)))) {
+	if time.Now().After(user.LastOnlineAuth.Add(time.Duration(uint(c.revalidationPeriod) * 24 * uint(time.Hour)))) {
 		return errors.New("cache expired")
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.shadowPasswd), []byte(password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(user.ShadowPasswd), []byte(password)); err != nil {
 		return errors.New("password does not match: %v")
 	}
 
@@ -206,19 +206,19 @@ func (c *Cache) Update(ctx context.Context, username, password string) (err erro
 		}
 	}()
 
-	user, err := c.getUserByName(ctx, username)
+	user, err := c.GetUserByName(ctx, username)
 	if errors.Is(err, sql.ErrNoRows) {
 		// Try creating the user
 		id, err := c.generateUidForUser(ctx, username)
 		if err != nil {
 			return err
 		}
-		user = userRecord{
-			login: username,
-			uid:   int(id),
-			gid:   int(id),
-			home:  filepath.Join("/home", username),
-			shell: "/bin/bash", // TODO, check for system default
+		user = UserRecord{
+			Name:  username,
+			UID:   int(id),
+			GID:   int(id),
+			Home:  filepath.Join("/home", username),
+			Shell: "/bin/bash", // TODO, check for system default
 		}
 
 		if err := c.insertUser(ctx, user); err != nil {
@@ -232,7 +232,7 @@ func (c *Cache) Update(ctx context.Context, username, password string) (err erro
 	if err != nil {
 		return err
 	}
-	return c.updateOnlineAuthAndPassword(ctx, user.uid, username, encryptedPassword)
+	return c.updateOnlineAuthAndPassword(ctx, user.UID, username, encryptedPassword)
 }
 
 // checkFilePermission ensure that the file has correct ownership and permissions.
@@ -257,7 +257,7 @@ func checkFilePermission(ctx context.Context, p string, owner, gOwner int, permi
 	}
 
 	if owner != int(stat.Uid) || gOwner != int(stat.Gid) {
-		return fmt.Errorf("invalid ownership: %d:%d instead of %d:%d", owner, gOwner, stat.Uid, stat.Gid)
+		return fmt.Errorf("invalid ownership: %d:%d instead of %d:%d", stat.Uid, stat.Gid, owner, gOwner)
 	}
 
 	return nil
