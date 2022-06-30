@@ -34,6 +34,8 @@ type Cache struct {
 	revalidationPeriod int
 
 	cursorPasswd *sql.Rows
+	cursorGroup  *sql.Rows
+	cursorShadow *sql.Rows
 }
 
 type options struct {
@@ -163,6 +165,12 @@ func (c *Cache) Close() error {
 	if c.cursorPasswd != nil {
 		_ = c.cursorPasswd.Close()
 	}
+	if c.cursorGroup != nil {
+		_ = c.cursorGroup.Close()
+	}
+	if c.cursorShadow != nil {
+		_ = c.cursorShadow.Close()
+	}
 	return c.db.Close()
 }
 
@@ -179,6 +187,26 @@ type UserRecord struct {
 
 	// if shadow is opened
 	ShadowPasswd string
+}
+
+// GroupRecord  returns a group record from the cache
+type GroupRecord struct {
+	Name     string
+	GID      int
+	Password string
+	Members  []string
+}
+
+// ShadowRecord returns a shadow record from the cache
+type ShadowRecord struct {
+	Name           string
+	Password       string
+	LastPwdChange  int
+	MaxPwdAge      int
+	PwdWarnPeriod  int
+	PwdInactivity  int
+	MinPwdAge      int
+	ExpirationDate int
 }
 
 // CanAuthenticate tries to authenticates user from cache and check it hasn't expired.

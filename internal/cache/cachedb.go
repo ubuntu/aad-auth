@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -300,6 +301,151 @@ func (c *Cache) NextPasswdEntry() (u UserRecord, err error) {
 	return newUserFromScanner(c.cursorPasswd)
 }
 
+// GetGroupByName returns given group struct by its name.
+// It returns an error if we couldn’t fetch the group (does not exist or not connected).
+func (c *Cache) GetGroupByName(ctx context.Context, groupname string) (group GroupRecord, err error) {
+	pam.LogDebug(ctx, "getting group information from cache for %q", groupname)
+
+	// Nested query to avoid the case where the user is not found,
+	// then all the values are NULL due to the call to GROUP_CONCAT
+	query := `
+	SELECT * FROM (
+		SELECT g.name, g.password, g.gid, group_concat(p.login, ',') as members
+		FROM groups g, uid_gid u, passwd p
+		WHERE g.name = ?
+		AND u.gid = g.gid
+		AND p.uid = u.uid
+	) WHERE name IS NOT NULL`
+
+	row := c.db.QueryRow(query, groupname)
+	g, err := newGroupFromScanner(row)
+	if err != nil {
+		return g, fmt.Errorf("error when getting group %q from cache: %w", groupname, err)
+	}
+
+	return g, nil
+}
+
+// GetGroupByUid returns given group struct by its GID.
+// It returns an error if we couldn’t fetch the group (does not exist or not connected).
+func (c *Cache) GetGroupByGid(ctx context.Context, gid uint) (group GroupRecord, err error) {
+	pam.LogDebug(ctx, "getting group information from cache for uid %d", gid) // TODO: remove PAM dep
+
+	// Nested query to avoid the case where the user is not found,
+	// then all the values are NULL due to the call to GROUP_CONCAT
+	query := `
+	SELECT * FROM (
+		SELECT g.name, g.password, g.gid, group_concat(p.login, ',') as members
+		FROM groups g, uid_gid u, passwd p
+		WHERE g.gid = ?
+		AND u.gid = g.gid
+		AND p.uid = u.uid
+	) WHERE name IS NOT NULL`
+
+	row := c.db.QueryRow(query, gid)
+	g, err := newGroupFromScanner(row)
+	if err != nil {
+		return g, fmt.Errorf("error when getting gid %d from cache: %w", gid, err)
+	}
+
+	return g, nil
+}
+
+// NextGroupEntry returns next group from the current position within this cache.
+// It initializes the group query on first run and return ErrNoEnt once done.
+func (c *Cache) NextGroupEntry() (g GroupRecord, err error) {
+	defer func() {
+		if err != nil && !errors.Is(err, ErrNoEnt) {
+			err = fmt.Errorf("failed to read group entry in db: %v", err)
+		}
+	}()
+	pam.LogDebug(context.Background(), "request next group entry in db")
+
+	if c.cursorGroup == nil {
+		query := `
+		SELECT * FROM (
+			SELECT g.name, g.password, g.gid, group_concat(p.login, ',') as members
+			FROM groups g, uid_gid u, passwd p
+			WHERE u.gid = g.gid
+			AND p.uid = u.uid
+			GROUP BY g.name
+		) WHERE name IS NOT NULL
+		ORDER BY name
+		`
+
+		c.cursorGroup, err = c.db.Query(query)
+		if err != nil {
+			return g, err
+		}
+	}
+	if !c.cursorGroup.Next() {
+		if err := c.cursorGroup.Close(); err != nil {
+			return g, err
+		}
+		c.cursorGroup = nil
+		return g, ErrNoEnt
+	}
+
+	return newGroupFromScanner(c.cursorGroup)
+}
+
+// GetShadowByName returns given shadow struct by its name.
+// It returns an error if we couldn’t fetch the shadow entry (does not exist or not connected).
+func (c *Cache) GetShadowByName(ctx context.Context, username string) (swr ShadowRecord, err error) {
+	pam.LogDebug(ctx, "getting shadow information from cache for %q", username)
+
+	if !c.hasShadow {
+		return swr, errors.New("need shadow to be accessible to query on it")
+	}
+
+	query := `
+	SELECT p.login, s.password, s.last_pwd_change, s.min_pwd_age, s.max_pwd_age, s.pwd_warn_period, s.pwd_inactivity, s.expiration_date
+	FROM passwd p, shadow.shadow s
+	WHERE p.uid = s.uid
+	AND p.login = ?
+	`
+	row := c.db.QueryRow(query, username)
+	swr, err = newShadowFromScanner(row)
+	if err != nil {
+		return swr, fmt.Errorf("error when getting shadow matching %q from cache: %w", username, err)
+	}
+
+	return swr, nil
+}
+
+// NextShadowEntry returns next shadow from the current position within this cache.
+// It initializes the shadow query on first run and return ErrNoEnt once done.
+func (c *Cache) NextShadowEntry() (swr ShadowRecord, err error) {
+	defer func() {
+		if err != nil && !errors.Is(err, ErrNoEnt) {
+			err = fmt.Errorf("failed to read shadow entry in db: %v", err)
+		}
+	}()
+	pam.LogDebug(context.Background(), "request next shadow entry in db")
+
+	if c.cursorShadow == nil {
+		query := `
+		SELECT p.login, s.password, s.last_pwd_change, s.min_pwd_age, s.max_pwd_age, s.pwd_warn_period, s.pwd_inactivity, s.expiration_date
+		FROM passwd p, shadow.shadow s
+		WHERE p.uid = s.uid
+		`
+
+		c.cursorShadow, err = c.db.Query(query)
+		if err != nil {
+			return swr, err
+		}
+	}
+	if !c.cursorShadow.Next() {
+		if err := c.cursorShadow.Close(); err != nil {
+			return swr, err
+		}
+		c.cursorShadow = nil
+		return swr, ErrNoEnt
+	}
+
+	return newShadowFromScanner(c.cursorShadow)
+}
+
 type rowScanner interface {
 	Scan(...any) error
 }
@@ -317,6 +463,34 @@ func newUserFromScanner(r rowScanner) (u UserRecord, err error) {
 
 	u.LastOnlineAuth = time.Unix(lastlogin, 0)
 	return u, nil
+}
+
+// newGroupFromScanner abstracts the row request deserialization to GroupRecord.
+// It returns ErrNoEnt in case of no element found.
+func newGroupFromScanner(r rowScanner) (g GroupRecord, err error) {
+	var members string
+	if err := r.Scan(&g.Name, &g.Password, &g.GID, &members); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = ErrNoEnt
+		}
+		return GroupRecord{}, err
+	}
+	g.Members = strings.Split(members, ",")
+
+	return g, nil
+}
+
+// newShadowFromScanner abstracts the row request deserialization to ShadowRecord.
+// It returns ErrNoEnt in case of no element found.
+func newShadowFromScanner(r rowScanner) (swr ShadowRecord, err error) {
+	if err := r.Scan(&swr.Name, &swr.Password, &swr.LastPwdChange, &swr.MinPwdAge, &swr.MaxPwdAge, &swr.PwdWarnPeriod, &swr.PwdInactivity, &swr.ExpirationDate); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = ErrNoEnt
+		}
+		return ShadowRecord{}, err
+	}
+
+	return swr, nil
 }
 
 // updateOnlineAuthAndPassword updates password and last_online_auth.
