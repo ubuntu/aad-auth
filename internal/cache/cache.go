@@ -109,20 +109,11 @@ func New(ctx context.Context, opts ...option) (c *Cache, err error) {
 	pam.LogDebug(ctx, "Cache initialization")
 	var hasShadow bool
 
-	shadowGrp, err := user.LookupGroup("shadow")
-	if err != nil {
-		return nil, fmt.Errorf("failed to find group id for group shadow: %v", err)
-	}
-	shadowGid, err := strconv.Atoi(shadowGrp.Gid)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read shadow group id: %v", err)
-	}
-
 	o := options{
 		cacheDir:  defaultCachePath,
 		rootUid:   0,
 		rootGid:   0,
-		shadowGid: shadowGid,
+		shadowGid: -1,
 
 		revalidationPeriod: 90,
 	}
@@ -130,6 +121,18 @@ func New(ctx context.Context, opts ...option) (c *Cache, err error) {
 	for _, opt := range opts {
 		if err := opt(&o); err != nil {
 			return nil, err
+		}
+	}
+
+	// Only apply shadow lookup here, as in tests, we won’t have a file database available.
+	if o.shadowGid < 0 {
+		shadowGrp, err := user.LookupGroup("shadow")
+		if err != nil {
+			return nil, fmt.Errorf("failed to find group id for group shadow: %v", err)
+		}
+		o.shadowGid, err = strconv.Atoi(shadowGrp.Gid)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read shadow group id: %v", err)
 		}
 	}
 
