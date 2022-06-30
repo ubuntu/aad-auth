@@ -302,10 +302,14 @@ type rowScanner interface {
 	Scan(...any) error
 }
 
-// newUserFromScanner abstracts the row request deserialization to u.
-func newUserFromScanner(s rowScanner) (u UserRecord, err error) {
+// newUserFromScanner abstracts the row request deserialization to UserRecord.
+// It returns ErrNoEnt in case of no element found.
+func newUserFromScanner(r rowScanner) (u UserRecord, err error) {
 	var lastlogin int64
 	if err := s.Scan(&u.Name, &u.ShadowPasswd, &u.UID, &u.GID, &u.Gecos, &u.Home, &u.Shell, &lastlogin); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = ErrNoEnt
+		}
 		return UserRecord{}, err
 	}
 
@@ -384,7 +388,7 @@ func uidOrGidExists(db *sql.DB, id uint32, username string) (bool, error) {
 	row := db.QueryRow("SELECT login from passwd where uid = ? UNION SELECT name from groups where gid = ?", id, id)
 
 	u, err := newUserFromScanner(row)
-	if errors.Is(err, sql.ErrNoRows) {
+	if errors.Is(err, ErrNoEnt) {
 		return false, nil
 	} else if err != nil {
 		return true, fmt.Errorf("failed to verify that %d is unique: %v", id, err)

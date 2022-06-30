@@ -60,7 +60,7 @@ func (p Passwd) ToCpasswd(pwd CPasswd, buf *CChar, buflen CSizeT, result *CPassw
 	b.WriteString(p.shell)
 	b.WriteByte(0)
 
-	// uid and git are not pointers, but just the uint itself.
+	// uid and gid are not pointers, but just the uint itself.
 	pwd.pw_uid = C.uint(p.uid)
 	pwd.pw_gid = C.uint(p.gid)
 

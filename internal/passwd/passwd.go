@@ -43,7 +43,7 @@ func NewByName(name string) (p Passwd, err error) {
 
 	u, err := c.GetUserByName(ctx, name)
 	if err != nil {
-		return Passwd{}, nss.ErrNotFound
+		return Passwd{}, nss.ErrNoEntriesToNotFound(err)
 	}
 
 	return Passwd{
@@ -77,7 +77,7 @@ func NewByUID(uid uint) (p Passwd, err error) {
 
 	u, err := c.GetUserByUid(ctx, uid)
 	if err != nil {
-		return Passwd{}, nss.ErrNotFound
+		return Passwd{}, nss.ErrNoEntriesToNotFound(err)
 	}
 
 	return Passwd{
@@ -93,7 +93,7 @@ func NewByUID(uid uint) (p Passwd, err error) {
 
 var cacheIterateEntries *cache.Cache
 
-// NextEntry returns next available entrey in Passwd. It will returns ENOENT from cache when the iteration is done.
+// NextEntry returns next available entry in Passwd. It will returns ENOENT from cache when the iteration is done.
 // It automatically opens and close the cache on first/last iteration.
 func NextEntry() (p Passwd, err error) {
 	defer func() {

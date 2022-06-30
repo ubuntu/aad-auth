@@ -6,7 +6,11 @@ package nss
 typedef enum nss_status nss_status;
 */
 import "C"
-import "errors"
+import (
+	"errors"
+
+	"github.com/ubuntu/aad-auth/internal/cache"
+)
 
 var (
 	// ErrTryAgain match NSS status TRYAGAIN
@@ -16,6 +20,14 @@ var (
 	// ErrTryAgain match NSS status NOTFOUND
 	ErrNotFound = errors.New("not found")
 )
+
+// ErrNoEntriesToNotFound converts cache error for no entries to a not found one.
+func ErrNoEntriesToNotFound(err error) error {
+	if errors.Is(err, cache.ErrNoEnt) {
+		return ErrNotFound
+	}
+	return err
+}
 
 // ErrToCStatus converts our Go errors to corresponding nss status returned code.
 // If err is nil, it returns a success.
