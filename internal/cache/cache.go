@@ -44,7 +44,7 @@ type options struct {
 
 	revalidationPeriod int
 }
-type option func(*options) error
+type Option func(*options) error
 
 // WithCacheDir specifies a personalized cache directory.
 func WithCacheDir(p string) func(o *options) error {
@@ -99,7 +99,7 @@ func WithRevalidationPeriod(days int) func(o *options) error {
 // If the cache exists, root or members of shadow will open passwd/group and shadow database. Other users will only open
 // passwd/group.
 // Every open will check for cache ownership and validity permission. If it has been tempered, NewCache will fail.
-func New(ctx context.Context, opts ...option) (c *Cache, err error) {
+func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("can't open/create cache: %v", err)

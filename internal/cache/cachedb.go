@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS uid_gid (
 	gid INT NOT NULL,
 	PRIMARY KEY("uid", "gid")
 );
-CREATE UNIQUE INDEX "idx_ug_gid" ON "uid_gid" ("gid");`
+`
 
 	sqlCreateShadowTables = `CREATE TABLE IF NOT EXISTS shadow (
 	uid				INTEGER NOT NULL UNIQUE,
