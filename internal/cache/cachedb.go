@@ -178,14 +178,11 @@ WHERE login = ?
 		query = fmt.Sprintf(queryFmt, ",s.password", ",shadow.shadow s", "AND   p.uid = s.uid")
 	}
 
-	var lastlogin int64
 	row := c.db.QueryRow(query, username)
 	u, err := newUserFromScanner(row)
 	if err != nil {
 		return u, fmt.Errorf("error when getting user %q from cache: %w", username, err)
 	}
-
-	u.LastOnlineAuth = time.Unix(lastlogin, 0)
 
 	return u, nil
 }

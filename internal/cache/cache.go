@@ -230,6 +230,7 @@ func (c *Cache) CanAuthenticate(ctx context.Context, username, password string) 
 	}
 
 	// ensure that we checked credential online recently.
+	pam.LogDebug(ctx, "Last online login was: %s. Current time: %s. Revalidation needed every %d days", user.LastOnlineAuth, time.Now(), c.revalidationPeriod)
 	if time.Now().After(user.LastOnlineAuth.Add(time.Duration(uint(c.revalidationPeriod) * 24 * uint(time.Hour)))) {
 		return errors.New("cache expired")
 	}
@@ -250,7 +251,7 @@ func (c *Cache) Update(ctx context.Context, username, password string) (err erro
 	}()
 
 	user, err := c.GetUserByName(ctx, username)
-	if errors.Is(err, sql.ErrNoRows) {
+	if errors.Is(err, ErrNoEnt) {
 		// Try creating the user
 		id, err := c.generateUidForUser(ctx, username)
 		if err != nil {
