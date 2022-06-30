@@ -48,7 +48,7 @@ func NewByName(name string) (p Passwd, err error) {
 
 	return Passwd{
 		name:   u.Name,
-		passwd: "x",
+		passwd: u.Passwd,
 		uid:    uint(u.UID),
 		gid:    uint(u.GID),
 		gecos:  u.Gecos,
@@ -82,7 +82,7 @@ func NewByUID(uid uint) (p Passwd, err error) {
 
 	return Passwd{
 		name:   u.Name,
-		passwd: "x",
+		passwd: u.Passwd,
 		uid:    uint(u.UID),
 		gid:    uint(u.GID),
 		gecos:  u.Gecos,
@@ -121,7 +121,7 @@ func NextEntry() (p Passwd, err error) {
 
 	return Passwd{
 		name:   u.Name,
-		passwd: "x",
+		passwd: u.Passwd,
 		uid:    uint(u.UID),
 		gid:    uint(u.GID),
 		gecos:  u.Gecos,

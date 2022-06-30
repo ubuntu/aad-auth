@@ -159,27 +159,28 @@ func (c *Cache) GetUserByName(ctx context.Context, username string) (user UserRe
 	// This query is dynamically extended whether we have can query the shadow database or not
 	queryFmt := `
 SELECT login,
-	%s,
+	p.password,
 	p.uid,
 	gid,
 	gecos,
 	home,
 	shell,
 	last_online_auth
+	%s
 FROM   passwd p
 %s
 WHERE login = ?
 %s`
 
-	query := fmt.Sprintf(queryFmt, "'' as password", "", "")
+	query := fmt.Sprintf(queryFmt, ",''", "", "")
 	if c.hasShadow {
-		query = fmt.Sprintf(queryFmt, "s.password", ", shadow.shadow s", "AND   p.uid = s.uid")
+		query = fmt.Sprintf(queryFmt, ",s.password", ",shadow.shadow s", "AND   p.uid = s.uid")
 	}
 
-	var u UserRecord
 	var lastlogin int64
 	row := c.db.QueryRow(query, username)
-	if err := row.Scan(&u.Name, &u.ShadowPasswd, &u.UID, &u.GID, &u.Gecos, &u.Home, &u.Shell, &lastlogin); err != nil {
+	u, err := newUserFromScanner(row)
+	if err != nil {
 		return u, fmt.Errorf("error when getting user %q from cache: %w", username, err)
 	}
 
@@ -192,31 +193,32 @@ WHERE login = ?
 // It returns an error if we couldn’t fetch the user (does not exist or not connected).
 // shadowPasswd is populated only if the shadow database is accessible.
 func (c *Cache) GetUserByUid(ctx context.Context, uid uint) (user UserRecord, err error) {
-	pam.LogDebug(ctx, "getting user information from cache for uid %d", uid)
+	pam.LogDebug(ctx, "getting user information from cache for uid %d", uid) // TODO: remove PAM dep
 
 	// This query is dynamically extended whether we have can query the shadow database or not
 	queryFmt := `
 SELECT login,
-	%s,
+	p.password,
 	p.uid,
 	gid,
 	gecos,
 	home,
 	shell,
 	last_online_auth
+	%s
 FROM   passwd p
 %s
 WHERE p.uid = ?
 %s`
 
-	query := fmt.Sprintf(queryFmt, "'' as password", "", "")
+	query := fmt.Sprintf(queryFmt, ",''", "", "")
 	if c.hasShadow {
-		query = fmt.Sprintf(queryFmt, "s.password", ", shadow.shadow s", "AND   p.uid = s.uid")
+		query = fmt.Sprintf(queryFmt, ",s.password", ",shadow.shadow s", "AND   p.uid = s.uid")
 	}
 
-	var u UserRecord
 	row := c.db.QueryRow(query, uid)
-	if u, err := newUserFromScanner(row); err != nil {
+	u, err := newUserFromScanner(row)
+	if err != nil {
 		return u, fmt.Errorf("error when getting uid %d from cache: %w", uid, err)
 	}
 
@@ -279,7 +281,7 @@ func (c *Cache) NextPasswdEntry() (u UserRecord, err error) {
 
 	if c.cursorPasswd == nil {
 		query := `
-		SELECT login, 'unused', uid, gid, gecos, home, shell, last_online_auth
+		SELECT login, password, uid, gid, gecos, home, shell, last_online_auth, ''
 		FROM passwd
 		ORDER BY login`
 		c.cursorPasswd, err = c.db.Query(query)
@@ -306,7 +308,7 @@ type rowScanner interface {
 // It returns ErrNoEnt in case of no element found.
 func newUserFromScanner(r rowScanner) (u UserRecord, err error) {
 	var lastlogin int64
-	if err := s.Scan(&u.Name, &u.ShadowPasswd, &u.UID, &u.GID, &u.Gecos, &u.Home, &u.Shell, &lastlogin); err != nil {
+	if err := r.Scan(&u.Name, &u.Passwd, &u.UID, &u.GID, &u.Gecos, &u.Home, &u.Shell, &lastlogin, &u.ShadowPasswd); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = ErrNoEnt
 		}

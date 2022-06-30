@@ -163,8 +163,10 @@ func (c *Cache) Close() error {
 	return c.db.Close()
 }
 
+// UserRecord returns a user record from the cache
 type UserRecord struct {
 	Name           string
+	Passwd         string
 	UID            int
 	GID            int
 	Gecos          string
