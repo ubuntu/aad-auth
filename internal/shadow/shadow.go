@@ -13,12 +13,12 @@ import (
 type Shadow struct {
 	name   string /* username */
 	passwd string /* user password */
-	lstchg uint   /* Date of last change */
-	min    uint   /* Minimum number of days between changes. */
-	max    uint   /* Maximum number of days between changes. */
-	warn   uint   /* Number of days to warn user to change the password.  */
-	inact  uint   /* Number of days the account may be inactive.  */
-	expire uint   /* Number of days since 1970-01-01 until account expires.  */
+	lstchg int    /* Date of last change */
+	min    int    /* Minimum number of days between changes. */
+	max    int    /* Maximum number of days between changes. */
+	warn   int    /* Number of days to warn user to change the password.  */
+	inact  int    /* Number of days the account may be inactive.  */
+	expire int    /* Number of days since 1970-01-01 until account expires.  */
 }
 
 var testopts = []cache.Option{
@@ -29,7 +29,7 @@ var testopts = []cache.Option{
 func NewByName(name string) (s Shadow, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("failed to get a shadow entry from name %q: %v", name, err)
+			err = fmt.Errorf("failed to get a shadow entry from name %q: %w", name, err)
 		}
 	}()
 
@@ -38,13 +38,13 @@ func NewByName(name string) (s Shadow, err error) {
 
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
-		return Shadow{}, nss.ErrUnavailable
+		return Shadow{}, nss.ErrUnavailableENoEnt
 	}
 	defer c.Close()
 
 	spw, err := c.GetShadowByName(ctx, name)
 	if err != nil {
-		return Shadow{}, nss.ErrNoEntriesToNotFound(err)
+		return Shadow{}, nss.ConvertErr(err)
 	}
 
 	return Shadow{
@@ -66,7 +66,7 @@ var cacheIterateEntries *cache.Cache
 func NextEntry() (sp Shadow, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("failed to get a shadow entry: %v", err)
+			err = fmt.Errorf("failed to get a shadow entry: %w", err)
 		}
 	}()
 	pam.LogDebug(context.Background(), "get next shadow entry")
@@ -74,7 +74,7 @@ func NextEntry() (sp Shadow, err error) {
 	if cacheIterateEntries == nil {
 		cacheIterateEntries, err = cache.New(context.Background(), testopts...)
 		if err != nil {
-			return Shadow{}, err
+			return Shadow{}, nss.ErrUnavailableENoEnt
 		}
 	}
 
@@ -82,9 +82,9 @@ func NextEntry() (sp Shadow, err error) {
 	if errors.Is(err, cache.ErrNoEnt) {
 		_ = cacheIterateEntries.Close()
 		cacheIterateEntries = nil
-		return Shadow{}, err
-	} else if err != nil {
-		return Shadow{}, err
+	}
+	if err != nil {
+		return Shadow{}, nss.ConvertErr(err)
 	}
 
 	return Shadow{

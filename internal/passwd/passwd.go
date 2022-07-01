@@ -28,7 +28,7 @@ var testopts = []cache.Option{
 func NewByName(name string) (p Passwd, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("failed to get passwd entry from name %q: %v", name, err)
+			err = fmt.Errorf("failed to get passwd entry from name %q: %w", name, err)
 		}
 	}()
 
@@ -37,13 +37,14 @@ func NewByName(name string) (p Passwd, err error) {
 
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
-		return Passwd{}, nss.ErrUnavailable
+		// TODO: wrap all open cache errors OR LOG HERE + transform?
+		return Passwd{}, nss.ErrUnavailableENoEnt
 	}
 	defer c.Close()
 
 	u, err := c.GetUserByName(ctx, name)
 	if err != nil {
-		return Passwd{}, nss.ErrNoEntriesToNotFound(err)
+		return Passwd{}, nss.ConvertErr(err)
 	}
 
 	return Passwd{
@@ -61,7 +62,7 @@ func NewByName(name string) (p Passwd, err error) {
 func NewByUID(uid uint) (p Passwd, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("failed to get passwd entry from UID %d: %v", uid, err)
+			err = fmt.Errorf("failed to get passwd entry from UID %d: %w", uid, err)
 		}
 	}()
 
@@ -70,14 +71,13 @@ func NewByUID(uid uint) (p Passwd, err error) {
 
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
-
-		return Passwd{}, nss.ErrUnavailable
+		return Passwd{}, nss.ErrUnavailableENoEnt
 	}
 	defer c.Close()
 
 	u, err := c.GetUserByUid(ctx, uid)
 	if err != nil {
-		return Passwd{}, nss.ErrNoEntriesToNotFound(err)
+		return Passwd{}, nss.ConvertErr(err)
 	}
 
 	return Passwd{
@@ -98,7 +98,7 @@ var cacheIterateEntries *cache.Cache
 func NextEntry() (p Passwd, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("failed to get passwd entry: %v", err)
+			err = fmt.Errorf("failed to get passwd entry: %w", err)
 		}
 	}()
 	pam.LogDebug(context.Background(), "get next passwd entry")
@@ -106,7 +106,7 @@ func NextEntry() (p Passwd, err error) {
 	if cacheIterateEntries == nil {
 		cacheIterateEntries, err = cache.New(context.Background(), testopts...)
 		if err != nil {
-			return Passwd{}, err
+			return Passwd{}, nss.ErrUnavailableENoEnt
 		}
 	}
 
@@ -114,9 +114,9 @@ func NextEntry() (p Passwd, err error) {
 	if errors.Is(err, cache.ErrNoEnt) {
 		_ = cacheIterateEntries.Close()
 		cacheIterateEntries = nil
-		return Passwd{}, err
+		return Passwd{}, nss.ConvertErr(err)
 	} else if err != nil {
-		return Passwd{}, err
+		return Passwd{}, nss.ConvertErr(err)
 	}
 
 	return Passwd{

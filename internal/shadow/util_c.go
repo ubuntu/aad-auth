@@ -23,14 +23,11 @@ type (
 
 // ToCshadow transforms the Go shadow struct to a C struct shadow, filling buffer, result and nss_status.
 // The function will check first for errors to transform them to corresponding nss status.
-func (s Shadow) ToCshadow(spwd CShadow, buf *CChar, buflen CSizeT, result *CShadow) error {
-	// result points to NULL in case of error
-	*result = (*C.struct_spwd)(nil)
-
+func (s Shadow) ToCshadow(spwd CShadow, buf *CChar, buflen CSizeT) error {
 	// Ensure the buffer is big enough for all fields of passwd, with an offset.
 	// 2 is the number of fields of type char * in the structure 'shadow'
 	if int(buflen) < len(s.name)+len(s.passwd)+2 {
-		return nss.ErrTryAgain
+		return nss.ErrTryAgainERange
 	}
 
 	// Transform the C guffer to a Go one.
@@ -56,9 +53,6 @@ func (s Shadow) ToCshadow(spwd CShadow, buf *CChar, buflen CSizeT, result *CShad
 	spwd.sp_inact = C.long(s.inact)
 	spwd.sp_expire = C.long(s.expire)
 	spwd.sp_flag = C.ulong(^uint(0))
-
-	// Point our result pointer struct to our C passwd.
-	*result = (*C.struct_spwd)(unsafe.Pointer(&spwd))
 
 	return nil
 }

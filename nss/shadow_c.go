@@ -14,26 +14,21 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/ubuntu/aad-auth/internal/cache"
 	"github.com/ubuntu/aad-auth/internal/nss"
 	"github.com/ubuntu/aad-auth/internal/shadow"
 )
 
 //export _nss_aad_getspnam_r
-func _nss_aad_getspnam_r(name *C.char, spwd *C.struct_spwd, buf *C.char, buflen C.size_t, result **C.struct_spwd) C.nss_status {
+func _nss_aad_getspnam_r(name *C.char, spwd *C.struct_spwd, buf *C.char, buflen C.size_t, errnop *C.int) C.nss_status {
 	n := C.GoString(name)
 	sp, err := shadow.NewByName(n)
 	if err != nil {
 		fmt.Printf("ERROR: %v\n", err) // TODO: log
-		return (C.nss_status)(nss.ErrToCStatus(err))
+		return errToCStatus(err, errnop)
 	}
-	if err = sp.ToCshadow(
-		shadow.CShadow(unsafe.Pointer(spwd)),
-		(*shadow.CChar)(buf),
-		shadow.CSizeT(buflen),
-		(*shadow.CShadow)(unsafe.Pointer(result))); err != nil {
+	if err = sp.ToCshadow(shadow.CShadow(unsafe.Pointer(spwd)), (*shadow.CChar)(buf), shadow.CSizeT(buflen)); err != nil {
 		fmt.Printf("ERROR: %v\n", err) // TODO: log
-		return (C.nss_status)(nss.ErrToCStatus(err))
+		return errToCStatus(err, errnop)
 	}
 
 	return C.NSS_STATUS_SUCCESS
@@ -50,23 +45,19 @@ func _nss_aad_endspent() {
 }
 
 //export _nss_aad_getspent_r
-func _nss_aad_getspent_r(spwd *C.struct_spwd, buf *C.char, buflen C.size_t, result **C.struct_spwd) C.nss_status {
+func _nss_aad_getspent_r(spwd *C.struct_spwd, buf *C.char, buflen C.size_t, errnop *C.int) C.nss_status {
 	sp, err := shadow.NextEntry()
-	if errors.Is(err, cache.ErrNoEnt) {
+	if errors.Is(err, nss.ErrNotFoundENoEnt) {
 		return C.ENOENT
 	}
 	if err != nil {
 		fmt.Printf("ERROR: %v\n", err) // TODO: log
-		return (C.nss_status)(nss.ErrToCStatus(err))
+		return errToCStatus(err, errnop)
 	}
 
-	if err = sp.ToCshadow(
-		shadow.CShadow(unsafe.Pointer(spwd)),
-		(*shadow.CChar)(buf),
-		shadow.CSizeT(buflen),
-		(*shadow.CShadow)(unsafe.Pointer(result))); err != nil {
+	if err = sp.ToCshadow(shadow.CShadow(unsafe.Pointer(spwd)), (*shadow.CChar)(buf), shadow.CSizeT(buflen)); err != nil {
 		fmt.Printf("ERROR: %v\n", err) // TODO: log
-		return (C.nss_status)(nss.ErrToCStatus(err))
+		return errToCStatus(err, errnop)
 	}
 
 	return C.NSS_STATUS_SUCCESS

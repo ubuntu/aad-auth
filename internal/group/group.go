@@ -25,7 +25,7 @@ var testopts = []cache.Option{
 func NewByName(name string) (g Group, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("failed to get group entry from name %q: %v", name, err)
+			err = fmt.Errorf("failed to get group entry from name %q: %w", name, err)
 		}
 	}()
 
@@ -34,14 +34,14 @@ func NewByName(name string) (g Group, err error) {
 
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
-		return Group{}, nss.ErrUnavailable
+		return Group{}, nss.ErrUnavailableENoEnt
 	}
 	defer c.Close()
 
 	grp, err := c.GetGroupByName(ctx, name)
 	if err != nil {
 		// TODO: remove this wrapper and just print logs on error before converting to known format for the C lib.
-		return Group{}, nss.ErrNoEntriesToNotFound(err)
+		return Group{}, nss.ConvertErr(err)
 	}
 
 	return Group{
@@ -56,7 +56,7 @@ func NewByName(name string) (g Group, err error) {
 func NewByGID(gid uint) (g Group, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("failed to get group entry from GID %d: %v", gid, err)
+			err = fmt.Errorf("failed to get group entry from GID %d: %w", gid, err)
 		}
 	}()
 
@@ -66,13 +66,13 @@ func NewByGID(gid uint) (g Group, err error) {
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
 
-		return Group{}, nss.ErrUnavailable
+		return Group{}, nss.ErrUnavailableENoEnt
 	}
 	defer c.Close()
 
 	grp, err := c.GetGroupByGid(ctx, gid)
 	if err != nil {
-		return Group{}, nss.ErrNoEntriesToNotFound(err)
+		return Group{}, nss.ConvertErr(err)
 	}
 
 	return Group{
@@ -90,7 +90,7 @@ var cacheIterateEntries *cache.Cache
 func NextEntry() (g Group, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("failed to get group entry: %v", err)
+			err = fmt.Errorf("failed to get group entry: %w", err)
 		}
 	}()
 	pam.LogDebug(context.Background(), "get next group entry")
@@ -98,7 +98,7 @@ func NextEntry() (g Group, err error) {
 	if cacheIterateEntries == nil {
 		cacheIterateEntries, err = cache.New(context.Background(), testopts...)
 		if err != nil {
-			return Group{}, err
+			return Group{}, nss.ErrUnavailableENoEnt
 		}
 	}
 
@@ -106,9 +106,9 @@ func NextEntry() (g Group, err error) {
 	if errors.Is(err, cache.ErrNoEnt) {
 		_ = cacheIterateEntries.Close()
 		cacheIterateEntries = nil
-		return Group{}, err
+		return Group{}, nss.ConvertErr(err)
 	} else if err != nil {
-		return Group{}, err
+		return Group{}, nss.ConvertErr(err)
 	}
 
 	return Group{

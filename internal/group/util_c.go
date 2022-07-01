@@ -23,10 +23,7 @@ type (
 
 // ToCpasswd transforms the Go passwd struct to a C struct passwd, filling buffer, result and nss_status.
 // The function will check first for errors to transform them to corresponding nss status.
-func (g Group) ToCgroup(grp CGroup, buf *CChar, buflen CSizeT, result *CGroup) error {
-	// result points to NULL in case of error
-	*result = (*C.struct_group)(nil)
-
+func (g Group) ToCgroup(grp CGroup, buf *CChar, buflen CSizeT) error {
 	// Ensure the buffer is big enough for all fields of group, with an offset.
 	// Calculate the size of members array.
 	sizeOfPChar := unsafe.Sizeof(uintptr(0))
@@ -37,7 +34,7 @@ func (g Group) ToCgroup(grp CGroup, buf *CChar, buflen CSizeT, result *CGroup) e
 	}
 	// 2 is the number of fields of type char * in the structure 'group'
 	if int(buflen) < len(g.name)+len(g.passwd)+lenMembers+2 {
-		return nss.ErrTryAgain
+		return nss.ErrTryAgainERange
 	}
 
 	// Transform the C guffer to a Go one.
@@ -76,9 +73,6 @@ func (g Group) ToCgroup(grp CGroup, buf *CChar, buflen CSizeT, result *CGroup) e
 
 	// gid are not pointers, but just the uint itself.
 	grp.gr_gid = C.uint(g.gid)
-
-	// Point our result pointer struct to our C passwd.
-	*result = (*C.struct_group)(unsafe.Pointer(&grp))
 
 	return nil
 }

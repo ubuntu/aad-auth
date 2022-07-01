@@ -1,11 +1,5 @@
 package nss
 
-/*
-#include <nss.h>
-
-typedef enum nss_status nss_status;
-*/
-import "C"
 import (
 	"errors"
 
@@ -13,34 +7,28 @@ import (
 )
 
 var (
-	// ErrTryAgain match NSS status TRYAGAIN
-	ErrTryAgain = errors.New("try again")
-	// ErrTryAgain match NSS status UNAVAIL
-	ErrUnavailable = errors.New("unavailable")
-	// ErrTryAgain match NSS status NOTFOUND
-	ErrNotFound = errors.New("not found")
+	// ErrTryAgainEAgain matches NSS status TRYAGAIN. One of the functions used ran temporarily out of resources or a service is currently not available.
+	ErrTryAgainEAgain = errors.New("try again EAGAIN")
+	// ErrTryAgainERange matched NSS status ERANGE. The provided buffer is not large enough. The function should be called again with a larger buffer.
+	ErrTryAgainERange = errors.New("try again ERANGE")
+	// ErrUnavailableENoEnt matches NSS status UNAVAIL. A necessary input file cannot be found.
+	ErrUnavailableENoEnt = errors.New("unavailable ENOENT")
+	// ErrNotFoundENoEnt matches NSS status NOTFOUND. The requested entry is not available.
+	ErrNotFoundENoEnt = errors.New("not found ENOENT")
+	// ErrNotFoundSuccess matches NSS status NOTFOUND. There are no entries. Use this to avoid returning errors for inactive services which may be enabled at a later time. This is not the same as the service being temporarily unavailable.
+	ErrNotFoundSuccess = errors.New("not found SUCCESS")
 )
 
-// ErrNoEntriesToNotFound converts cache error for no entries to a not found one.
-func ErrNoEntriesToNotFound(err error) error {
+// ConvertErr converts errors to known types.
+func ConvertErr(err error) error {
+	if err == nil {
+		return nil
+	}
+
 	if errors.Is(err, cache.ErrNoEnt) {
-		return ErrNotFound
-	}
-	return err
-}
-
-// ErrToCStatus converts our Go errors to corresponding nss status returned code.
-// If err is nil, it returns a success.
-func ErrToCStatus(err error) C.nss_status {
-	if errors.Is(err, ErrTryAgain) {
-		return C.NSS_STATUS_TRYAGAIN
-	} else if errors.Is(err, ErrUnavailable) {
-		return C.NSS_STATUS_UNAVAIL
-	} else if errors.Is(err, ErrNotFound) {
-		return C.NSS_STATUS_NOTFOUND
-	} else if err != nil { // By default: system error
-		return C.NSS_STATUS_UNAVAIL
+		return ErrNotFoundENoEnt
 	}
 
-	return C.NSS_STATUS_SUCCESS
+	// TODO: what to do err? Wrapping/logging (would be better to keep it)
+	return ErrUnavailableENoEnt
 }

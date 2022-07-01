@@ -3,6 +3,7 @@ package passwd
 /*
 #include <nss.h>
 #include <pwd.h>
+#include <errno.h>
 */
 import "C"
 import (
@@ -23,14 +24,11 @@ type (
 
 // ToCpasswd transforms the Go passwd struct to a C struct passwd, filling buffer, result and nss_status.
 // The function will check first for errors to transform them to corresponding nss status.
-func (p Passwd) ToCpasswd(pwd CPasswd, buf *CChar, buflen CSizeT, result *CPasswd) error {
-	// result points to NULL in case of error
-	*result = (*C.struct_passwd)(nil)
-
+func (p Passwd) ToCpasswd(pwd CPasswd, buf *CChar, buflen CSizeT) error {
 	// Ensure the buffer is big enough for all fields of passwd, with an offset.
 	// 5 is the number of fields of type char * in the structure 'passwd'
 	if int(buflen) < len(p.name)+len(p.passwd)+len(p.gecos)+len(p.dir)+len(p.shell)+5 {
-		return nss.ErrTryAgain
+		return nss.ErrTryAgainERange
 	}
 
 	// Transform the C guffer to a Go one.
@@ -63,9 +61,6 @@ func (p Passwd) ToCpasswd(pwd CPasswd, buf *CChar, buflen CSizeT, result *CPassw
 	// uid and gid are not pointers, but just the uint itself.
 	pwd.pw_uid = C.uint(p.uid)
 	pwd.pw_gid = C.uint(p.gid)
-
-	// Point our result pointer struct to our C passwd.
-	*result = (*C.struct_passwd)(unsafe.Pointer(&pwd))
 
 	return nil
 }
