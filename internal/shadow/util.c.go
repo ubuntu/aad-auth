@@ -48,12 +48,14 @@ func (s Shadow) ToCshadow(spwd CShadow, buf *CChar, buflen CSizeT, result *CShad
 	b.WriteString(s.passwd)
 	b.WriteByte(0)
 
-	// those are not pointers, but just the uint itself.
+	// those are not pointers, but just the int itself.
+	spwd.sp_lstchg = C.long(s.lstchg)
 	spwd.sp_min = C.long(s.min)
 	spwd.sp_max = C.long(s.max)
 	spwd.sp_warn = C.long(s.warn)
 	spwd.sp_inact = C.long(s.inact)
 	spwd.sp_expire = C.long(s.expire)
+	spwd.sp_flag = C.ulong(^uint(0))
 
 	// Point our result pointer struct to our C passwd.
 	*result = (*C.struct_spwd)(unsafe.Pointer(&spwd))

@@ -50,12 +50,12 @@ func NewByName(name string) (s Shadow, err error) {
 	return Shadow{
 		name:   spw.Name,
 		passwd: spw.Password,
-		lstchg: uint(spw.LastPwdChange),
-		min:    uint(spw.MinPwdAge),
-		max:    uint(spw.MinPwdAge),
-		warn:   uint(spw.MaxPwdAge),
-		inact:  uint(spw.PwdInactivity),
-		expire: uint(spw.ExpirationDate),
+		lstchg: spw.LastPwdChange,
+		min:    spw.MinPwdAge,
+		max:    spw.MinPwdAge,
+		warn:   spw.MaxPwdAge,
+		inact:  spw.PwdInactivity,
+		expire: spw.ExpirationDate,
 	}, nil
 }
 
@@ -90,11 +90,11 @@ func NextEntry() (sp Shadow, err error) {
 	return Shadow{
 		name:   spw.Name,
 		passwd: spw.Password,
-		lstchg: uint(spw.LastPwdChange),
-		min:    uint(spw.MinPwdAge),
-		max:    uint(spw.MaxPwdAge),
-		warn:   uint(spw.PwdWarnPeriod),
-		inact:  uint(spw.PwdInactivity),
-		expire: uint(spw.ExpirationDate),
+		lstchg: spw.LastPwdChange,
+		min:    spw.MinPwdAge,
+		max:    spw.MaxPwdAge,
+		warn:   spw.PwdWarnPeriod,
+		inact:  spw.PwdInactivity,
+		expire: spw.ExpirationDate,
 	}, nil
 }
