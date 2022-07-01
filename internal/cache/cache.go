@@ -174,41 +174,6 @@ func (c *Cache) Close() error {
 	return c.db.Close()
 }
 
-// UserRecord returns a user record from the cache
-type UserRecord struct {
-	Name           string
-	Passwd         string
-	UID            int
-	GID            int
-	Gecos          string
-	Home           string
-	Shell          string
-	LastOnlineAuth time.Time
-
-	// if shadow is opened
-	ShadowPasswd string
-}
-
-// GroupRecord  returns a group record from the cache
-type GroupRecord struct {
-	Name     string
-	GID      int
-	Password string
-	Members  []string
-}
-
-// ShadowRecord returns a shadow record from the cache
-type ShadowRecord struct {
-	Name           string
-	Password       string
-	LastPwdChange  int
-	MaxPwdAge      int
-	PwdWarnPeriod  int
-	PwdInactivity  int
-	MinPwdAge      int
-	ExpirationDate int
-}
-
 // CanAuthenticate tries to authenticates user from cache and check it hasn't expired.
 // It returns an error if it can’t authenticate
 func (c *Cache) CanAuthenticate(ctx context.Context, username, password string) (err error) {
