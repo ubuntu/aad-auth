@@ -21,19 +21,19 @@ type Passwd struct {
 }
 
 var testopts = []cache.Option{
-	cache.WithCacheDir("../cache"), cache.WithRootUid(1000), cache.WithRootGid(1000), cache.WithShadowGid(1000),
+	//cache.WithCacheDir("../cache"), cache.WithRootUid(1000), cache.WithRootGid(1000), cache.WithShadowGid(1000),
 }
 
 // NewByName returns a passwd entry from a name.
 func NewByName(name string) (p Passwd, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("failed to get entry from name %q: %v", name, err)
+			err = fmt.Errorf("failed to get passwd entry from name %q: %v", name, err)
 		}
 	}()
 
 	ctx := context.Background()
-	pam.LogDebug(context.Background(), "Requesting an entry matching name %q", name)
+	pam.LogDebug(context.Background(), "Requesting a passwd entry matching name %q", name)
 
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
@@ -61,12 +61,12 @@ func NewByName(name string) (p Passwd, err error) {
 func NewByUID(uid uint) (p Passwd, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("failed to get entry from UID %d: %v", uid, err)
+			err = fmt.Errorf("failed to get passwd entry from UID %d: %v", uid, err)
 		}
 	}()
 
 	ctx := context.Background()
-	pam.LogDebug(context.Background(), "Requesting an entry matching UID %d", uid)
+	pam.LogDebug(context.Background(), "Requesting a passwd entry matching UID %d", uid)
 
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {

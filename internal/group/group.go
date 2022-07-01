@@ -18,19 +18,19 @@ type Group struct {
 }
 
 var testopts = []cache.Option{
-	cache.WithCacheDir("../cache"), cache.WithRootUid(1000), cache.WithRootGid(1000), cache.WithShadowGid(1000),
+	//cache.WithCacheDir("../cache"), cache.WithRootUid(1000), cache.WithRootGid(1000), cache.WithShadowGid(1000),
 }
 
 // NewByName returns a passwd entry from a name.
 func NewByName(name string) (g Group, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("failed to get entry from name %q: %v", name, err)
+			err = fmt.Errorf("failed to get group entry from name %q: %v", name, err)
 		}
 	}()
 
 	ctx := context.Background()
-	pam.LogDebug(context.Background(), "Requesting an entry matching name %q", name)
+	pam.LogDebug(context.Background(), "Requesting a group entry matching name %q", name)
 
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
@@ -38,17 +38,17 @@ func NewByName(name string) (g Group, err error) {
 	}
 	defer c.Close()
 
-	group, err := c.GetGroupByName(ctx, name)
+	grp, err := c.GetGroupByName(ctx, name)
 	if err != nil {
 		// TODO: remove this wrapper and just print logs on error before converting to known format for the C lib.
 		return Group{}, nss.ErrNoEntriesToNotFound(err)
 	}
 
 	return Group{
-		name:    group.Name,
-		passwd:  group.Password,
-		gid:     uint(group.GID),
-		members: group.Members,
+		name:    grp.Name,
+		passwd:  grp.Password,
+		gid:     uint(grp.GID),
+		members: grp.Members,
 	}, nil
 }
 
@@ -56,12 +56,12 @@ func NewByName(name string) (g Group, err error) {
 func NewByGID(gid uint) (g Group, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("failed to get entry from GID %d: %v", gid, err)
+			err = fmt.Errorf("failed to get group entry from GID %d: %v", gid, err)
 		}
 	}()
 
 	ctx := context.Background()
-	pam.LogDebug(context.Background(), "Requesting an entry matching GID %d", gid)
+	pam.LogDebug(context.Background(), "Requesting an group entry matching GID %d", gid)
 
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
@@ -70,16 +70,16 @@ func NewByGID(gid uint) (g Group, err error) {
 	}
 	defer c.Close()
 
-	group, err := c.GetGroupByGid(ctx, gid)
+	grp, err := c.GetGroupByGid(ctx, gid)
 	if err != nil {
 		return Group{}, nss.ErrNoEntriesToNotFound(err)
 	}
 
 	return Group{
-		name:    group.Name,
-		passwd:  group.Password,
-		gid:     uint(group.GID),
-		members: group.Members,
+		name:    grp.Name,
+		passwd:  grp.Password,
+		gid:     uint(grp.GID),
+		members: grp.Members,
 	}, nil
 }
 
@@ -113,7 +113,7 @@ func NextEntry() (g Group, err error) {
 
 	return Group{
 		name:    grp.Name,
-		passwd:  "x",
+		passwd:  grp.Password,
 		gid:     uint(grp.GID),
 		members: grp.Members,
 	}, nil

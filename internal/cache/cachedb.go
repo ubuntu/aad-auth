@@ -50,14 +50,14 @@ CREATE TABLE IF NOT EXISTS uid_gid (
 `
 
 	sqlCreateShadowTables = `CREATE TABLE IF NOT EXISTS shadow (
-	uid				INTEGER NOT NULL UNIQUE,
-	password		TEXT	NOT NULL,
-	last_pwd_change	INTEGER DEFAULT 0,
-	min_pwd_age		INTEGER DEFAULT 0,
-	max_pwd_age		INTEGER DEFAULT 0,
-	pwd_warn_period	INTEGER DEFAULT 0,
-	pwd_inactivity	INTEGER DEFAULT 0,
-	expiration_date	INTEGER DEFAULT 0,
+	uid             INTEGER NOT NULL UNIQUE,
+	password        TEXT    NOT NULL,
+	last_pwd_change	INTEGER DEFAULT NULL,  -- NULL disables functionality, 0 change password on next login
+	min_pwd_age     INTEGER DEFAULT 0,     -- 0 no minimum age
+	max_pwd_age     INTEGER DEFAULT NULL,  -- NULL disabled
+	pwd_warn_period	INTEGER DEFAULT NULL,
+	pwd_inactivity	INTEGER DEFAULT NULL,
+	expiration_date	INTEGER DEFAULT NULL,
 	PRIMARY KEY("uid")
 );`
 )
@@ -69,7 +69,7 @@ type rowScanner interface {
 func initDB(ctx context.Context, cacheDir string, rootUid, rootGid, shadowGid int) (db *sql.DB, hasShadow bool, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("can’t initiate database: %v", err)
+			err = fmt.Errorf("can't initiate database: %v", err)
 		}
 	}()
 	pam.LogDebug(ctx, "Opening cache in %s", cacheDir)

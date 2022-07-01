@@ -22,19 +22,19 @@ type Shadow struct {
 }
 
 var testopts = []cache.Option{
-	cache.WithCacheDir("../cache"), cache.WithRootUid(1000), cache.WithRootGid(1000), cache.WithShadowGid(1000),
+	//cache.WithCacheDir("../cache"), cache.WithRootUid(1000), cache.WithRootGid(1000), cache.WithShadowGid(1000),
 }
 
 // NewByName returns a passwd entry from a name.
 func NewByName(name string) (s Shadow, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("failed to get entry from name %q: %v", name, err)
+			err = fmt.Errorf("failed to get a shadow entry from name %q: %v", name, err)
 		}
 	}()
 
 	ctx := context.Background()
-	pam.LogDebug(context.Background(), "Requesting an entry matching name %q", name)
+	pam.LogDebug(context.Background(), "Requesting a shadow entry matching name %q", name)
 
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
@@ -66,7 +66,7 @@ var cacheIterateEntries *cache.Cache
 func NextEntry() (sp Shadow, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("failed to get shadow entry: %v", err)
+			err = fmt.Errorf("failed to get a shadow entry: %v", err)
 		}
 	}()
 	pam.LogDebug(context.Background(), "get next shadow entry")
@@ -92,8 +92,8 @@ func NextEntry() (sp Shadow, err error) {
 		passwd: spw.Password,
 		lstchg: uint(spw.LastPwdChange),
 		min:    uint(spw.MinPwdAge),
-		max:    uint(spw.MinPwdAge),
-		warn:   uint(spw.MaxPwdAge),
+		max:    uint(spw.MaxPwdAge),
+		warn:   uint(spw.PwdWarnPeriod),
 		inact:  uint(spw.PwdInactivity),
 		expire: uint(spw.ExpirationDate),
 	}, nil
