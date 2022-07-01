@@ -145,8 +145,7 @@ func newUserFromScanner(r rowScanner) (u UserRecord, err error) {
 
 //  uidOrGidExists check if uid in passwd or gid in groups does exists.
 func uidOrGidExists(db *sql.DB, id uint32, username string) (bool, error) {
-	// TODO: check with the amount of return parameters vs newUserFromScanner
-	row := db.QueryRow("SELECT login from passwd where uid = ? UNION SELECT name from groups where gid = ?", id, id)
+	row := db.QueryRow("SELECT login,'',-1, -1,-1,-1,-1,-1,-1 from passwd where uid = ? UNION SELECT name,'',-1, -1,-1,-1,-1,-1,-1 from groups where gid = ?", id, id)
 
 	u, err := newUserFromScanner(row)
 	if errors.Is(err, ErrNoEnt) {
