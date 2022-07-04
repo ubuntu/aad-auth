@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/ubuntu/aad-auth/internal/group"
+	"github.com/ubuntu/aad-auth/internal/nss/group"
 )
 
 //export _nss_aad_getgrnam_r

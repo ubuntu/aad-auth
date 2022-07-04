@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/ubuntu/aad-auth/internal/shadow"
+	"github.com/ubuntu/aad-auth/internal/nss/shadow"
 )
 
 //export _nss_aad_getspnam_r

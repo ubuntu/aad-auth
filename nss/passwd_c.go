@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/ubuntu/aad-auth/internal/passwd"
+	"github.com/ubuntu/aad-auth/internal/nss/passwd"
 )
 
 //export _nss_aad_getpwnam_r
