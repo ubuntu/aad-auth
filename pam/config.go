@@ -10,7 +10,7 @@ import (
 )
 
 // loadConfig returns the loaded configuration from p.
-func loadConfig(ctx context.Context, p string) (tenantID string, appID string, cacheRevalidation int, err error) {
+func loadConfig(ctx context.Context, p string) (tenantID string, appID string, offlineCredentialsExpiration int, err error) {
 	logger.Debug(ctx, "Loading configuration from %s", p)
 
 	cfg, err := ini.Load(p)
@@ -20,14 +20,14 @@ func loadConfig(ctx context.Context, p string) (tenantID string, appID string, c
 
 	tenantID = cfg.Section("").Key("tenant_id").String()
 	appID = cfg.Section("").Key("app_id").String()
-	cacheRevalidation = -1
-	cacheRevalidationCfg := cfg.Section("").Key("cache_revalidation").String()
+	offlineCredentialsExpiration = -1
+	cacheRevalidationCfg := cfg.Section("").Key("offline_credentials_expiration").String()
 	if cacheRevalidationCfg != "" {
 		v, err := strconv.Atoi(cacheRevalidationCfg)
 		if err != nil {
 			logger.Warn(ctx, "Invalid cache revalidation period %v", err)
 		}
-		cacheRevalidation = v
+		offlineCredentialsExpiration = v
 	}
 
 	if tenantID == "" {
@@ -37,5 +37,5 @@ func loadConfig(ctx context.Context, p string) (tenantID string, appID string, c
 		return "", "", 0, fmt.Errorf("missing 'app_id' entry in configuration file")
 	}
 
-	return tenantID, appID, cacheRevalidation, nil
+	return tenantID, appID, offlineCredentialsExpiration, nil
 }

@@ -29,9 +29,9 @@ type Cache struct {
 	db        *sql.DB
 	hasShadow bool
 
-	// revalidationPeriod is the number of days we allow to user to login without online verification.
+	// offlineCredentialsExpiration is the number of days we allow to user to login without online verification.
 	// Note that users will be purged from cache when exceeding twice this time.
-	revalidationPeriod int
+	offlineCredentialsExpiration int
 
 	cursorPasswd *sql.Rows
 	cursorGroup  *sql.Rows
@@ -44,7 +44,7 @@ type options struct {
 	rootGid   int
 	shadowGid int // this bypass group lookup
 
-	revalidationPeriod int
+	offlineCredentialsExpiration int
 }
 type Option func(*options) error
 
@@ -82,14 +82,14 @@ func WithShadowGid(shadowGid int) func(o *options) error {
 	}
 }
 
-// WithRevalidationPeriod allows to change the number of days the user can log in without online verification.
+// WithOfflineCredentialsExpiration allows to change the number of days the user can log in without online verification.
 // Note that users will be purged from cache when exceeding twice this time.
-func WithRevalidationPeriod(days int) func(o *options) error {
+func WithOfflineCredentialsExpiration(days int) func(o *options) error {
 	return func(o *options) error {
 		if days < 0 {
 			return nil
 		}
-		o.revalidationPeriod = days
+		o.offlineCredentialsExpiration = days
 		return nil
 	}
 }
@@ -117,7 +117,7 @@ func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 		rootGid:   0,
 		shadowGid: -1,
 
-		revalidationPeriod: 90,
+		offlineCredentialsExpiration: 90,
 	}
 	// applied options
 	for _, opt := range opts {
@@ -146,8 +146,8 @@ func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 	logger.Debug(ctx, "Attaching shadow db: %v", hasShadow)
 
 	if hasShadow {
-		revalidationPeriodDuration := time.Duration(2 * uint(o.revalidationPeriod) * 24 * uint(time.Hour))
-		if err := cleanUpDB(ctx, db, revalidationPeriodDuration); err != nil {
+		offlineCredentialsExpirationDuration := time.Duration(2 * uint(o.offlineCredentialsExpiration) * 24 * uint(time.Hour))
+		if err := cleanUpDB(ctx, db, offlineCredentialsExpirationDuration); err != nil {
 			return nil, err
 		}
 	}
@@ -156,7 +156,7 @@ func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 		db:        db,
 		hasShadow: hasShadow,
 
-		revalidationPeriod: o.revalidationPeriod,
+		offlineCredentialsExpiration: o.offlineCredentialsExpiration,
 	}, nil
 }
 
@@ -195,8 +195,8 @@ func (c *Cache) CanAuthenticate(ctx context.Context, username, password string) 
 	}
 
 	// ensure that we checked credential online recently.
-	logger.Debug(ctx, "Last online login was: %s. Current time: %s. Revalidation needed every %d days", user.LastOnlineAuth, time.Now(), c.revalidationPeriod)
-	if time.Now().After(user.LastOnlineAuth.Add(time.Duration(uint(c.revalidationPeriod) * 24 * uint(time.Hour)))) {
+	logger.Debug(ctx, "Last online login was: %s. Current time: %s. Revalidation needed every %d days", user.LastOnlineAuth, time.Now(), c.offlineCredentialsExpiration)
+	if time.Now().After(user.LastOnlineAuth.Add(time.Duration(uint(c.offlineCredentialsExpiration) * 24 * uint(time.Hour)))) {
 		return errors.New("cache expired")
 	}
 

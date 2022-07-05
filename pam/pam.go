@@ -19,7 +19,7 @@ var (
 //export pam_sm_authenticate
 func authenticate(ctx context.Context, conf string) error {
 	// Load configuration.
-	tenantID, appID, revalidationPeriod, err := loadConfig(ctx, conf)
+	tenantID, appID, offlineCredentialsExpiration, err := loadConfig(ctx, conf)
 	if err != nil {
 		logger.Err(ctx, "No valid configuration found: %v", err)
 		return pamSystemErr
@@ -46,7 +46,7 @@ func authenticate(ctx context.Context, conf string) error {
 		return pamAuthErr
 	}
 
-	c, err := cache.New(ctx, cache.WithRevalidationPeriod(revalidationPeriod))
+	c, err := cache.New(ctx, cache.WithOfflineCredentialsExpiration(offlineCredentialsExpiration))
 	if err != nil {
 		logger.Err(ctx, "%v. Denying access.", err)
 		return pamAuthErr
