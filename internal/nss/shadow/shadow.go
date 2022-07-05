@@ -48,7 +48,8 @@ func NewByName(ctx context.Context, name string) (s Shadow, err error) {
 
 	return Shadow{
 		name:   spw.Name,
-		passwd: spw.Password,
+		passwd: "*", // we want to prevent pam_unix using this field to use a cached account without calling pam_aad.
+		//passwd: spw.Password,
 		lstchg: spw.LastPwdChange,
 		min:    spw.MinPwdAge,
 		max:    spw.MinPwdAge,
