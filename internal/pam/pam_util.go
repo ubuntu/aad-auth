@@ -33,7 +33,7 @@ import (
 )
 
 func GetUser(ctx context.Context) (string, error) {
-	pamh := ctx.Value(ctxKey).(*C.pam_handle_t)
+	pamh := ctx.Value(ctxPamhKey).(*C.pam_handle_t)
 
 	cUsername := C.get_user(pamh)
 	if cUsername == nil {
@@ -44,7 +44,7 @@ func GetUser(ctx context.Context) (string, error) {
 }
 
 func GetPassword(ctx context.Context) (string, error) {
-	pamh := ctx.Value(ctxKey).(*C.pam_handle_t)
+	pamh := ctx.Value(ctxPamhKey).(*C.pam_handle_t)
 
 	cPasswd := C.get_password(pamh)
 	if cPasswd == nil {

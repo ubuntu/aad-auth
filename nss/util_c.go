@@ -8,14 +8,16 @@ typedef enum nss_status nss_status;
 */
 import "C"
 import (
+	"context"
 	"errors"
 
+	"github.com/ubuntu/aad-auth/internal/logger"
 	"github.com/ubuntu/aad-auth/internal/nss"
 )
 
 // errToCStatus converts our Go errors to corresponding nss status returned code and errno.
 // If err is nil, it returns a success.
-func errToCStatus(err error, errnop *C.int) C.nss_status {
+func errToCStatus(ctx context.Context, err error, errnop *C.int) C.nss_status {
 	var nssStatus C.nss_status = C.NSS_STATUS_SUCCESS
 	var errno int
 
@@ -41,6 +43,8 @@ func errToCStatus(err error, errnop *C.int) C.nss_status {
 	}
 
 	*errnop = C.int(errno)
+
+	logger.Info(ctx, "Returning error: %d with errno: %d\n", nssStatus, *errnop)
 
 	return nssStatus
 }

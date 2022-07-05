@@ -10,7 +10,7 @@ import (
 	msalErrors "github.com/AzureAD/microsoft-authentication-library-for-go/apps/errors"
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/public"
 
-	"github.com/ubuntu/aad-auth/internal/pam"
+	"github.com/ubuntu/aad-auth/internal/logger"
 )
 
 const (
@@ -35,12 +35,12 @@ type aadErr struct {
 // Authenticate tries to authenticate username against AAD.
 func Authenticate(ctx context.Context, tenantID, appID, username, password string) error {
 	authority := fmt.Sprintf("%s/%s", endpoint, tenantID)
-	pam.LogDebug(ctx, "Connecting to %q, with clientID %q for user %q", authority, appID, username)
+	logger.Debug(ctx, "Connecting to %q, with clientID %q for user %q", authority, appID, username)
 
 	// Get client from network
 	app, errAcquireToken := public.New(appID, public.WithAuthority(authority))
 	if errAcquireToken != nil {
-		pam.LogErr(ctx, "Connection to authority failed: %v", errAcquireToken)
+		logger.Err(ctx, "Connection to authority failed: %v", errAcquireToken)
 		return NoNetworkErr
 	}
 
@@ -51,37 +51,37 @@ func Authenticate(ctx context.Context, tenantID, appID, username, password strin
 	if errors.As(errAcquireToken, &callErr) {
 		data, err := io.ReadAll(callErr.Resp.Body)
 		if err != nil {
-			pam.LogErr(ctx, "Can't read server response: %v", err)
+			logger.Err(ctx, "Can't read server response: %v", err)
 			return DenyErr
 		}
 		var addErrWithCodes aadErr
 		if err := json.Unmarshal(data, &addErrWithCodes); err != nil {
-			pam.LogErr(ctx, "Invalid server response, not a json object: %v", err)
+			logger.Err(ctx, "Invalid server response, not a json object: %v", err)
 			return DenyErr
 		}
 		for _, errcode := range addErrWithCodes.ErrorCodes {
 			if errcode == invalidCredCode {
-				pam.LogDebug(ctx, "Got response: Invalid credentials")
+				logger.Debug(ctx, "Got response: Invalid credentials")
 				return DenyErr
 			}
 			if errcode == noSuchUserCode {
-				pam.LogDebug(ctx, "Got response: User doesn't exist")
+				logger.Debug(ctx, "Got response: User doesn't exist")
 				return DenyErr
 			}
 			if errcode == requiresMFACode {
-				pam.LogDebug(ctx, "Authentication successful even if requiring MFA")
+				logger.Debug(ctx, "Authentication successful even if requiring MFA")
 				return nil
 			}
 		}
-		pam.LogErr(ctx, "Unknown error code(s) from server: %v", addErrWithCodes.ErrorCodes)
+		logger.Err(ctx, "Unknown error code(s) from server: %v", addErrWithCodes.ErrorCodes)
 		return DenyErr
 	}
 
 	if errAcquireToken != nil {
-		pam.LogDebug(ctx, "acquiring token failed: %v", errAcquireToken)
+		logger.Debug(ctx, "acquiring token failed: %v", errAcquireToken)
 		return NoNetworkErr
 	}
 
-	pam.LogDebug(ctx, "Authentication successful with user/password")
+	logger.Debug(ctx, "Authentication successful with user/password")
 	return nil
 }

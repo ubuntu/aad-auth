@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/ubuntu/aad-auth/internal/cache"
+	"github.com/ubuntu/aad-auth/internal/logger"
 	"github.com/ubuntu/aad-auth/internal/nss"
-	"github.com/ubuntu/aad-auth/internal/pam"
 )
 
 type Shadow struct {
@@ -26,15 +26,14 @@ var testopts = []cache.Option{
 }
 
 // NewByName returns a passwd entry from a name.
-func NewByName(name string) (s Shadow, err error) {
+func NewByName(ctx context.Context, name string) (s Shadow, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("failed to get a shadow entry from name %q: %w", name, err)
 		}
 	}()
 
-	ctx := context.Background()
-	pam.LogDebug(context.Background(), "Requesting a shadow entry matching name %q", name)
+	logger.Debug(ctx, "Requesting a shadow entry matching name %q", name)
 
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
@@ -63,16 +62,16 @@ var cacheIterateEntries *cache.Cache
 
 // NextEntry returns next available entry in Shadow. It will returns ENOENT from cache when the iteration is done.
 // It automatically opens and close the cache on first/last iteration.
-func NextEntry() (sp Shadow, err error) {
+func NextEntry(ctx context.Context) (sp Shadow, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("failed to get a shadow entry: %w", err)
 		}
 	}()
-	pam.LogDebug(context.Background(), "get next shadow entry")
+	logger.Debug(ctx, "get next shadow entry")
 
 	if cacheIterateEntries == nil {
-		cacheIterateEntries, err = cache.New(context.Background(), testopts...)
+		cacheIterateEntries, err = cache.New(ctx, testopts...)
 		if err != nil {
 			return Shadow{}, nss.ErrUnavailableENoEnt
 		}

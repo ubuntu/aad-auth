@@ -6,12 +6,12 @@ import (
 	"strconv"
 
 	"github.com/go-ini/ini"
-	"github.com/ubuntu/aad-auth/internal/pam"
+	"github.com/ubuntu/aad-auth/internal/logger"
 )
 
 // loadConfig returns the loaded configuration from p.
 func loadConfig(ctx context.Context, p string) (tenantID string, appID string, cacheRevalidation int, err error) {
-	pam.LogDebug(ctx, "Loading configuration from %s", p)
+	logger.Debug(ctx, "Loading configuration from %s", p)
 
 	cfg, err := ini.Load(p)
 	if err != nil {
@@ -25,7 +25,7 @@ func loadConfig(ctx context.Context, p string) (tenantID string, appID string, c
 	if cacheRevalidationCfg != "" {
 		v, err := strconv.Atoi(cacheRevalidationCfg)
 		if err != nil {
-			pam.LogWarn(ctx, "Invalid cache revalidation period %v", err)
+			logger.Warn(ctx, "Invalid cache revalidation period %v", err)
 		}
 		cacheRevalidation = v
 	}

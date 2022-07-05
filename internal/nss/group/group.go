@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/ubuntu/aad-auth/internal/cache"
+	"github.com/ubuntu/aad-auth/internal/logger"
 	"github.com/ubuntu/aad-auth/internal/nss"
-	"github.com/ubuntu/aad-auth/internal/pam"
 )
 
 type Group struct {
@@ -22,15 +22,14 @@ var testopts = []cache.Option{
 }
 
 // NewByName returns a passwd entry from a name.
-func NewByName(name string) (g Group, err error) {
+func NewByName(ctx context.Context, name string) (g Group, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("failed to get group entry from name %q: %w", name, err)
 		}
 	}()
 
-	ctx := context.Background()
-	pam.LogDebug(context.Background(), "Requesting a group entry matching name %q", name)
+	logger.Debug(ctx, "Requesting a group entry matching name %q", name)
 
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
@@ -53,15 +52,14 @@ func NewByName(name string) (g Group, err error) {
 }
 
 // NewByGID returns a group entry from a GID.
-func NewByGID(gid uint) (g Group, err error) {
+func NewByGID(ctx context.Context, gid uint) (g Group, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("failed to get group entry from GID %d: %w", gid, err)
 		}
 	}()
 
-	ctx := context.Background()
-	pam.LogDebug(context.Background(), "Requesting an group entry matching GID %d", gid)
+	logger.Debug(ctx, "Requesting an group entry matching GID %d", gid)
 
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
@@ -87,16 +85,16 @@ var cacheIterateEntries *cache.Cache
 
 // NextEntry returns next available entry in Group. It will returns ENOENT from cache when the iteration is done.
 // It automatically opens and close the cache on first/last iteration.
-func NextEntry() (g Group, err error) {
+func NextEntry(ctx context.Context) (g Group, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("failed to get group entry: %w", err)
 		}
 	}()
-	pam.LogDebug(context.Background(), "get next group entry")
+	logger.Debug(ctx, "get next group entry")
 
 	if cacheIterateEntries == nil {
-		cacheIterateEntries, err = cache.New(context.Background(), testopts...)
+		cacheIterateEntries, err = cache.New(ctx, testopts...)
 		if err != nil {
 			return Group{}, nss.ErrUnavailableENoEnt
 		}

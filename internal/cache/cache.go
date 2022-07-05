@@ -17,7 +17,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/ubuntu/aad-auth/internal/pam"
+	"github.com/ubuntu/aad-auth/internal/logger"
 )
 
 var (
@@ -108,7 +108,7 @@ func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 		}
 	}()
 
-	pam.LogDebug(ctx, "Cache initialization")
+	logger.Debug(ctx, "Cache initialization")
 	var hasShadow bool
 
 	o := options{
@@ -143,7 +143,7 @@ func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 		return nil, err
 	}
 
-	pam.LogDebug(ctx, "Attaching shadow db: %v", hasShadow)
+	logger.Debug(ctx, "Attaching shadow db: %v", hasShadow)
 
 	if hasShadow {
 		revalidationPeriodDuration := time.Duration(2 * uint(o.revalidationPeriod) * 24 * uint(time.Hour))
@@ -183,7 +183,7 @@ func (c *Cache) CanAuthenticate(ctx context.Context, username, password string) 
 		}
 	}()
 
-	pam.LogInfo(ctx, "try to authenticate %q from cache", username)
+	logger.Info(ctx, "try to authenticate %q from cache", username)
 
 	if !c.hasShadow {
 		return errors.New("shadow database is not available")
@@ -195,7 +195,7 @@ func (c *Cache) CanAuthenticate(ctx context.Context, username, password string) 
 	}
 
 	// ensure that we checked credential online recently.
-	pam.LogDebug(ctx, "Last online login was: %s. Current time: %s. Revalidation needed every %d days", user.LastOnlineAuth, time.Now(), c.revalidationPeriod)
+	logger.Debug(ctx, "Last online login was: %s. Current time: %s. Revalidation needed every %d days", user.LastOnlineAuth, time.Now(), c.revalidationPeriod)
 	if time.Now().After(user.LastOnlineAuth.Add(time.Duration(uint(c.revalidationPeriod) * 24 * uint(time.Hour)))) {
 		return errors.New("cache expired")
 	}
@@ -251,7 +251,7 @@ func checkFilePermission(ctx context.Context, p string, owner, gOwner int, permi
 			err = fmt.Errorf("failed checking file permission for %v: %v", p, err)
 		}
 	}()
-	pam.LogDebug(ctx, "check file permissions on %v", p)
+	logger.Debug(ctx, "check file permissions on %v", p)
 
 	info, err := os.Stat(p)
 	if err != nil {
@@ -274,7 +274,7 @@ func checkFilePermission(ctx context.Context, p string, owner, gOwner int, permi
 
 // encryptPassword returns an encrypted version of password
 func encryptPassword(ctx context.Context, username, password string) (string, error) {
-	pam.LogDebug(ctx, "encrypt password for user %q", username)
+	logger.Debug(ctx, "encrypt password for user %q", username)
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -291,7 +291,7 @@ func (c *Cache) generateUidForUser(ctx context.Context, username string) (uid ui
 		}
 	}()
 
-	pam.LogDebug(ctx, "generate user id for user %q", username)
+	logger.Debug(ctx, "generate user id for user %q", username)
 
 	// compute uid for user
 	var offset uint32 = 100000
@@ -313,7 +313,7 @@ func (c *Cache) generateUidForUser(ctx context.Context, username string) (uid ui
 		break
 	}
 
-	pam.LogInfo(ctx, "user id for %q is %d", username, uid)
+	logger.Info(ctx, "user id for %q is %d", username, uid)
 
 	return uid, nil
 }

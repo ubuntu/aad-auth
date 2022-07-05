@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/ubuntu/aad-auth/internal/cache"
+	"github.com/ubuntu/aad-auth/internal/logger"
 	"github.com/ubuntu/aad-auth/internal/nss"
-	"github.com/ubuntu/aad-auth/internal/pam"
 )
 
 type Passwd struct {
@@ -25,15 +25,14 @@ var testopts = []cache.Option{
 }
 
 // NewByName returns a passwd entry from a name.
-func NewByName(name string) (p Passwd, err error) {
+func NewByName(ctx context.Context, name string) (p Passwd, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("failed to get passwd entry from name %q: %w", name, err)
 		}
 	}()
 
-	ctx := context.Background()
-	pam.LogDebug(context.Background(), "Requesting a passwd entry matching name %q", name)
+	logger.Debug(ctx, "Requesting a passwd entry matching name %q", name)
 
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
@@ -59,15 +58,14 @@ func NewByName(name string) (p Passwd, err error) {
 }
 
 // NewByUID returns a passwd entry from an UID.
-func NewByUID(uid uint) (p Passwd, err error) {
+func NewByUID(ctx context.Context, uid uint) (p Passwd, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("failed to get passwd entry from UID %d: %w", uid, err)
 		}
 	}()
 
-	ctx := context.Background()
-	pam.LogDebug(context.Background(), "Requesting a passwd entry matching UID %d", uid)
+	logger.Debug(ctx, "Requesting a passwd entry matching UID %d", uid)
 
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
@@ -95,16 +93,16 @@ var cacheIterateEntries *cache.Cache
 
 // NextEntry returns next available entry in Passwd. It will returns ENOENT from cache when the iteration is done.
 // It automatically opens and close the cache on first/last iteration.
-func NextEntry() (p Passwd, err error) {
+func NextEntry(ctx context.Context) (p Passwd, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("failed to get passwd entry: %w", err)
 		}
 	}()
-	pam.LogDebug(context.Background(), "get next passwd entry")
+	logger.Debug(ctx, "get next passwd entry")
 
 	if cacheIterateEntries == nil {
-		cacheIterateEntries, err = cache.New(context.Background(), testopts...)
+		cacheIterateEntries, err = cache.New(ctx, testopts...)
 		if err != nil {
 			return Passwd{}, nss.ErrUnavailableENoEnt
 		}

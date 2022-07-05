@@ -16,6 +16,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/ubuntu/aad-auth/internal/logger"
 	"github.com/ubuntu/aad-auth/internal/pam"
 )
 
@@ -28,7 +29,10 @@ const (
 //export pam_sm_authenticate
 func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char) C.int {
 
+	// Attach logger and info handler.
 	ctx := pam.CtxWithPamh(context.Background(), pam.Handle(pamh))
+	pamLogger := pam.NewLogger(pam.Handle(pamh))
+	ctx = logger.CtxWithLogger(ctx, pamLogger)
 
 	// Get options.
 	conf := defaultConfigPath
@@ -38,7 +42,7 @@ func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 		case "conf":
 			conf = opt[1]
 		default:
-			pam.LogWarn(ctx, "unknown option: %s\n", opt[0])
+			pamLogger.Warn("unknown option: %s\n", opt[0])
 		}
 	}
 

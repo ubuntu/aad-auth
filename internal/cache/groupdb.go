@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ubuntu/aad-auth/internal/pam"
+	"github.com/ubuntu/aad-auth/internal/logger"
 )
 
 // GroupRecord  returns a group record from the cache
@@ -21,7 +21,7 @@ type GroupRecord struct {
 // GetGroupByName returns given group struct by its name.
 // It returns an error if we couldn’t fetch the group (does not exist or not connected).
 func (c *Cache) GetGroupByName(ctx context.Context, groupname string) (group GroupRecord, err error) {
-	pam.LogDebug(ctx, "getting group information from cache for %q", groupname)
+	logger.Debug(ctx, "getting group information from cache for %q", groupname)
 
 	// Nested query to avoid the case where the user is not found,
 	// then all the values are NULL due to the call to GROUP_CONCAT
@@ -46,7 +46,7 @@ func (c *Cache) GetGroupByName(ctx context.Context, groupname string) (group Gro
 // GetGroupByUid returns given group struct by its GID.
 // It returns an error if we couldn’t fetch the group (does not exist or not connected).
 func (c *Cache) GetGroupByGid(ctx context.Context, gid uint) (group GroupRecord, err error) {
-	pam.LogDebug(ctx, "getting group information from cache for uid %d", gid) // TODO: remove PAM dep
+	logger.Debug(ctx, "getting group information from cache for uid %d", gid)
 
 	// Nested query to avoid the case where the user is not found,
 	// then all the values are NULL due to the call to GROUP_CONCAT
@@ -76,7 +76,7 @@ func (c *Cache) NextGroupEntry() (g GroupRecord, err error) {
 			err = fmt.Errorf("failed to read group entry in db: %v", err)
 		}
 	}()
-	pam.LogDebug(context.Background(), "request next group entry in db")
+	logger.Debug(context.Background(), "request next group entry in db")
 
 	if c.cursorGroup == nil {
 		query := `

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ubuntu/aad-auth/internal/pam"
+	"github.com/ubuntu/aad-auth/internal/logger"
 )
 
 // UserRecord returns a user record from the cache
@@ -29,7 +29,7 @@ type UserRecord struct {
 // It returns an error if we couldn’t fetch the user (does not exist or not connected).
 // shadowPasswd is populated only if the shadow database is accessible.
 func (c *Cache) GetUserByName(ctx context.Context, username string) (user UserRecord, err error) {
-	pam.LogDebug(ctx, "getting user information from cache for %q", username)
+	logger.Debug(ctx, "getting user information from cache for %q", username)
 
 	// This query is dynamically extended whether we have can query the shadow database or not
 	queryFmt := `
@@ -65,7 +65,7 @@ WHERE login = ?
 // It returns an error if we couldn’t fetch the user (does not exist or not connected).
 // shadowPasswd is populated only if the shadow database is accessible.
 func (c *Cache) GetUserByUid(ctx context.Context, uid uint) (user UserRecord, err error) {
-	pam.LogDebug(ctx, "getting user information from cache for uid %d", uid) // TODO: remove PAM dep
+	logger.Debug(ctx, "getting user information from cache for uid %d", uid)
 
 	// This query is dynamically extended whether we have can query the shadow database or not
 	queryFmt := `
@@ -105,7 +105,7 @@ func (c *Cache) NextPasswdEntry() (u UserRecord, err error) {
 			err = fmt.Errorf("failed to read passwd entry in db: %v", err)
 		}
 	}()
-	pam.LogDebug(context.Background(), "request next passwd entry in db")
+	logger.Debug(context.Background(), "request next passwd entry in db")
 
 	if c.cursorPasswd == nil {
 		query := `

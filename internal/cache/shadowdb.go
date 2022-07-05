@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ubuntu/aad-auth/internal/pam"
+	"github.com/ubuntu/aad-auth/internal/logger"
 )
 
 // ShadowRecord returns a shadow record from the cache
@@ -24,7 +24,7 @@ type ShadowRecord struct {
 // GetShadowByName returns given shadow struct by its name.
 // It returns an error if we couldn’t fetch the shadow entry (does not exist or not connected).
 func (c *Cache) GetShadowByName(ctx context.Context, username string) (swr ShadowRecord, err error) {
-	pam.LogDebug(ctx, "getting shadow information from cache for %q", username)
+	logger.Debug(ctx, "getting shadow information from cache for %q", username)
 
 	if !c.hasShadow {
 		return swr, errors.New("need shadow to be accessible to query on it")
@@ -53,7 +53,7 @@ func (c *Cache) NextShadowEntry() (swr ShadowRecord, err error) {
 			err = fmt.Errorf("failed to read shadow entry in db: %v", err)
 		}
 	}()
-	pam.LogDebug(context.Background(), "request next shadow entry in db")
+	logger.Debug(context.Background(), "request next shadow entry in db")
 
 	if c.cursorShadow == nil {
 		query := `

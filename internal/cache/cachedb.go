@@ -12,7 +12,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
-	"github.com/ubuntu/aad-auth/internal/pam"
+	"github.com/ubuntu/aad-auth/internal/logger"
 )
 
 const (
@@ -72,7 +72,7 @@ func initDB(ctx context.Context, cacheDir string, rootUid, rootGid, shadowGid in
 			err = fmt.Errorf("can't initiate database: %v", err)
 		}
 	}()
-	pam.LogDebug(ctx, "Opening cache in %s", cacheDir)
+	logger.Debug(ctx, "Opening cache in %s", cacheDir)
 
 	passwdPath := filepath.Join(cacheDir, passwdDB)
 	var passwdPermission fs.FileMode = 0644
@@ -161,7 +161,7 @@ func (c *Cache) insertUser(ctx context.Context, newUser UserRecord) (err error) 
 			err = fmt.Errorf("failed to insert user %q in local cache: %v", newUser.Name, err)
 		}
 	}()
-	pam.LogDebug(ctx, "inserting in cache user %q", newUser.Name)
+	logger.Debug(ctx, "inserting in cache user %q", newUser.Name)
 
 	if !c.hasShadow {
 		return errors.New("shadow database is not accessible")
@@ -205,7 +205,7 @@ func (c *Cache) updateOnlineAuthAndPassword(ctx context.Context, uid int, userna
 			err = fmt.Errorf("failed to update user %q in local cache: %v", username, err)
 		}
 	}()
-	pam.LogDebug(ctx, "updating from last online login information for user %q", username)
+	logger.Debug(ctx, "updating from last online login information for user %q", username)
 
 	if !c.hasShadow {
 		return errors.New("shadow database is not accessible")
@@ -229,11 +229,11 @@ func (c *Cache) updateOnlineAuthAndPassword(ctx context.Context, uid int, userna
 
 func cleanUpDB(ctx context.Context, db *sql.DB, revalidationPeriodDuration time.Duration) error {
 	if revalidationPeriodDuration == 0 {
-		pam.LogDebug(ctx, "Do not clean up database as revalidation period is set to 0")
+		logger.Debug(ctx, "Do not clean up database as revalidation period is set to 0")
 		return nil
 	}
 
-	pam.LogDebug(ctx, "Clean up database")
+	logger.Debug(ctx, "Clean up database")
 
 	tx, err := db.Begin()
 	if err != nil {
