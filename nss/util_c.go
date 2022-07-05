@@ -44,7 +44,7 @@ func errToCStatus(ctx context.Context, err error, errnop *C.int) C.nss_status {
 
 	*errnop = C.int(errno)
 
-	logger.Info(ctx, "Returning error: %d with errno: %d\n", nssStatus, *errnop)
+	logger.Debug(ctx, "Returning error: %d with errno: %d", nssStatus, *errnop)
 
 	return nssStatus
 }

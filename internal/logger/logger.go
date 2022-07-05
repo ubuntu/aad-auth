@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 )
 
 // Logger is the interface used to access the logger
@@ -37,7 +38,7 @@ func Debug(ctx context.Context, format string, a ...any) {
 		fmt.Fprintf(os.Stderr, "DEBUG: %v", msg)
 		return
 	}
-	l.Debug(format, a)
+	l.Debug(format, a...)
 }
 
 // Info calls the corresponding logger Info() func from context.
@@ -48,7 +49,7 @@ func Info(ctx context.Context, format string, a ...any) {
 		fmt.Fprintf(os.Stderr, "INFO: %v", msg)
 		return
 	}
-	l.Info(format, a)
+	l.Info(format, a...)
 }
 
 // Warn calls the corresponding logger Warn() func from context.
@@ -59,7 +60,7 @@ func Warn(ctx context.Context, format string, a ...any) {
 		fmt.Fprintf(os.Stderr, "WARNING: %v", msg)
 		return
 	}
-	l.Warn(format, a)
+	l.Warn(format, a...)
 }
 
 // Err calls the corresponding logger Err() func from context.
@@ -70,7 +71,7 @@ func Err(ctx context.Context, format string, a ...any) {
 		fmt.Fprintf(os.Stderr, "ERROR: %v", msg)
 		return
 	}
-	l.Err(format, a)
+	l.Err(format, a...)
 }
 
 // Crit calls the corresponding logger Crit() func from context.
@@ -81,5 +82,14 @@ func Crit(ctx context.Context, format string, a ...any) {
 		fmt.Fprintf(os.Stderr, "CRITICAL: %v", msg)
 		return
 	}
-	l.Crit(format, a)
+	l.Crit(format, a...)
+}
+
+// NormalizeMsg use format to expand a to it.
+// Returned msg will always ends with an EOL.
+func NormalizeMsg(format string, a ...any) string {
+	if !strings.HasSuffix(format, "\n") {
+		format += "\n"
+	}
+	return fmt.Sprintf(format, a...)
 }

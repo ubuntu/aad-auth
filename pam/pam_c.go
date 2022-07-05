@@ -36,12 +36,13 @@ func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 	// Get options.
 	conf := defaultConfigPath
 	for _, arg := range sliceFromArgv(argc, argv) {
-		opt := strings.Split(arg, "=")
-		switch opt[0] {
+		opt, optarg, _ := strings.Cut(arg, "=")
+		switch opt {
 		case "conf":
-			conf = opt[1]
+			conf = optarg
 		case "debug":
 			pamLogger = pam.NewLogger(pam.Handle(pamh), pam.LOG_DEBUG)
+			pamLogger.Debug("PAM AAD DEBUG enabled")
 		default:
 			pamLogger.Warn("unknown option: %s\n", opt[0])
 		}

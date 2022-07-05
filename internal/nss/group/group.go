@@ -100,7 +100,7 @@ func NextEntry(ctx context.Context) (g Group, err error) {
 		}
 	}
 
-	grp, err := cacheIterateEntries.NextGroupEntry()
+	grp, err := cacheIterateEntries.NextGroupEntry(ctx)
 	if errors.Is(err, cache.ErrNoEnt) {
 		_ = cacheIterateEntries.Close()
 		cacheIterateEntries = nil

@@ -70,13 +70,13 @@ func (c *Cache) GetGroupByGid(ctx context.Context, gid uint) (group GroupRecord,
 
 // NextGroupEntry returns next group from the current position within this cache.
 // It initializes the group query on first run and return ErrNoEnt once done.
-func (c *Cache) NextGroupEntry() (g GroupRecord, err error) {
+func (c *Cache) NextGroupEntry(ctx context.Context) (g GroupRecord, err error) {
 	defer func() {
 		if err != nil && !errors.Is(err, ErrNoEnt) {
 			err = fmt.Errorf("failed to read group entry in db: %v", err)
 		}
 	}()
-	logger.Debug(context.Background(), "request next group entry in db")
+	logger.Debug(ctx, "request next group entry in db")
 
 	if c.cursorGroup == nil {
 		query := `

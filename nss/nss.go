@@ -14,7 +14,7 @@ const (
 	nssLogKey = "NSS_AAD_DEBUG"
 )
 
-// ctxWithSyslogLogger attach a logger to the context and set default priority.
+// ctxWithSyslogLogger attach a logger to the context and set priority based on environment.
 func ctxWithSyslogLogger(ctx context.Context) context.Context {
 	priority := syslog.LOG_INFO
 	if os.Getenv(nssLogKey) != "" {
