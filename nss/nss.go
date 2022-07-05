@@ -10,9 +10,17 @@ import (
 	"github.com/ubuntu/aad-auth/internal/nss"
 )
 
+const (
+	nssLogKey = "NSS_AAD_DEBUG"
+)
+
 // ctxWithSyslogLogger attach a logger to the context and set default priority.
 func ctxWithSyslogLogger(ctx context.Context) context.Context {
-	nssLogger, err := nss.NewLogger(syslog.LOG_DEBUG)
+	priority := syslog.LOG_INFO
+	if os.Getenv(nssLogKey) != "" {
+		priority = syslog.LOG_DEBUG
+	}
+	nssLogger, err := nss.NewLogger(priority)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: can't find syslog to write to. Default to stderr\n")
 		return ctx

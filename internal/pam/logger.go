@@ -16,23 +16,38 @@ import (
 	"unsafe"
 )
 
+// Priority is the level of the message
+type Priority int
+
+const (
+	// LOG_INFO matches the syslog Info level
+	LOG_INFO Priority = 6
+	// LOG_DEBUG matches the syslog Debug level
+	LOG_DEBUG Priority = 7
+)
+
 // Handle allows to pass C.pam_handle_t to this package.
 type Handle = *C.pam_handle_t
 
 // Logger is the logger connected to pam infra.
 type Logger struct {
 	pamHandle Handle
+	priority  Priority
 }
 
 // NewLogger returns a Logger hanging the Logger information.
-func NewLogger(pamHandle Handle) Logger {
+func NewLogger(pamHandle Handle, priority Priority) Logger {
 	return Logger{
 		pamHandle: pamHandle,
+		priority:  priority,
 	}
 }
 
 // Debug sends a debug level message to the logger.
 func (l Logger) Debug(format string, a ...any) {
+	if l.priority < LOG_DEBUG {
+		return
+	}
 	pamSyslog(l.pamHandle, C.LOG_DEBUG, format, a...)
 }
 

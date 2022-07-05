@@ -31,8 +31,7 @@ func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 
 	// Attach logger and info handler.
 	ctx := pam.CtxWithPamh(context.Background(), pam.Handle(pamh))
-	pamLogger := pam.NewLogger(pam.Handle(pamh))
-	ctx = logger.CtxWithLogger(ctx, pamLogger)
+	pamLogger := pam.NewLogger(pam.Handle(pamh), pam.LOG_INFO)
 
 	// Get options.
 	conf := defaultConfigPath
@@ -41,10 +40,13 @@ func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 		switch opt[0] {
 		case "conf":
 			conf = opt[1]
+		case "debug":
+			pamLogger = pam.NewLogger(pam.Handle(pamh), pam.LOG_DEBUG)
 		default:
 			pamLogger.Warn("unknown option: %s\n", opt[0])
 		}
 	}
+	ctx = logger.CtxWithLogger(ctx, pamLogger)
 
 	if err := authenticate(ctx, conf); err != nil {
 		switch err {
