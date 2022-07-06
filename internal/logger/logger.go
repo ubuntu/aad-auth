@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// Logger is the interface used to access the logger
+// Logger is the interface used to access the logger.
 type Logger interface {
 	// Debug sends a debug level message to the logger
 	Debug(format string, a ...any)
@@ -21,11 +21,13 @@ type Logger interface {
 	Crit(format string, a ...any)
 }
 
+type ctxKey string
+
 const (
-	ctxloggerKey = "loggerCtxKey"
+	ctxloggerKey ctxKey = "loggerCtxKey"
 )
 
-// CtxWithLogger returns a new context with a logger embedeed
+// CtxWithLogger returns a new context with a logger embedeed.
 func CtxWithLogger(ctx context.Context, logger Logger) context.Context {
 	return context.WithValue(ctx, ctxloggerKey, logger)
 }

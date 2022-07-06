@@ -10,6 +10,7 @@ import (
 	"github.com/ubuntu/aad-auth/internal/nss"
 )
 
+// Shadow is the nss shadow object.
 type Shadow struct {
 	name   string /* username */
 	passwd string /* user password */

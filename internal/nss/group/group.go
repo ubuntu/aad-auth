@@ -10,6 +10,7 @@ import (
 	"github.com/ubuntu/aad-auth/internal/nss"
 )
 
+// Group is the nss group object.
 type Group struct {
 	name    string   /* username */
 	passwd  string   /* user password */
@@ -68,7 +69,7 @@ func NewByGID(ctx context.Context, gid uint) (g Group, err error) {
 	}
 	defer c.Close()
 
-	grp, err := c.GetGroupByGid(ctx, gid)
+	grp, err := c.GetGroupByGID(ctx, gid)
 	if err != nil {
 		return Group{}, nss.ConvertErr(err)
 	}

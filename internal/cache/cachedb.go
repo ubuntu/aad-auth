@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"time"
 
+	// register sqlite3 as our database driver.
 	_ "github.com/mattn/go-sqlite3"
-
 	"github.com/ubuntu/aad-auth/internal/logger"
 )
 
@@ -66,7 +66,7 @@ type rowScanner interface {
 	Scan(...any) error
 }
 
-func initDB(ctx context.Context, cacheDir string, rootUid, rootGid, shadowGid int) (db *sql.DB, hasShadow bool, err error) {
+func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGid int) (db *sql.DB, hasShadow bool, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("can't initiate database: %v", err)
@@ -85,8 +85,8 @@ func initDB(ctx context.Context, cacheDir string, rootUid, rootGid, shadowGid in
 		fileGOwner     int
 		filePermission fs.FileMode
 	}{
-		passwdPath: {sqlCreatePasswdTables, rootUid, rootGid, passwdPermission},
-		shadowPath: {sqlCreateShadowTables, rootUid, shadowGid, shadowPermission},
+		passwdPath: {sqlCreatePasswdTables, rootUID, rootGID, passwdPermission},
+		shadowPath: {sqlCreateShadowTables, rootUID, shadowGid, shadowPermission},
 	}
 
 	var needsCreate bool
@@ -98,7 +98,7 @@ func initDB(ctx context.Context, cacheDir string, rootUid, rootGid, shadowGid in
 
 	// Ensure that the partial cache (if exists) is cleaned up before creating it
 	if needsCreate {
-		if os.Geteuid() != rootUid || os.Getegid() != rootGid {
+		if os.Geteuid() != rootUID || os.Getegid() != rootGID {
 			return nil, false, fmt.Errorf("cache creation can only be done by root user")
 		}
 
@@ -265,6 +265,6 @@ func cleanUpDB(ctx context.Context, db *sql.DB, offlineCredentialsExpiration tim
 
 /*func updateUid()   {}
 func updateGid()   {}*/
-// TODO: add user to local groups
+// TODO: add user to local groups.
 func updateShell() {}
 func updateHome()  {}

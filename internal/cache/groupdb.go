@@ -10,7 +10,7 @@ import (
 	"github.com/ubuntu/aad-auth/internal/logger"
 )
 
-// GroupRecord  returns a group record from the cache
+// GroupRecord  returns a group record from the cache.
 type GroupRecord struct {
 	Name     string
 	GID      int
@@ -43,9 +43,9 @@ func (c *Cache) GetGroupByName(ctx context.Context, groupname string) (group Gro
 	return g, nil
 }
 
-// GetGroupByUid returns given group struct by its GID.
+// GetGroupByGID returns given group struct by its GID.
 // It returns an error if we couldn’t fetch the group (does not exist or not connected).
-func (c *Cache) GetGroupByGid(ctx context.Context, gid uint) (group GroupRecord, err error) {
+func (c *Cache) GetGroupByGID(ctx context.Context, gid uint) (group GroupRecord, err error) {
 	logger.Debug(ctx, "getting group information from cache for uid %d", gid)
 
 	// Nested query to avoid the case where the user is not found,

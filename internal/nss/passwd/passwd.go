@@ -10,6 +10,7 @@ import (
 	"github.com/ubuntu/aad-auth/internal/nss"
 )
 
+// Passwd is the nss passwd object.
 type Passwd struct {
 	name   string /* username */
 	passwd string /* user password */
@@ -73,7 +74,7 @@ func NewByUID(ctx context.Context, uid uint) (p Passwd, err error) {
 	}
 	defer c.Close()
 
-	u, err := c.GetUserByUid(ctx, uid)
+	u, err := c.GetUserByUID(ctx, uid)
 	if err != nil {
 		return Passwd{}, nss.ConvertErr(err)
 	}

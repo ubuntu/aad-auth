@@ -14,17 +14,16 @@ import (
 	"syscall"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
-	"golang.org/x/crypto/bcrypt"
-
 	"github.com/ubuntu/aad-auth/internal/logger"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
-	// ErrNoEnt is returned when there is no entries
-	ErrNoEnt = errors.New("No entries")
+	// ErrNoEnt is returned when there is no entries.
+	ErrNoEnt = errors.New("no entries")
 )
 
+// Cache is the cache object, wrapping our database.
 type Cache struct {
 	db        *sql.DB
 	hasShadow bool
@@ -40,12 +39,14 @@ type Cache struct {
 
 type options struct {
 	cacheDir  string
-	rootUid   int
-	rootGid   int
-	shadowGid int // this bypass group lookup
+	rootUID   int
+	rootGID   int
+	shadowGID int // this bypass group lookup
 
 	offlineCredentialsExpiration int
 }
+
+// Option represents the functional option passed to cache.
 type Option func(*options) error
 
 // WithCacheDir specifies a personalized cache directory.
@@ -58,26 +59,26 @@ func WithCacheDir(p string) func(o *options) error {
 
 //////////////////// to move for tests
 
-// WithRootUid allows to change current Root Uid for tests
-func WithRootUid(uid int) func(o *options) error {
+// WithRootUID allows to change current Root Uid for tests.
+func WithRootUID(uid int) func(o *options) error {
 	return func(o *options) error {
-		o.rootUid = uid
+		o.rootUID = uid
 		return nil
 	}
 }
 
-// WithRootGid allows to change current Root Guid for tests
-func WithRootGid(gid int) func(o *options) error {
+// WithRootGID allows to change current Root Guid for tests.
+func WithRootGID(gid int) func(o *options) error {
 	return func(o *options) error {
-		o.rootGid = gid
+		o.rootGID = gid
 		return nil
 	}
 }
 
-// WithShadowGid allow change current Shadow Gid for tests
-func WithShadowGid(shadowGid int) func(o *options) error {
+// WithShadowGID allow change current Shadow Gid for tests.
+func WithShadowGID(shadowGID int) func(o *options) error {
 	return func(o *options) error {
-		o.shadowGid = shadowGid
+		o.shadowGID = shadowGID
 		return nil
 	}
 }
@@ -94,7 +95,7 @@ func WithOfflineCredentialsExpiration(days int) func(o *options) error {
 	}
 }
 
-// NewCache returns a new cache handler with the database opens. The cache should be closed once unused with .Close()
+// New returns a new cache handler with the database opens. The cache should be closed once unused with .Close()
 // There are 2 caches files: one for passwd/group and one for shadow.
 // If both does not exists, NewCache will create them with proper permissions only if you are the root user, otherwise
 // NewCache will fail.
@@ -113,9 +114,9 @@ func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 
 	o := options{
 		cacheDir:  defaultCachePath,
-		rootUid:   0,
-		rootGid:   0,
-		shadowGid: -1,
+		rootUID:   0,
+		rootGID:   0,
+		shadowGID: -1,
 
 		offlineCredentialsExpiration: 90,
 	}
@@ -127,18 +128,18 @@ func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 	}
 
 	// Only apply shadow lookup here, as in tests, we won’t have a file database available.
-	if o.shadowGid < 0 {
+	if o.shadowGID < 0 {
 		shadowGrp, err := user.LookupGroup("shadow")
 		if err != nil {
 			return nil, fmt.Errorf("failed to find group id for group shadow: %v", err)
 		}
-		o.shadowGid, err = strconv.Atoi(shadowGrp.Gid)
+		o.shadowGID, err = strconv.Atoi(shadowGrp.Gid)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read shadow group id: %v", err)
 		}
 	}
 
-	db, hasShadow, err := initDB(ctx, o.cacheDir, o.rootUid, o.rootGid, o.shadowGid)
+	db, hasShadow, err := initDB(ctx, o.cacheDir, o.rootUID, o.rootGID, o.shadowGID)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +176,7 @@ func (c *Cache) Close() error {
 }
 
 // CanAuthenticate tries to authenticates user from cache and check it hasn't expired.
-// It returns an error if it can’t authenticate
+// It returns an error if it can’t authenticate.
 func (c *Cache) CanAuthenticate(ctx context.Context, username, password string) (err error) {
 	defer func() {
 		if err != nil {
@@ -218,7 +219,7 @@ func (c *Cache) Update(ctx context.Context, username, password string) (err erro
 	user, err := c.GetUserByName(ctx, username)
 	if errors.Is(err, ErrNoEnt) {
 		// Try creating the user
-		id, err := c.generateUidForUser(ctx, username)
+		id, err := c.generateUIDForUser(ctx, username)
 		if err != nil {
 			return err
 		}
@@ -272,7 +273,7 @@ func checkFilePermission(ctx context.Context, p string, owner, gOwner int, permi
 	return nil
 }
 
-// encryptPassword returns an encrypted version of password
+// encryptPassword returns an encrypted version of password.
 func encryptPassword(ctx context.Context, username, password string) (string, error) {
 	logger.Debug(ctx, "encrypt password for user %q", username)
 
@@ -283,8 +284,8 @@ func encryptPassword(ctx context.Context, username, password string) (string, er
 	return string(hash), nil
 }
 
-// generateUidForUser returns an unique uid for the user to create.
-func (c *Cache) generateUidForUser(ctx context.Context, username string) (uid uint32, err error) {
+// generateUIDForUser returns an unique uid for the user to create.
+func (c *Cache) generateUIDForUser(ctx context.Context, username string) (uid uint32, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("failed to generate uid for user %q: %v", username, err)
@@ -296,7 +297,7 @@ func (c *Cache) generateUidForUser(ctx context.Context, username string) (uid ui
 	// compute uid for user
 	var offset uint32 = 100000
 	uid = 1
-	for _, c := range []rune(username) {
+	for _, c := range username {
 		uid = (uid * uint32(c)) % math.MaxUint32
 	}
 	uid = uid%(math.MaxUint32-offset) + offset
@@ -306,7 +307,7 @@ func (c *Cache) generateUidForUser(ctx context.Context, username string) (uid ui
 		if exists, err := uidOrGidExists(c.db, uid, username); err != nil {
 			return 0, err
 		} else if exists {
-			uid += 1
+			uid++
 			continue
 		}
 

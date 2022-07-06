@@ -10,7 +10,7 @@ import (
 	"github.com/ubuntu/aad-auth/internal/logger"
 )
 
-// UserRecord returns a user record from the cache
+// UserRecord returns a user record from the cache.
 type UserRecord struct {
 	Name           string
 	Passwd         string
@@ -61,10 +61,10 @@ WHERE login = ?
 	return u, nil
 }
 
-// GetUserByUid returns given user struct by its UID.
+// GetUserByUID returns given user struct by its UID.
 // It returns an error if we couldn’t fetch the user (does not exist or not connected).
 // shadowPasswd is populated only if the shadow database is accessible.
-func (c *Cache) GetUserByUid(ctx context.Context, uid uint) (user UserRecord, err error) {
+func (c *Cache) GetUserByUID(ctx context.Context, uid uint) (user UserRecord, err error) {
 	logger.Debug(ctx, "getting user information from cache for uid %d", uid)
 
 	// This query is dynamically extended whether we have can query the shadow database or not

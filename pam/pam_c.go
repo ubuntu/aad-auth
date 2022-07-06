@@ -51,11 +51,11 @@ func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 
 	if err := authenticate(ctx, conf); err != nil {
 		switch err {
-		case pamSystemErr:
+		case ErrPamSystem:
 			return C.PAM_SYSTEM_ERR
-		case pamAuthErr:
+		case ErrPamAuth:
 			return C.PAM_AUTH_ERR
-		case pamIgnore:
+		case ErrPamIgnore:
 			return C.PAM_IGNORE
 		}
 	}

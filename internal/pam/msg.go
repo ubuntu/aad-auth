@@ -14,6 +14,7 @@ import "C"
 import (
 	"context"
 	"fmt"
+	"os"
 	"unsafe"
 )
 
@@ -26,9 +27,14 @@ func CtxWithPamh(ctx context.Context, pamh Handle) context.Context {
 }
 
 func Info(ctx context.Context, format string, a ...any) {
-	pamh := ctx.Value(ctxPamhKey).(*C.pam_handle_t)
-
 	msg := fmt.Sprintf(format, a...)
+
+	pamh, ok := ctx.Value(ctxPamhKey).(*C.pam_handle_t)
+	if !ok {
+		fmt.Fprintf(os.Stderr, "WARNING: Failed to display message to user (no pam attached): %v", msg)
+		pamSyslog(pamh, C.LOG_WARNING, "Failed to display message to user (no pam attached): %v", msg)
+	}
+
 	cMsg := C.CString(msg)
 	defer C.free(unsafe.Pointer(cMsg))
 

@@ -28,12 +28,16 @@ char *get_password(pam_handle_t *pamh) {
 import "C"
 import (
 	"context"
+	"errors"
 	"fmt"
 	"unsafe"
 )
 
 func GetUser(ctx context.Context) (string, error) {
-	pamh := ctx.Value(ctxPamhKey).(*C.pam_handle_t)
+	pamh, ok := ctx.Value(ctxPamhKey).(*C.pam_handle_t)
+	if !ok {
+		return "", errors.New("can't check for user: no pam context")
+	}
 
 	cUsername := C.get_user(pamh)
 	if cUsername == nil {
@@ -44,7 +48,10 @@ func GetUser(ctx context.Context) (string, error) {
 }
 
 func GetPassword(ctx context.Context) (string, error) {
-	pamh := ctx.Value(ctxPamhKey).(*C.pam_handle_t)
+	pamh, ok := ctx.Value(ctxPamhKey).(*C.pam_handle_t)
+	if !ok {
+		return "", errors.New("can't check for user: no pam context")
+	}
 
 	cPasswd := C.get_password(pamh)
 	if cPasswd == nil {

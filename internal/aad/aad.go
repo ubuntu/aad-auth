@@ -9,7 +9,6 @@ import (
 
 	msalErrors "github.com/AzureAD/microsoft-authentication-library-for-go/apps/errors"
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/public"
-
 	"github.com/ubuntu/aad-auth/internal/logger"
 )
 
@@ -22,10 +21,10 @@ const (
 )
 
 var (
-	// NoNetworkErr is returned in case of no network available
-	NoNetworkErr = errors.New("NO NETWORK")
-	// DenyErr is returned in case of denial returned by AAD
-	DenyErr = errors.New("DENY")
+	// ErrNoNetwork is returned in case of no network available.
+	ErrNoNetwork = errors.New("NO NETWORK")
+	// ErrDeny is returned in case of denial returned by AAD.
+	ErrDeny = errors.New("DENY")
 )
 
 type aadErr struct {
@@ -41,7 +40,7 @@ func Authenticate(ctx context.Context, tenantID, appID, username, password strin
 	app, errAcquireToken := public.New(appID, public.WithAuthority(authority))
 	if errAcquireToken != nil {
 		logger.Err(ctx, "Connection to authority failed: %v", errAcquireToken)
-		return NoNetworkErr
+		return ErrNoNetwork
 	}
 
 	// Authentify the user
@@ -52,21 +51,21 @@ func Authenticate(ctx context.Context, tenantID, appID, username, password strin
 		data, err := io.ReadAll(callErr.Resp.Body)
 		if err != nil {
 			logger.Err(ctx, "Can't read server response: %v", err)
-			return DenyErr
+			return ErrDeny
 		}
 		var addErrWithCodes aadErr
 		if err := json.Unmarshal(data, &addErrWithCodes); err != nil {
 			logger.Err(ctx, "Invalid server response, not a json object: %v", err)
-			return DenyErr
+			return ErrDeny
 		}
 		for _, errcode := range addErrWithCodes.ErrorCodes {
 			if errcode == invalidCredCode {
 				logger.Debug(ctx, "Got response: Invalid credentials")
-				return DenyErr
+				return ErrDeny
 			}
 			if errcode == noSuchUserCode {
 				logger.Debug(ctx, "Got response: User doesn't exist")
-				return DenyErr
+				return ErrDeny
 			}
 			if errcode == requiresMFACode {
 				logger.Debug(ctx, "Authentication successful even if requiring MFA")
@@ -74,12 +73,12 @@ func Authenticate(ctx context.Context, tenantID, appID, username, password strin
 			}
 		}
 		logger.Err(ctx, "Unknown error code(s) from server: %v", addErrWithCodes.ErrorCodes)
-		return DenyErr
+		return ErrDeny
 	}
 
 	if errAcquireToken != nil {
 		logger.Debug(ctx, "acquiring token failed: %v", errAcquireToken)
-		return NoNetworkErr
+		return ErrNoNetwork
 	}
 
 	logger.Debug(ctx, "Authentication successful with user/password")

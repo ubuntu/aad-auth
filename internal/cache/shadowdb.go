@@ -9,7 +9,7 @@ import (
 	"github.com/ubuntu/aad-auth/internal/logger"
 )
 
-// ShadowRecord returns a shadow record from the cache
+// ShadowRecord returns a shadow record from the cache.
 type ShadowRecord struct {
 	Name           string
 	Password       string
