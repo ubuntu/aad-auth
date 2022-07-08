@@ -2,7 +2,6 @@ package group
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/ubuntu/aad-auth/internal/cache"
@@ -89,8 +88,30 @@ func NewByGID(ctx context.Context, gid uint) (g Group, err error) {
 
 var cacheIterateEntries *cache.Cache
 
+// StartEntryIteration open a new cache for iteration.
+func StartEntryIteration(ctx context.Context) error {
+	c, err := cache.New(ctx, testopts...)
+	if err != nil {
+		// TODO: add context to error
+		logger.Warn(ctx, "XXXXXXXXXXX: %v", err)
+		return nss.ErrUnavailableENoEnt
+	}
+	cacheIterateEntries = c
+
+	return nil
+}
+
+// EndEntryIteration closes the underlying DB.
+func EndEntryIteration(ctx context.Context) error {
+	if cacheIterateEntries == nil {
+		logger.Warn(ctx, "group entry iteration ended without initialization first")
+	}
+	err := cacheIterateEntries.Close()
+	cacheIterateEntries = nil
+	return err
+}
+
 // NextEntry returns next available entry in Group. It will returns ENOENT from cache when the iteration is done.
-// It automatically opens and close the cache on first/last iteration.
 func NextEntry(ctx context.Context) (g Group, err error) {
 	defer func() {
 		if err != nil {
@@ -100,18 +121,12 @@ func NextEntry(ctx context.Context) (g Group, err error) {
 	logger.Debug(ctx, "get next group entry")
 
 	if cacheIterateEntries == nil {
-		cacheIterateEntries, err = cache.New(ctx, testopts...)
-		if err != nil {
-			return Group{}, nss.ErrUnavailableENoEnt
-		}
+		logger.Warn(ctx, "group entry iteration called without initialization first")
+		return Group{}, nss.ErrUnavailableENoEnt
 	}
 
 	grp, err := cacheIterateEntries.NextGroupEntry(ctx)
-	if errors.Is(err, cache.ErrNoEnt) {
-		_ = cacheIterateEntries.Close()
-		cacheIterateEntries = nil
-		return Group{}, nss.ConvertErr(err)
-	} else if err != nil {
+	if err != nil {
 		return Group{}, nss.ConvertErr(err)
 	}
 

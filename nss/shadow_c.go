@@ -41,6 +41,11 @@ func _nss_aad_setspent() C.nss_status {
 	defer logger.CloseLoggerFromContext(ctx)
 	logger.Debug(ctx, "_nss_aad_setspent called")
 
+	err := shadow.StartEntryIteration(ctx)
+	if err != nil {
+		return errToCStatus(ctx, err, nil)
+	}
+
 	// Initialization of the database is done in the read primitive
 	return C.NSS_STATUS_SUCCESS
 }
@@ -50,6 +55,11 @@ func _nss_aad_endspent() C.nss_status {
 	ctx := ctxWithSyslogLogger(context.Background())
 	defer logger.CloseLoggerFromContext(ctx)
 	logger.Debug(ctx, "_nss_aad_endspent called")
+
+	err := shadow.EndEntryIteration(ctx)
+	if err != nil {
+		return errToCStatus(ctx, err, nil)
+	}
 
 	// Closing the database is done in the read primitive
 	return C.NSS_STATUS_SUCCESS

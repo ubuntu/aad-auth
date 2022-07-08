@@ -2,7 +2,6 @@ package shadow
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/ubuntu/aad-auth/internal/cache"
@@ -62,6 +61,28 @@ func NewByName(ctx context.Context, name string) (s Shadow, err error) {
 
 var cacheIterateEntries *cache.Cache
 
+// StartEntryIteration open a new cache for iteration.
+func StartEntryIteration(ctx context.Context) error {
+	c, err := cache.New(ctx, testopts...)
+	if err != nil {
+		// TODO: add context to error
+		return nss.ErrUnavailableENoEnt
+	}
+	cacheIterateEntries = c
+
+	return nil
+}
+
+// EndEntryIteration closes the underlying DB.
+func EndEntryIteration(ctx context.Context) error {
+	if cacheIterateEntries == nil {
+		logger.Warn(ctx, "shadow entry iteration ended without initialization first")
+	}
+	err := cacheIterateEntries.Close()
+	cacheIterateEntries = nil
+	return err
+}
+
 // NextEntry returns next available entry in Shadow. It will returns ENOENT from cache when the iteration is done.
 // It automatically opens and close the cache on first/last iteration.
 func NextEntry(ctx context.Context) (sp Shadow, err error) {
@@ -73,17 +94,11 @@ func NextEntry(ctx context.Context) (sp Shadow, err error) {
 	logger.Debug(ctx, "get next shadow entry")
 
 	if cacheIterateEntries == nil {
-		cacheIterateEntries, err = cache.New(ctx, testopts...)
-		if err != nil {
-			return Shadow{}, nss.ErrUnavailableENoEnt
-		}
+		logger.Warn(ctx, "shadow entry iteration called without initialization first")
+		return Shadow{}, nss.ErrUnavailableENoEnt
 	}
 
 	spw, err := cacheIterateEntries.NextShadowEntry()
-	if errors.Is(err, cache.ErrNoEnt) {
-		_ = cacheIterateEntries.Close()
-		cacheIterateEntries = nil
-	}
 	if err != nil {
 		return Shadow{}, nss.ConvertErr(err)
 	}

@@ -2,7 +2,6 @@ package passwd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/ubuntu/aad-auth/internal/cache"
@@ -92,6 +91,28 @@ func NewByUID(ctx context.Context, uid uint) (p Passwd, err error) {
 
 var cacheIterateEntries *cache.Cache
 
+// StartEntryIteration open a new cache for iteration.
+func StartEntryIteration(ctx context.Context) error {
+	c, err := cache.New(ctx, testopts...)
+	if err != nil {
+		// TODO: add context to error
+		return nss.ErrUnavailableENoEnt
+	}
+	cacheIterateEntries = c
+
+	return nil
+}
+
+// EndEntryIteration closes the underlying DB.
+func EndEntryIteration(ctx context.Context) error {
+	if cacheIterateEntries == nil {
+		logger.Warn(ctx, "passwd entry iteration ended without initialization first")
+	}
+	err := cacheIterateEntries.Close()
+	cacheIterateEntries = nil
+	return err
+}
+
 // NextEntry returns next available entry in Passwd. It will returns ENOENT from cache when the iteration is done.
 // It automatically opens and close the cache on first/last iteration.
 func NextEntry(ctx context.Context) (p Passwd, err error) {
@@ -103,18 +124,12 @@ func NextEntry(ctx context.Context) (p Passwd, err error) {
 	logger.Debug(ctx, "get next passwd entry")
 
 	if cacheIterateEntries == nil {
-		cacheIterateEntries, err = cache.New(ctx, testopts...)
-		if err != nil {
-			return Passwd{}, nss.ErrUnavailableENoEnt
-		}
+		logger.Warn(ctx, "passwd entry iteration called without initialization first")
+		return Passwd{}, nss.ErrUnavailableENoEnt
 	}
 
 	u, err := cacheIterateEntries.NextPasswdEntry()
-	if errors.Is(err, cache.ErrNoEnt) {
-		_ = cacheIterateEntries.Close()
-		cacheIterateEntries = nil
-		return Passwd{}, nss.ConvertErr(err)
-	} else if err != nil {
+	if err != nil {
 		return Passwd{}, nss.ConvertErr(err)
 	}
 

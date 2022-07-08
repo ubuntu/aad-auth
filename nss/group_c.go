@@ -58,6 +58,11 @@ func _nss_aad_setgrent(stayopen C.int) C.nss_status {
 	defer logger.CloseLoggerFromContext(ctx)
 	logger.Debug(ctx, "_nss_aad_setgrent called")
 
+	err := group.StartEntryIteration(ctx)
+	if err != nil {
+		return errToCStatus(ctx, err, nil)
+	}
+
 	// Initialization of the database is done in the read primitive
 	return C.NSS_STATUS_SUCCESS
 }
@@ -67,6 +72,11 @@ func _nss_aad_endgrent() C.nss_status {
 	ctx := ctxWithSyslogLogger(context.Background())
 	defer logger.CloseLoggerFromContext(ctx)
 	logger.Debug(ctx, "_nss_aad_endgrent called")
+
+	err := group.EndEntryIteration(ctx)
+	if err != nil {
+		return errToCStatus(ctx, err, nil)
+	}
 
 	// Closing the database is done in the read primitive
 	return C.NSS_STATUS_SUCCESS
