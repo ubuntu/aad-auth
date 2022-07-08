@@ -1,0 +1,9 @@
+# TODO
+
+## Other
+
+* Open DB connection and cache once
+* Local cache vs remote cache in tests.
+* Make homedir configurable like override_homedir and related options in sssd.conf
+* Make shell configurable like override_shell and related options on sssd.conf
+* Cleanup error override (see TODO in code)
