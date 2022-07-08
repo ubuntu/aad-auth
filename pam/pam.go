@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/ubuntu/aad-auth/internal/aad"
 	"github.com/ubuntu/aad-auth/internal/cache"
@@ -31,12 +32,12 @@ func authenticate(ctx context.Context, conf string) error {
 	// Get connection information
 	username, err := pam.GetUser(ctx)
 	if err != nil {
-		logger.Err(ctx, "Could not get user from stdin")
+		logError(ctx, "Could not get user from stdin", nil)
 		return ErrPamSystem
 	}
 	password, err := pam.GetPassword(ctx)
 	if err != nil {
-		logger.Err(ctx, "Could not read password from stdin")
+		logError(ctx, "Could not read password from stdin", nil)
 		return ErrPamSystem
 	}
 
@@ -70,11 +71,19 @@ func authenticate(ctx context.Context, conf string) error {
 
 	// Successful online login, update cache.
 	if err := c.Update(ctx, username, password); err != nil {
-		logger.Err(ctx, "%v. Denying access.", err)
+		logError(ctx, "%w. Denying access.", err)
 		return ErrPamAuth
 	}
 
 	return nil
+}
+
+func logError(ctx context.Context, format string, err error) {
+	msg := format
+	if err != nil {
+		msg = fmt.Errorf(format, err).Error()
+	}
+	logger.Err(ctx, msg)
 }
 
 func main() {}

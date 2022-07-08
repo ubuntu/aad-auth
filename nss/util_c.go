@@ -42,9 +42,12 @@ func errToCStatus(ctx context.Context, err error, errnop *C.int) C.nss_status {
 		errno = C.EINVAL
 	}
 
-	*errnop = C.int(errno)
-
-	logger.Debug(ctx, "Returning error: %d with errno: %d", nssStatus, *errnop)
+	if errnop != nil {
+		*errnop = C.int(errno)
+		logger.Debug(ctx, "Returning error: %d with errno: %d", nssStatus, errno)
+	} else {
+		logger.Debug(ctx, "Returning error: %d", nssStatus)
+	}
 
 	return nssStatus
 }
