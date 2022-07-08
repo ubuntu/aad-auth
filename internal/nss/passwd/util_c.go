@@ -32,7 +32,7 @@ func (p Passwd) ToCpasswd(pwd CPasswd, buf *CChar, buflen CSizeT) error {
 	}
 
 	// Transform the C guffer to a Go one.
-	gobuf := C.GoBytes(unsafe.Pointer(buf), C.int(buflen))
+	gobuf := (*[1 << 30]byte)(unsafe.Pointer(buf))[:buflen:buflen]
 	b := bytes.NewBuffer(gobuf)
 	b.Reset()
 
