@@ -48,6 +48,7 @@ func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 		}
 	}
 	ctx = logger.CtxWithLogger(ctx, pamLogger)
+	defer logger.CloseLoggerFromContext(ctx)
 
 	if err := authenticate(ctx, conf); err != nil {
 		switch err {

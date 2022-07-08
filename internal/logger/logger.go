@@ -2,6 +2,7 @@ package logger
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -19,6 +20,8 @@ type Logger interface {
 	Err(format string, a ...any)
 	// Crit sends a critical message to the logger
 	Crit(format string, a ...any)
+	// Close closes the underlying logger
+	Close() error
 }
 
 type ctxKey string
@@ -30,6 +33,17 @@ const (
 // CtxWithLogger returns a new context with a logger embedeed.
 func CtxWithLogger(ctx context.Context, logger Logger) context.Context {
 	return context.WithValue(ctx, ctxloggerKey, logger)
+}
+
+// CloseLoggerFromContext closes an underlying logger attached to context.
+func CloseLoggerFromContext(ctx context.Context) error {
+	l, ok := ctx.Value(ctxloggerKey).(Logger)
+	if !ok {
+		err := errors.New("no logger attached to context")
+		fmt.Fprintf(os.Stderr, "ERROR: %v", err)
+		return err
+	}
+	return l.Close()
 }
 
 // Debug calls the corresponding logger Debug() func from context.

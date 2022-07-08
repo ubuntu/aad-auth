@@ -20,6 +20,7 @@ import (
 //export _nss_aad_getgrnam_r
 func _nss_aad_getgrnam_r(name *C.char, grp *C.struct_group, buf *C.char, buflen C.size_t, errnop *C.int) C.nss_status {
 	ctx := ctxWithSyslogLogger(context.Background())
+	defer logger.CloseLoggerFromContext(ctx)
 	n := C.GoString(name)
 	logger.Debug(ctx, "_nss_aad_getgrname_r called for %q", n)
 
@@ -37,7 +38,8 @@ func _nss_aad_getgrnam_r(name *C.char, grp *C.struct_group, buf *C.char, buflen 
 //export _nss_aad_getgrgid_r
 func _nss_aad_getgrgid_r(gid C.gid_t, grp *C.struct_group, buf *C.char, buflen C.size_t, errnop *C.int) C.nss_status {
 	ctx := ctxWithSyslogLogger(context.Background())
-	logger.Debug(ctx, "_nss_aad_getgrgid_r called for %q", gid)
+	defer logger.CloseLoggerFromContext(ctx)
+	logger.Debug(ctx, "_nss_aad_getgrgid_r called for %d", gid)
 
 	g, err := group.NewByGID(ctx, uint(gid))
 	if err != nil {
@@ -53,6 +55,7 @@ func _nss_aad_getgrgid_r(gid C.gid_t, grp *C.struct_group, buf *C.char, buflen C
 //export _nss_aad_setgrent
 func _nss_aad_setgrent(stayopen C.int) C.nss_status {
 	ctx := ctxWithSyslogLogger(context.Background())
+	defer logger.CloseLoggerFromContext(ctx)
 	logger.Debug(ctx, "_nss_aad_setgrent called")
 
 	// Initialization of the database is done in the read primitive
@@ -62,6 +65,7 @@ func _nss_aad_setgrent(stayopen C.int) C.nss_status {
 //export _nss_aad_endgrent
 func _nss_aad_endgrent() C.nss_status {
 	ctx := ctxWithSyslogLogger(context.Background())
+	defer logger.CloseLoggerFromContext(ctx)
 	logger.Debug(ctx, "_nss_aad_endgrent called")
 
 	// Closing the database is done in the read primitive
@@ -71,6 +75,7 @@ func _nss_aad_endgrent() C.nss_status {
 //export _nss_aad_getgrent_r
 func _nss_aad_getgrent_r(grbuf *C.struct_group, buf *C.char, buflen C.size_t, errnop *C.int) C.nss_status {
 	ctx := ctxWithSyslogLogger(context.Background())
+	defer logger.CloseLoggerFromContext(ctx)
 	logger.Debug(ctx, "_nss_aad_getgrent_r called")
 
 	g, err := group.NextEntry(ctx)

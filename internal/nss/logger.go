@@ -30,6 +30,11 @@ func NewLogger(priority syslog.Priority) (*Logger, error) {
 	return l, nil
 }
 
+// Close closes the underlying syslog connection
+func (l Logger) Close() error {
+	return l.w.Close()
+}
+
 // Debug sends a debug level message to the logger.
 func (l Logger) Debug(format string, a ...any) {
 	if l.priority < syslog.LOG_DEBUG {

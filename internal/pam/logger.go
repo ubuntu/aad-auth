@@ -72,6 +72,11 @@ func (l Logger) Crit(format string, a ...any) {
 	pamSyslog(l.pamHandle, C.LOG_CRIT, format, a...)
 }
 
+// Close does nothing for PAM
+func (l Logger) Close() error {
+	return nil
+}
+
 func pamSyslog(pamh Handle, priority int, format string, a ...any) {
 	msg := logger.NormalizeMsg(format, a...)
 
