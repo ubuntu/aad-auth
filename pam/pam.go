@@ -59,7 +59,10 @@ func authenticate(ctx context.Context, conf string) error {
 	// No network: try validate user from cache.
 	if errors.Is(errAAD, aad.ErrNoNetwork) {
 		if err := c.CanAuthenticate(ctx, username, password); err != nil {
-			logger.Err(ctx, "%v. Denying access.", err)
+			if errors.Is(err, cache.ErrOfflineCredentialsExpired) {
+				pam.Info(ctx, "Machine is offline and cached credentials expired. Please try again when the machine is online.")
+			}
+			logError(ctx, "%w. Denying access.", err)
 			return ErrPamAuth
 		}
 		return nil

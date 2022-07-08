@@ -32,6 +32,11 @@ func NewByName(ctx context.Context, name string) (g Group, err error) {
 
 	logger.Debug(ctx, "Requesting a group entry matching name %q", name)
 
+	if name == "shadow" {
+		logger.Debug(ctx, "Ignoring shadow group as it's not in our database")
+		return Group{}, nss.ErrNotFoundENoEnt
+	}
+
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
 		return Group{}, nss.ErrUnavailableENoEnt

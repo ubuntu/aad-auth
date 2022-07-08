@@ -26,8 +26,8 @@ type ShadowRecord struct {
 func (c *Cache) GetShadowByName(ctx context.Context, username string) (swr ShadowRecord, err error) {
 	logger.Debug(ctx, "getting shadow information from cache for %q", username)
 
-	if !c.hasShadow {
-		return swr, errors.New("need shadow to be accessible to query on it")
+	if c.shadowMode < shadowROMode {
+		return swr, fmt.Errorf("need shadow to be accessible to query on it, current access is: %d", c.shadowMode)
 	}
 
 	query := `

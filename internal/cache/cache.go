@@ -21,12 +21,20 @@ import (
 var (
 	// ErrNoEnt is returned when there is no entries.
 	ErrNoEnt = errors.New("no entries")
+	// ErrOfflineCredentialsExpired is returned when the user offline credentials is expired.
+	ErrOfflineCredentialsExpired = errors.New("offline credentials expired")
+)
+
+const (
+	shadowNotAvailableMode = iota
+	shadowROMode
+	shadowRWMode
 )
 
 // Cache is the cache object, wrapping our database.
 type Cache struct {
-	db        *sql.DB
-	hasShadow bool
+	db         *sql.DB
+	shadowMode int
 
 	// offlineCredentialsExpiration is the number of days we allow to user to login without online verification.
 	// Note that users will be purged from cache when exceeding twice this time.
@@ -110,7 +118,7 @@ func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 	}()
 
 	logger.Debug(ctx, "Cache initialization")
-	var hasShadow bool
+	var shadowMode int
 
 	o := options{
 		cacheDir:  defaultCachePath,
@@ -139,14 +147,14 @@ func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 		}
 	}
 
-	db, hasShadow, err := initDB(ctx, o.cacheDir, o.rootUID, o.rootGID, o.shadowGID)
+	db, shadowMode, err := initDB(ctx, o.cacheDir, o.rootUID, o.rootGID, o.shadowGID)
 	if err != nil {
 		return nil, err
 	}
 
-	logger.Debug(ctx, "Attaching shadow db: %v", hasShadow)
+	logger.Debug(ctx, "Shadow db mode: %v", shadowMode)
 
-	if hasShadow {
+	if shadowMode == shadowRWMode {
 		offlineCredentialsExpirationDuration := time.Duration(2 * uint(o.offlineCredentialsExpiration) * 24 * uint(time.Hour))
 		if err := cleanUpDB(ctx, db, offlineCredentialsExpirationDuration); err != nil {
 			return nil, err
@@ -154,8 +162,8 @@ func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 	}
 
 	return &Cache{
-		db:        db,
-		hasShadow: hasShadow,
+		db:         db,
+		shadowMode: shadowMode,
 
 		offlineCredentialsExpiration: o.offlineCredentialsExpiration,
 	}, nil
@@ -180,14 +188,14 @@ func (c *Cache) Close() error {
 func (c *Cache) CanAuthenticate(ctx context.Context, username, password string) (err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("authenticating user %q from cache failed: %v", username, err)
+			err = fmt.Errorf("authenticating user %q from cache failed: %w", username, err)
 		}
 	}()
 
 	logger.Info(ctx, "try to authenticate %q from cache", username)
 
-	if !c.hasShadow {
-		return errors.New("shadow database is not available")
+	if c.shadowMode < shadowROMode {
+		return errors.New("shadow database is not available for reading")
 	}
 
 	user, err := c.GetUserByName(ctx, username)
@@ -198,7 +206,7 @@ func (c *Cache) CanAuthenticate(ctx context.Context, username, password string) 
 	// ensure that we checked credential online recently.
 	logger.Debug(ctx, "Last online login was: %s. Current time: %s. Revalidation needed every %d days", user.LastOnlineAuth, time.Now(), c.offlineCredentialsExpiration)
 	if time.Now().After(user.LastOnlineAuth.Add(time.Duration(uint(c.offlineCredentialsExpiration) * 24 * uint(time.Hour)))) {
-		return errors.New("cache expired")
+		return ErrOfflineCredentialsExpired
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.ShadowPasswd), []byte(password)); err != nil {

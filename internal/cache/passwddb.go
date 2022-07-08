@@ -48,7 +48,7 @@ WHERE login = ?
 %s`
 
 	query := fmt.Sprintf(queryFmt, ",''", "", "")
-	if c.hasShadow {
+	if c.shadowMode > shadowNotAvailableMode {
 		query = fmt.Sprintf(queryFmt, ",s.password", ",shadow.shadow s", "AND   p.uid = s.uid")
 	}
 
@@ -84,7 +84,7 @@ WHERE p.uid = ?
 %s`
 
 	query := fmt.Sprintf(queryFmt, ",''", "", "")
-	if c.hasShadow {
+	if c.shadowMode > shadowNotAvailableMode {
 		query = fmt.Sprintf(queryFmt, ",s.password", ",shadow.shadow s", "AND   p.uid = s.uid")
 	}
 

@@ -66,7 +66,7 @@ type rowScanner interface {
 	Scan(...any) error
 }
 
-func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGid int) (db *sql.DB, hasShadow bool, err error) {
+func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGID int) (db *sql.DB, shadowMode int, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("can't initiate database: %v", err)
@@ -86,7 +86,7 @@ func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGid in
 		filePermission fs.FileMode
 	}{
 		passwdPath: {sqlCreatePasswdTables, rootUID, rootGID, passwdPermission},
-		shadowPath: {sqlCreateShadowTables, rootUID, shadowGid, shadowPermission},
+		shadowPath: {sqlCreateShadowTables, rootUID, shadowGID, shadowPermission},
 	}
 
 	var needsCreate bool
@@ -99,31 +99,31 @@ func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGid in
 	// Ensure that the partial cache (if exists) is cleaned up before creating it
 	if needsCreate {
 		if os.Geteuid() != rootUID || os.Getegid() != rootGID {
-			return nil, false, fmt.Errorf("cache creation can only be done by root user")
+			return nil, 0, fmt.Errorf("cache creation can only be done by root user")
 		}
 
 		if err := os.RemoveAll(cacheDir); err != nil {
-			return nil, false, err
+			return nil, 0, err
 		}
 		if err := os.MkdirAll(cacheDir, 0755); err != nil {
-			return nil, false, err
+			return nil, 0, err
 		}
 
 		for p, prop := range dbFiles {
 			db, err := sql.Open("sqlite3", p)
 			if err != nil {
-				return nil, false, err
+				return nil, 0, err
 			}
 			_, err = db.Exec(prop.sqlCreate)
 			if err != nil {
-				return nil, false, fmt.Errorf("failed to create table: %v", err)
+				return nil, 0, fmt.Errorf("failed to create table: %v", err)
 			}
 			db.Close()
 			if err := os.Chown(p, prop.fileOwner, prop.fileGOwner); err != nil {
-				return nil, false, fmt.Errorf("fixing ownership failed: %v", err)
+				return nil, 0, fmt.Errorf("fixing ownership failed: %v", err)
 			}
 			if err := os.Chmod(p, prop.filePermission); err != nil {
-				return nil, false, fmt.Errorf("fixing permission failed: %v", err)
+				return nil, 0, fmt.Errorf("fixing permission failed: %v", err)
 			}
 		}
 	}
@@ -131,27 +131,32 @@ func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGid in
 	// Check the cache has expected owner and permissions
 	for p, prop := range dbFiles {
 		if err := checkFilePermission(ctx, p, prop.fileOwner, prop.fileGOwner, prop.filePermission); err != nil {
-			return nil, false, err
+			return nil, 0, err
 		}
 	}
 
 	// Open existing cache
 	db, err = sql.Open("sqlite3", passwdPath)
 	if err != nil {
-		return nil, false, err
+		return nil, 0, err
 	}
 
 	// Attach shadow if our user has access to the file (even read-only)
-	if f, err := os.Open(shadowPath); err == nil {
+	if f, err := os.OpenFile(shadowPath, os.O_RDWR, 0); err == nil {
 		f.Close()
+		shadowMode = shadowRWMode
+	} else if f, err := os.Open(shadowPath); err == nil {
+		f.Close()
+		shadowMode = shadowROMode
+	}
+	if shadowMode > shadowNotAvailableMode {
 		_, err = db.Exec(fmt.Sprintf("attach database '%s' as shadow;", shadowPath))
 		if err != nil {
-			return nil, false, err
+			return nil, 0, err
 		}
-		hasShadow = true
 	}
 
-	return db, hasShadow, nil
+	return db, shadowMode, nil
 }
 
 // insertUser insert newUser in cache databases.
@@ -163,8 +168,8 @@ func (c *Cache) insertUser(ctx context.Context, newUser UserRecord) (err error) 
 	}()
 	logger.Debug(ctx, "inserting in cache user %q", newUser.Name)
 
-	if !c.hasShadow {
-		return errors.New("shadow database is not accessible")
+	if c.shadowMode != shadowRWMode {
+		return fmt.Errorf("shadow database is not accessible for writing: %v", c.shadowMode)
 	}
 
 	tx, err := c.db.Begin()
@@ -207,8 +212,8 @@ func (c *Cache) updateOnlineAuthAndPassword(ctx context.Context, uid int, userna
 	}()
 	logger.Debug(ctx, "updating from last online login information for user %q", username)
 
-	if !c.hasShadow {
-		return errors.New("shadow database is not accessible")
+	if c.shadowMode != shadowRWMode {
+		return fmt.Errorf("shadow database is not accessible for writing: %v", c.shadowMode)
 	}
 
 	tx, err := c.db.Begin()
