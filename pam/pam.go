@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/ubuntu/aad-auth/internal/aad"
 	"github.com/ubuntu/aad-auth/internal/cache"
@@ -86,4 +87,20 @@ func logError(ctx context.Context, format string, err error) {
 	logger.Err(ctx, msg)
 }
 
-func main() {}
+func main() {
+	c, err := cache.New(context.Background(), cache.WithCacheDir("../cache"), cache.WithRootUID(1000), cache.WithRootGID(1000), cache.WithShadowGID(1000))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer c.Close()
+
+	for u, pass := range map[string]string{
+		"alice":             "alice pass",
+		"bob@example.com":   "bob pass",
+		"carol@example.com": "carol pass",
+	} {
+		if err := c.Update(context.Background(), u, pass); err != nil {
+			log.Fatal(err)
+		}
+	}
+}
