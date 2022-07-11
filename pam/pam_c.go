@@ -7,8 +7,6 @@ package main
 #include <stdlib.h>
 #include <string.h>
 
-char *get_user(pam_handle_t *pamh);
-char *get_password(pam_handle_t *pamh);
 char *string_from_argv(int i, char **argv);
 */
 import "C"

@@ -31,13 +31,17 @@ type aadErr struct {
 	ErrorCodes []int `json:"error_codes"`
 }
 
+type publicClient interface {
+	AcquireTokenByUsernamePassword(ctx context.Context, scopes []string, username string, password string) (public.AuthResult, error)
+}
+
 // Authenticate tries to authenticate username against AAD.
 func Authenticate(ctx context.Context, tenantID, appID, username, password string) error {
 	authority := fmt.Sprintf("%s/%s", endpoint, tenantID)
 	logger.Debug(ctx, "Connecting to %q, with clientID %q for user %q", authority, appID, username)
 
 	// Get client from network
-	app, errAcquireToken := public.New(appID, public.WithAuthority(authority))
+	app, errAcquireToken := newPublicClient(appID, public.WithAuthority(authority))
 	if errAcquireToken != nil {
 		logger.Err(ctx, "Connection to authority failed: %v", errAcquireToken)
 		return ErrNoNetwork
