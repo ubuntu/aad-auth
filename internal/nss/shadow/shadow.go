@@ -37,7 +37,7 @@ func NewByName(ctx context.Context, name string) (s Shadow, err error) {
 
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
-		return Shadow{}, nss.ErrUnavailableENoEnt
+		return Shadow{}, nss.ConvertErr(err)
 	}
 	defer c.Close()
 
@@ -65,8 +65,7 @@ var cacheIterateEntries *cache.Cache
 func StartEntryIteration(ctx context.Context) error {
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
-		// TODO: add context to error
-		return nss.ErrUnavailableENoEnt
+		return nss.ConvertErr(err)
 	}
 	cacheIterateEntries = c
 
@@ -96,7 +95,7 @@ func NextEntry(ctx context.Context) (sp Shadow, err error) {
 
 	if cacheIterateEntries == nil {
 		logger.Warn(ctx, "shadow entry iteration called without initialization first")
-		return Shadow{}, nss.ErrUnavailableENoEnt
+		return Shadow{}, nss.ConvertErr(err)
 	}
 
 	spw, err := cacheIterateEntries.NextShadowEntry()
