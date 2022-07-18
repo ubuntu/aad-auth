@@ -15,6 +15,7 @@ import (
 
 	"github.com/ubuntu/aad-auth/internal/logger"
 	"github.com/ubuntu/aad-auth/internal/nss/group"
+	"github.com/ubuntu/aad-auth/internal/user"
 )
 
 //export _nss_aad_getgrnam_r
@@ -23,6 +24,7 @@ func _nss_aad_getgrnam_r(name *C.char, grp *C.struct_group, buf *C.char, buflen 
 	defer logger.CloseLoggerFromContext(ctx)
 	n := C.GoString(name)
 	logger.Debug(ctx, "_nss_aad_getgrname_r called for %q", n)
+	n = user.NormalizeName(n)
 
 	p, err := group.NewByName(ctx, n)
 	if err != nil {
