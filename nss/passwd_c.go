@@ -17,6 +17,8 @@ import (
 	"github.com/ubuntu/aad-auth/internal/nss/passwd"
 )
 
+//go:generate sh -c "go build -ldflags='-s -w' -buildmode=c-shared -o libnss_aad.so.2"
+
 //export _nss_aad_getpwnam_r
 func _nss_aad_getpwnam_r(name *C.char, pwd *C.struct_passwd, buf *C.char, buflen C.size_t, errnop *C.int) C.nss_status {
 	ctx := ctxWithSyslogLogger(context.Background())
