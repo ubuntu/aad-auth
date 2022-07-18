@@ -128,7 +128,7 @@ func NextEntry(ctx context.Context) (p Passwd, err error) {
 		return Passwd{}, nss.ErrUnavailableENoEnt
 	}
 
-	u, err := cacheIterateEntries.NextPasswdEntry()
+	u, err := cacheIterateEntries.NextPasswdEntry(ctx)
 	if err != nil {
 		return Passwd{}, nss.ConvertErr(err)
 	}
