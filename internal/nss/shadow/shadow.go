@@ -77,6 +77,7 @@ func StartEntryIteration(ctx context.Context) error {
 func EndEntryIteration(ctx context.Context) error {
 	if cacheIterateEntries == nil {
 		logger.Warn(ctx, "shadow entry iteration ended without initialization first")
+		return nil
 	}
 	err := cacheIterateEntries.Close()
 	cacheIterateEntries = nil
