@@ -15,6 +15,7 @@ import (
 
 	"github.com/ubuntu/aad-auth/internal/logger"
 	"github.com/ubuntu/aad-auth/internal/nss/passwd"
+	"github.com/ubuntu/aad-auth/internal/user"
 )
 
 //go:generate sh -c "go build -ldflags='-s -w' -buildmode=c-shared -o libnss_aad.so.2"
@@ -25,6 +26,7 @@ func _nss_aad_getpwnam_r(name *C.char, pwd *C.struct_passwd, buf *C.char, buflen
 	defer logger.CloseLoggerFromContext(ctx)
 	n := C.GoString(name)
 	logger.Debug(ctx, "_nss_aad_getpwnam_r called for %q", n)
+	n = user.NormalizeName(n)
 
 	p, err := passwd.NewByName(ctx, n)
 	if err != nil {

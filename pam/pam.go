@@ -10,6 +10,7 @@ import (
 	"github.com/ubuntu/aad-auth/internal/cache"
 	"github.com/ubuntu/aad-auth/internal/logger"
 	"github.com/ubuntu/aad-auth/internal/pam"
+	"github.com/ubuntu/aad-auth/internal/user"
 )
 
 var (
@@ -36,6 +37,7 @@ func authenticate(ctx context.Context, conf string) error {
 		logError(ctx, "Could not get user from stdin", nil)
 		return ErrPamSystem
 	}
+	username = user.NormalizeName(username)
 	password, err := pam.GetPassword(ctx)
 	if err != nil {
 		logError(ctx, "Could not read password from stdin", nil)

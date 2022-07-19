@@ -15,6 +15,7 @@ import (
 
 	"github.com/ubuntu/aad-auth/internal/logger"
 	"github.com/ubuntu/aad-auth/internal/nss/shadow"
+	"github.com/ubuntu/aad-auth/internal/user"
 )
 
 //export _nss_aad_getspnam_r
@@ -23,6 +24,7 @@ func _nss_aad_getspnam_r(name *C.char, spwd *C.struct_spwd, buf *C.char, buflen 
 	defer logger.CloseLoggerFromContext(ctx)
 	n := C.GoString(name)
 	logger.Debug(ctx, "_nss_aad_getspnam_r called for %q", n)
+	n = user.NormalizeName(n)
 
 	sp, err := shadow.NewByName(ctx, n)
 	if err != nil {
