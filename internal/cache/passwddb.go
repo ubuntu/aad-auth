@@ -99,13 +99,13 @@ WHERE p.uid = ?
 
 // NextPasswdEntry returns next passwd from the current position within this cache.
 // It initializes the passwd query on first run and return ErrNoEnt once done.
-func (c *Cache) NextPasswdEntry() (u UserRecord, err error) {
+func (c *Cache) NextPasswdEntry(ctx context.Context) (u UserRecord, err error) {
 	defer func() {
 		if err != nil && !errors.Is(err, ErrNoEnt) {
 			err = fmt.Errorf("failed to read passwd entry in db: %v", err)
 		}
 	}()
-	logger.Debug(context.Background(), "request next passwd entry in db")
+	logger.Debug(ctx, "request next passwd entry in db")
 
 	if c.cursorPasswd == nil {
 		query := `

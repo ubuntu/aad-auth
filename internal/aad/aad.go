@@ -48,7 +48,7 @@ func Authenticate(ctx context.Context, tenantID, appID, username, password strin
 	}
 
 	// Authentify the user
-	_, errAcquireToken = app.AcquireTokenByUsernamePassword(context.Background(), nil, username, password)
+	_, errAcquireToken = app.AcquireTokenByUsernamePassword(ctx, nil, username, password)
 
 	var callErr msalErrors.CallErr
 	if errors.As(errAcquireToken, &callErr) {

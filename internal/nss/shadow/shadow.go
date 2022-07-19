@@ -98,7 +98,7 @@ func NextEntry(ctx context.Context) (sp Shadow, err error) {
 		return Shadow{}, nss.ConvertErr(err)
 	}
 
-	spw, err := cacheIterateEntries.NextShadowEntry()
+	spw, err := cacheIterateEntries.NextShadowEntry(ctx)
 	if err != nil {
 		return Shadow{}, nss.ConvertErr(err)
 	}

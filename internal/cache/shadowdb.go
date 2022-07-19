@@ -47,13 +47,13 @@ func (c *Cache) GetShadowByName(ctx context.Context, username string) (swr Shado
 
 // NextShadowEntry returns next shadow from the current position within this cache.
 // It initializes the shadow query on first run and return ErrNoEnt once done.
-func (c *Cache) NextShadowEntry() (swr ShadowRecord, err error) {
+func (c *Cache) NextShadowEntry(ctx context.Context) (swr ShadowRecord, err error) {
 	defer func() {
 		if err != nil && !errors.Is(err, ErrNoEnt) {
 			err = fmt.Errorf("failed to read shadow entry in db: %v", err)
 		}
 	}()
-	logger.Debug(context.Background(), "request next shadow entry in db")
+	logger.Debug(ctx, "request next shadow entry in db")
 
 	if c.cursorShadow == nil {
 		query := `
