@@ -2,6 +2,7 @@ package nss
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/ubuntu/aad-auth/internal/cache"
 )
@@ -19,16 +20,41 @@ var (
 	ErrNotFoundSuccess = errors.New("not found SUCCESS")
 )
 
-// ConvertErr converts errors to known types.
-func ConvertErr(err error) error {
-	if err == nil {
+type nssError struct {
+	origErr error
+	apiErr  error
+}
+
+func (err nssError) Unwrap() error {
+	return err.apiErr
+}
+
+func (err nssError) Error() string {
+	return fmt.Sprintf("%v (returning %v)", err.origErr, err.apiErr)
+}
+
+// ConvertErr converts errors to known types, wrapping the original ones.
+func ConvertErr(origErr error) error {
+	if origErr == nil {
 		return nil
 	}
 
-	if errors.Is(err, cache.ErrNoEnt) {
-		return ErrNotFoundENoEnt
+	apiErr := ErrUnavailableENoEnt
+
+	// If we have an API error already, do not override it.
+	if errors.Is(origErr, ErrTryAgainEAgain) ||
+		errors.Is(origErr, ErrTryAgainERange) ||
+		errors.Is(origErr, ErrUnavailableENoEnt) ||
+		errors.Is(origErr, ErrNotFoundENoEnt) ||
+		errors.Is(origErr, ErrNotFoundSuccess) {
+		apiErr = origErr
+	} else if errors.Is(origErr, cache.ErrNoEnt) {
+		// Special error from cache to convert.
+		apiErr = ErrNotFoundENoEnt
 	}
 
-	// TODO: what to do err? Wrapping/logging (would be better to keep it)
-	return ErrUnavailableENoEnt
+	return nssError{
+		origErr: origErr,
+		apiErr:  apiErr,
+	}
 }

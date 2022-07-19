@@ -33,18 +33,17 @@ func NewByName(ctx context.Context, name string) (g Group, err error) {
 
 	if name == "shadow" {
 		logger.Debug(ctx, "Ignoring shadow group as it's not in our database")
-		return Group{}, nss.ErrNotFoundENoEnt
+		return Group{}, nss.ConvertErr(err)
 	}
 
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
-		return Group{}, nss.ErrUnavailableENoEnt
+		return Group{}, nss.ConvertErr(err)
 	}
 	defer c.Close()
 
 	grp, err := c.GetGroupByName(ctx, name)
 	if err != nil {
-		// TODO: remove this wrapper and just print logs on error before converting to known format for the C lib.
 		return Group{}, nss.ConvertErr(err)
 	}
 
@@ -69,7 +68,7 @@ func NewByGID(ctx context.Context, gid uint) (g Group, err error) {
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
 
-		return Group{}, nss.ErrUnavailableENoEnt
+		return Group{}, nss.ConvertErr(err)
 	}
 	defer c.Close()
 
@@ -92,9 +91,7 @@ var cacheIterateEntries *cache.Cache
 func StartEntryIteration(ctx context.Context) error {
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
-		// TODO: add context to error
-		logger.Warn(ctx, "XXXXXXXXXXX: %v", err)
-		return nss.ErrUnavailableENoEnt
+		return nss.ConvertErr(err)
 	}
 	cacheIterateEntries = c
 
@@ -105,6 +102,7 @@ func StartEntryIteration(ctx context.Context) error {
 func EndEntryIteration(ctx context.Context) error {
 	if cacheIterateEntries == nil {
 		logger.Warn(ctx, "group entry iteration ended without initialization first")
+		return nil
 	}
 	err := cacheIterateEntries.Close()
 	cacheIterateEntries = nil
@@ -122,7 +120,7 @@ func NextEntry(ctx context.Context) (g Group, err error) {
 
 	if cacheIterateEntries == nil {
 		logger.Warn(ctx, "group entry iteration called without initialization first")
-		return Group{}, nss.ErrUnavailableENoEnt
+		return Group{}, nss.ConvertErr(err)
 	}
 
 	grp, err := cacheIterateEntries.NextGroupEntry(ctx)

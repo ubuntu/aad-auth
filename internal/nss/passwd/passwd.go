@@ -36,8 +36,7 @@ func NewByName(ctx context.Context, name string) (p Passwd, err error) {
 
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
-		// TODO: wrap all open cache errors OR LOG HERE + transform?
-		return Passwd{}, nss.ErrUnavailableENoEnt
+		return Passwd{}, nss.ConvertErr(err)
 	}
 	defer c.Close()
 
@@ -69,7 +68,7 @@ func NewByUID(ctx context.Context, uid uint) (p Passwd, err error) {
 
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
-		return Passwd{}, nss.ErrUnavailableENoEnt
+		return Passwd{}, nss.ConvertErr(err)
 	}
 	defer c.Close()
 
@@ -95,8 +94,7 @@ var cacheIterateEntries *cache.Cache
 func StartEntryIteration(ctx context.Context) error {
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
-		// TODO: add context to error
-		return nss.ErrUnavailableENoEnt
+		return nss.ConvertErr(err)
 	}
 	cacheIterateEntries = c
 
@@ -107,6 +105,7 @@ func StartEntryIteration(ctx context.Context) error {
 func EndEntryIteration(ctx context.Context) error {
 	if cacheIterateEntries == nil {
 		logger.Warn(ctx, "passwd entry iteration ended without initialization first")
+		return nil
 	}
 	err := cacheIterateEntries.Close()
 	cacheIterateEntries = nil
@@ -125,7 +124,7 @@ func NextEntry(ctx context.Context) (p Passwd, err error) {
 
 	if cacheIterateEntries == nil {
 		logger.Warn(ctx, "passwd entry iteration called without initialization first")
-		return Passwd{}, nss.ErrUnavailableENoEnt
+		return Passwd{}, nss.ConvertErr(err)
 	}
 
 	u, err := cacheIterateEntries.NextPasswdEntry()
