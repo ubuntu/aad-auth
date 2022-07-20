@@ -39,7 +39,7 @@ func NewByName(ctx context.Context, name string) (s Shadow, err error) {
 	if err != nil {
 		return Shadow{}, nss.ConvertErr(err)
 	}
-	defer c.Close()
+	defer c.Close(ctx)
 
 	spw, err := c.GetShadowByName(ctx, name)
 	if err != nil {
@@ -59,28 +59,24 @@ func NewByName(ctx context.Context, name string) (s Shadow, err error) {
 	}, nil
 }
 
-var cacheIterateEntries *cache.Cache
-
 // StartEntryIteration open a new cache for iteration.
 func StartEntryIteration(ctx context.Context) error {
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
 		return nss.ConvertErr(err)
 	}
-	cacheIterateEntries = c
-
-	return nil
+	defer c.Close(ctx)
+	return nss.ConvertErr(c.CloseShadowIterator(ctx))
 }
 
-// EndEntryIteration closes the underlying DB.
+// EndEntryIteration closes the underlying DB iterator.
 func EndEntryIteration(ctx context.Context) error {
-	if cacheIterateEntries == nil {
-		logger.Warn(ctx, "shadow entry iteration ended without initialization first")
-		return nil
+	c, err := cache.New(ctx, testopts...)
+	if err != nil {
+		return nss.ConvertErr(err)
 	}
-	err := cacheIterateEntries.Close()
-	cacheIterateEntries = nil
-	return err
+	defer c.Close(ctx)
+	return nss.ConvertErr(c.CloseShadowIterator(ctx))
 }
 
 // NextEntry returns next available entry in Shadow. It will returns ENOENT from cache when the iteration is done.
@@ -93,12 +89,13 @@ func NextEntry(ctx context.Context) (sp Shadow, err error) {
 	}()
 	logger.Debug(ctx, "get next shadow entry")
 
-	if cacheIterateEntries == nil {
-		logger.Warn(ctx, "shadow entry iteration called without initialization first")
+	c, err := cache.New(ctx, testopts...)
+	if err != nil {
 		return Shadow{}, nss.ConvertErr(err)
 	}
+	defer c.Close(ctx)
 
-	spw, err := cacheIterateEntries.NextShadowEntry(ctx)
+	spw, err := c.NextShadowEntry(ctx)
 	if err != nil {
 		return Shadow{}, nss.ConvertErr(err)
 	}

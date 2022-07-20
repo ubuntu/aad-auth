@@ -58,7 +58,7 @@ func authenticate(ctx context.Context, conf string) error {
 		logger.Err(ctx, "%v. Denying access.", err)
 		return ErrPamAuth
 	}
-	defer c.Close()
+	defer c.Close(ctx)
 
 	// No network: try validate user from cache.
 	if errors.Is(errAAD, aad.ErrNoNetwork) {
@@ -94,7 +94,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer c.Close()
+	defer c.Close(context.Background())
 
 	for u, pass := range map[string]string{
 		"alice":             "alice pass",

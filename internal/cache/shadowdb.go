@@ -78,6 +78,22 @@ func (c *Cache) NextShadowEntry(ctx context.Context) (swr ShadowRecord, err erro
 	return newShadowFromScanner(c.cursorShadow)
 }
 
+// CloseShadowIterator allows to close current iterator underlying request on shadow.
+// If none is in process, this is a no-op.
+func (c *Cache) CloseShadowIterator(ctx context.Context) error {
+	logger.Debug(ctx, "request to close shadow iteration in db")
+	if c.cursorShadow == nil {
+		return nil
+	}
+
+	err := c.cursorShadow.Close()
+	c.cursorShadow = nil
+	if err != nil {
+		return fmt.Errorf("failed to close shadow iterator in db: %w", err)
+	}
+	return nil
+}
+
 // newShadowFromScanner abstracts the row request deserialization to ShadowRecord.
 // It returns ErrNoEnt in case of no element found.
 func newShadowFromScanner(r rowScanner) (swr ShadowRecord, err error) {

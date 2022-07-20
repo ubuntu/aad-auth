@@ -106,6 +106,22 @@ func (c *Cache) NextGroupEntry(ctx context.Context) (g GroupRecord, err error) {
 	return newGroupFromScanner(c.cursorGroup)
 }
 
+// CloseGroupIterator allows to close current iterator underlying request group.
+// If none is in process, this is a no-op.
+func (c *Cache) CloseGroupIterator(ctx context.Context) error {
+	logger.Debug(ctx, "request to close group iteration in db")
+	if c.cursorGroup == nil {
+		return nil
+	}
+
+	err := c.cursorGroup.Close()
+	c.cursorGroup = nil
+	if err != nil {
+		return fmt.Errorf("failed to close group iterator in db: %w", err)
+	}
+	return nil
+}
+
 // newGroupFromScanner abstracts the row request deserialization to GroupRecord.
 // It returns ErrNoEnt in case of no element found.
 func newGroupFromScanner(r rowScanner) (g GroupRecord, err error) {

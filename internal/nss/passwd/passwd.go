@@ -38,7 +38,7 @@ func NewByName(ctx context.Context, name string) (p Passwd, err error) {
 	if err != nil {
 		return Passwd{}, nss.ConvertErr(err)
 	}
-	defer c.Close()
+	defer c.Close(ctx)
 
 	u, err := c.GetUserByName(ctx, name)
 	if err != nil {
@@ -70,7 +70,7 @@ func NewByUID(ctx context.Context, uid uint) (p Passwd, err error) {
 	if err != nil {
 		return Passwd{}, nss.ConvertErr(err)
 	}
-	defer c.Close()
+	defer c.Close(ctx)
 
 	u, err := c.GetUserByUID(ctx, uid)
 	if err != nil {
@@ -88,28 +88,24 @@ func NewByUID(ctx context.Context, uid uint) (p Passwd, err error) {
 	}, nil
 }
 
-var cacheIterateEntries *cache.Cache
-
 // StartEntryIteration open a new cache for iteration.
 func StartEntryIteration(ctx context.Context) error {
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
 		return nss.ConvertErr(err)
 	}
-	cacheIterateEntries = c
-
-	return nil
+	defer c.Close(ctx)
+	return nss.ConvertErr(c.ClosePasswdIterator(ctx))
 }
 
-// EndEntryIteration closes the underlying DB.
+// EndEntryIteration closes the underlying DB iterator.
 func EndEntryIteration(ctx context.Context) error {
-	if cacheIterateEntries == nil {
-		logger.Warn(ctx, "passwd entry iteration ended without initialization first")
-		return nil
+	c, err := cache.New(ctx, testopts...)
+	if err != nil {
+		return nss.ConvertErr(err)
 	}
-	err := cacheIterateEntries.Close()
-	cacheIterateEntries = nil
-	return err
+	defer c.Close(ctx)
+	return nss.ConvertErr(c.ClosePasswdIterator(ctx))
 }
 
 // NextEntry returns next available entry in Passwd. It will returns ENOENT from cache when the iteration is done.
@@ -122,12 +118,13 @@ func NextEntry(ctx context.Context) (p Passwd, err error) {
 	}()
 	logger.Debug(ctx, "get next passwd entry")
 
-	if cacheIterateEntries == nil {
-		logger.Warn(ctx, "passwd entry iteration called without initialization first")
+	c, err := cache.New(ctx, testopts...)
+	if err != nil {
 		return Passwd{}, nss.ConvertErr(err)
 	}
+	defer c.Close(ctx)
 
-	u, err := cacheIterateEntries.NextPasswdEntry(ctx)
+	u, err := c.NextPasswdEntry(ctx)
 	if err != nil {
 		return Passwd{}, nss.ConvertErr(err)
 	}

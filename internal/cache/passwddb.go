@@ -128,6 +128,22 @@ func (c *Cache) NextPasswdEntry(ctx context.Context) (u UserRecord, err error) {
 	return newUserFromScanner(c.cursorPasswd)
 }
 
+// ClosePasswdIterator allows to close current iterator underlying request on passwd.
+// If none is in process, this is a no-op.
+func (c *Cache) ClosePasswdIterator(ctx context.Context) error {
+	logger.Debug(ctx, "request to close passwd iteration in db")
+	if c.cursorPasswd == nil {
+		return nil
+	}
+
+	err := c.cursorPasswd.Close()
+	c.cursorPasswd = nil
+	if err != nil {
+		return fmt.Errorf("failed to close passwd iterator in db: %w", err)
+	}
+	return nil
+}
+
 // newUserFromScanner abstracts the row request deserialization to UserRecord.
 // It returns ErrNoEnt in case of no element found.
 func newUserFromScanner(r rowScanner) (u UserRecord, err error) {
