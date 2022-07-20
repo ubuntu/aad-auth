@@ -40,7 +40,7 @@ func NewByName(ctx context.Context, name string) (g Group, err error) {
 	if err != nil {
 		return Group{}, nss.ConvertErr(err)
 	}
-	defer c.Close()
+	defer c.Close(ctx)
 
 	grp, err := c.GetGroupByName(ctx, name)
 	if err != nil {
@@ -70,7 +70,7 @@ func NewByGID(ctx context.Context, gid uint) (g Group, err error) {
 
 		return Group{}, nss.ConvertErr(err)
 	}
-	defer c.Close()
+	defer c.Close(ctx)
 
 	grp, err := c.GetGroupByGID(ctx, gid)
 	if err != nil {
@@ -85,28 +85,24 @@ func NewByGID(ctx context.Context, gid uint) (g Group, err error) {
 	}, nil
 }
 
-var cacheIterateEntries *cache.Cache
-
 // StartEntryIteration open a new cache for iteration.
 func StartEntryIteration(ctx context.Context) error {
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
 		return nss.ConvertErr(err)
 	}
-	cacheIterateEntries = c
-
-	return nil
+	defer c.Close(ctx)
+	return nss.ConvertErr(c.CloseGroupIterator(ctx))
 }
 
-// EndEntryIteration closes the underlying DB.
+// EndEntryIteration closes the underlying DB iteration.
 func EndEntryIteration(ctx context.Context) error {
-	if cacheIterateEntries == nil {
-		logger.Warn(ctx, "group entry iteration ended without initialization first")
-		return nil
+	c, err := cache.New(ctx, testopts...)
+	if err != nil {
+		return nss.ConvertErr(err)
 	}
-	err := cacheIterateEntries.Close()
-	cacheIterateEntries = nil
-	return err
+	defer c.Close(ctx)
+	return nss.ConvertErr(c.CloseGroupIterator(ctx))
 }
 
 // NextEntry returns next available entry in Group. It will returns ENOENT from cache when the iteration is done.
@@ -118,12 +114,13 @@ func NextEntry(ctx context.Context) (g Group, err error) {
 	}()
 	logger.Debug(ctx, "get next group entry")
 
-	if cacheIterateEntries == nil {
-		logger.Warn(ctx, "group entry iteration called without initialization first")
+	c, err := cache.New(ctx, testopts...)
+	if err != nil {
 		return Group{}, nss.ConvertErr(err)
 	}
+	defer c.Close(ctx)
 
-	grp, err := cacheIterateEntries.NextGroupEntry(ctx)
+	grp, err := c.NextGroupEntry(ctx)
 	if err != nil {
 		return Group{}, nss.ConvertErr(err)
 	}

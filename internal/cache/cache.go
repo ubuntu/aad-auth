@@ -11,6 +11,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
@@ -43,13 +44,19 @@ type Cache struct {
 	cursorPasswd *sql.Rows
 	cursorGroup  *sql.Rows
 	cursorShadow *sql.Rows
+
+	usedBy           int
+	usedByMu         sync.Mutex
+	teardownDuration time.Duration
+	sig              options // signature used in the cache entry to remove the element from the map.
 }
 
 type options struct {
-	cacheDir  string
-	rootUID   int
-	rootGID   int
-	shadowGID int // this bypass group lookup
+	cacheDir         string
+	rootUID          int
+	rootGID          int
+	shadowGID        int // this bypass group lookup
+	teardownDuration time.Duration
 
 	offlineCredentialsExpiration int
 }
@@ -91,6 +98,14 @@ func WithShadowGID(shadowGID int) func(o *options) error {
 	}
 }
 
+// WithTeardownDuration allows to change current Shadow Gid for tests.
+func WithTeardownDuration(d time.Duration) func(o *options) error {
+	return func(o *options) error {
+		o.teardownDuration = d
+		return nil
+	}
+}
+
 // WithOfflineCredentialsExpiration allows to change the number of days the user can log in without online verification.
 // Note that users will be purged from cache when exceeding twice this time.
 func WithOfflineCredentialsExpiration(days int) func(o *options) error {
@@ -103,7 +118,14 @@ func WithOfflineCredentialsExpiration(days int) func(o *options) error {
 	}
 }
 
-// New returns a new cache handler with the database opens. The cache should be closed once unused with .Close()
+var (
+	openedCaches   = make(map[options]*Cache)
+	openedCachesMu sync.RWMutex
+)
+
+// New returns a new cache handler with the database opened. The cache should be closed and released once unused with .Close().
+// For optimization purposes, the cache can stay opened for a while and further New() calls with the same options
+// will rematch and reuse the same cache. It will automatically close any released cache on idle.
 // There are 2 caches files: one for passwd/group and one for shadow.
 // If both does not exists, NewCache will create them with proper permissions only if you are the root user, otherwise
 // NewCache will fail.
@@ -117,14 +139,14 @@ func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 		}
 	}()
 
-	logger.Debug(ctx, "Cache initialization")
 	var shadowMode int
 
 	o := options{
-		cacheDir:  defaultCachePath,
-		rootUID:   0,
-		rootGID:   0,
-		shadowGID: -1,
+		cacheDir:         defaultCachePath,
+		rootUID:          0,
+		rootGID:          0,
+		shadowGID:        -1,
+		teardownDuration: 30 * time.Second,
 
 		offlineCredentialsExpiration: 90,
 	}
@@ -134,6 +156,22 @@ func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 			return nil, err
 		}
 	}
+
+	initialShadowGID := o.shadowGID
+
+	openedCachesMu.Lock()
+	defer openedCachesMu.Unlock()
+
+	// return any used and opened cache
+	if c, ok := openedCaches[o]; ok {
+		logger.Debug(ctx, "Reusing existing opened cache")
+		c.usedByMu.Lock()
+		defer c.usedByMu.Unlock()
+		c.usedBy++
+		return c, nil
+	}
+
+	logger.Debug(ctx, "Cache initialization")
 
 	// Only apply shadow lookup here, as in tests, we won’t have a file database available.
 	if o.shadowGID < 0 {
@@ -161,26 +199,75 @@ func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 		}
 	}
 
-	return &Cache{
+	// reset shadowGid to initial value as the detection may have changed it after initialization, to retest
+	o.shadowGID = initialShadowGID
+
+	c = &Cache{
 		db:         db,
 		shadowMode: shadowMode,
 
 		offlineCredentialsExpiration: o.offlineCredentialsExpiration,
-	}, nil
+
+		usedBy:           1,
+		teardownDuration: o.teardownDuration,
+		sig:              o,
+	}
+	openedCaches[o] = c
+
+	return c, nil
 }
 
 // Close closes the underlying db.
-func (c *Cache) Close() error {
-	if c.cursorPasswd != nil {
-		_ = c.cursorPasswd.Close()
+// After a while, if no other connection to this db is active, this cache will be closed.
+func (c *Cache) Close(ctx context.Context) error {
+	logger.Debug(ctx, "Close database request")
+
+	c.usedByMu.Lock()
+	defer c.usedByMu.Unlock()
+	c.usedBy--
+	if c.usedBy != 0 {
+		return nil
 	}
-	if c.cursorGroup != nil {
-		_ = c.cursorGroup.Close()
-	}
-	if c.cursorShadow != nil {
-		_ = c.cursorShadow.Close()
-	}
-	return c.db.Close()
+
+	// Start closing DB timer.
+	go func() {
+		<-time.After(c.teardownDuration)
+
+		// Take master mutex to avoid getting a cached object we may remove from the cache map
+		openedCachesMu.Lock()
+		defer openedCachesMu.Unlock()
+
+		// Teardown underlying connection if there is still no usage
+		c.usedByMu.Lock()
+		defer c.usedByMu.Unlock()
+		if c.usedBy != 0 {
+			if c.usedBy > 0 {
+				logger.Debug(ctx, "Don’t teardown cache as still in use by %d", c.usedBy)
+			}
+			return
+		}
+
+		logger.Debug(ctx, "No use of cache, closing underlying DB.")
+
+		if err := c.ClosePasswdIterator(ctx); err != nil {
+			logger.Warn(ctx, "%v", err)
+		}
+		if err := c.CloseGroupIterator(ctx); err != nil {
+			logger.Warn(ctx, "%v", err)
+		}
+		if err := c.CloseShadowIterator(ctx); err != nil {
+			logger.Warn(ctx, "%v", err)
+		}
+
+		if err := c.db.Close(); err != nil {
+			logger.Warn(ctx, "%v", err)
+		}
+
+		delete(openedCaches, c.sig)
+		c.usedBy = -1 // prevent other consumer in close teardown to clear it up
+	}()
+
+	return nil
 }
 
 // CanAuthenticate tries to authenticates user from cache and check it hasn't expired.
