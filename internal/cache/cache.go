@@ -11,6 +11,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -24,6 +25,7 @@ var (
 	ErrNoEnt = errors.New("no entries")
 	// ErrOfflineCredentialsExpired is returned when the user offline credentials is expired.
 	ErrOfflineCredentialsExpired = errors.New("offline credentials expired")
+	errNoSuchArg                 = errors.New("No such argument")
 )
 
 const (
@@ -242,7 +244,7 @@ func (c *Cache) Close(ctx context.Context) error {
 		defer c.usedByMu.Unlock()
 		if c.usedBy != 0 {
 			if c.usedBy > 0 {
-				logger.Debug(ctx, "Don’t teardown cache as still in use by %d", c.usedBy)
+				logger.Debug(ctx, "Don't teardown cache as still in use by %d", c.usedBy)
 			}
 			return
 		}
@@ -304,7 +306,7 @@ func (c *Cache) CanAuthenticate(ctx context.Context, username, password string) 
 }
 
 // Update creates and update user nss cache when there has been an online verification.
-func (c *Cache) Update(ctx context.Context, username, password string) (err error) {
+func (c *Cache) Update(ctx context.Context, username, password, homeDir, shell string) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("can not create/open cache for nss database: %v", err)
@@ -318,12 +320,19 @@ func (c *Cache) Update(ctx context.Context, username, password string) (err erro
 		if err != nil {
 			return err
 		}
+
+		home, err := parseHomeDir(ctx, homeDir, username, fmt.Sprintf("%v", id))
+		if err != nil {
+			logger.Debug(ctx, err.Error())
+			home = filepath.Join("/home", username)
+		}
+
 		user = UserRecord{
 			Name:  username,
 			UID:   int(id),
 			GID:   int(id),
-			Home:  filepath.Join("/home", username),
-			Shell: "/bin/bash", // TODO, check for system default
+			Home:  home,
+			Shell: shell,
 		}
 
 		if err := c.insertUser(ctx, user); err != nil {
@@ -412,4 +421,46 @@ func (c *Cache) generateUIDForUser(ctx context.Context, username string) (uid ui
 	logger.Info(ctx, "user id for %q is %d", username, uid)
 
 	return uid, nil
+}
+
+func parseHomeDir(ctx context.Context, homeDir, username, uid string) (string, error) {
+	home := ""
+	arg := false
+	for _, c := range homeDir {
+		s := string(c)
+		if c == '%' && !arg {
+			arg = true
+			continue
+		}
+		if arg {
+			tmp, err := parseHomeDirArg(ctx, s, username, uid)
+			if err != nil {
+				return "", err
+			}
+			s = tmp
+			arg = false
+		}
+		home += s
+	}
+	return home, nil
+}
+
+func parseHomeDirArg(ctx context.Context, arg, username, uid string) (string, error) {
+	switch arg {
+	case "u", "d":
+		sl := strings.Split(username, "@")
+		if arg == "u" {
+			return string(sl[0]), nil
+		}
+		return string(sl[1]), nil
+	case "U":
+		return uid, nil
+	case "f":
+		return username, nil
+	case "l":
+		return string(username[0]), nil
+	case "%":
+		return "%", nil
+	}
+	return "", errNoSuchArg
 }
