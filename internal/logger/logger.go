@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
+	"log"
 	"strings"
 )
 
@@ -40,7 +40,7 @@ func CloseLoggerFromContext(ctx context.Context) error {
 	l, ok := ctx.Value(ctxloggerKey).(Logger)
 	if !ok {
 		err := errors.New("no logger attached to context")
-		fmt.Fprintf(os.Stderr, "ERROR: %v", err)
+		log.Printf("ERROR: %v", err)
 		return err
 	}
 	return l.Close()
@@ -51,7 +51,7 @@ func Debug(ctx context.Context, format string, a ...any) {
 	l, ok := ctx.Value(ctxloggerKey).(Logger)
 	if !ok {
 		msg := fmt.Sprintf(format, a...)
-		fmt.Fprintf(os.Stderr, "DEBUG: %v", msg)
+		log.Printf("DEBUG: %v", msg)
 		return
 	}
 	l.Debug(format, a...)
@@ -62,7 +62,7 @@ func Info(ctx context.Context, format string, a ...any) {
 	l, ok := ctx.Value(ctxloggerKey).(Logger)
 	if !ok {
 		msg := fmt.Sprintf(format, a...)
-		fmt.Fprintf(os.Stderr, "INFO: %v", msg)
+		log.Printf("INFO: %v", msg)
 		return
 	}
 	l.Info(format, a...)
@@ -73,7 +73,7 @@ func Warn(ctx context.Context, format string, a ...any) {
 	l, ok := ctx.Value(ctxloggerKey).(Logger)
 	if !ok {
 		msg := fmt.Sprintf(format, a...)
-		fmt.Fprintf(os.Stderr, "WARNING: %v", msg)
+		log.Printf("WARNING: %v", msg)
 		return
 	}
 	l.Warn(format, a...)
@@ -84,7 +84,7 @@ func Err(ctx context.Context, format string, a ...any) {
 	l, ok := ctx.Value(ctxloggerKey).(Logger)
 	if !ok {
 		msg := fmt.Sprintf(format, a...)
-		fmt.Fprintf(os.Stderr, "ERROR: %v", msg)
+		log.Printf("ERROR: %v", msg)
 		return
 	}
 	l.Err(format, a...)
@@ -95,7 +95,7 @@ func Crit(ctx context.Context, format string, a ...any) {
 	l, ok := ctx.Value(ctxloggerKey).(Logger)
 	if !ok {
 		msg := fmt.Sprintf(format, a...)
-		fmt.Fprintf(os.Stderr, "CRITICAL: %v", msg)
+		log.Printf("CRITICAL: %v", msg)
 		return
 	}
 	l.Crit(format, a...)
