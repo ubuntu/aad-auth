@@ -24,6 +24,7 @@ var (
 	ErrNoEnt = errors.New("no entries")
 	// ErrOfflineCredentialsExpired is returned when the user offline credentials is expired.
 	ErrOfflineCredentialsExpired = errors.New("offline credentials expired")
+	errNoSuchArg                 = errors.New("No such argument")
 )
 
 const (
