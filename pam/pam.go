@@ -22,7 +22,6 @@ var (
 	ErrPamIgnore = errors.New("PAM IGNORE")
 )
 
-//export pam_sm_authenticate
 func authenticate(ctx context.Context, conf string) error {
 	// Load configuration.
 	tenantID, appID, offlineCredentialsExpiration, homeDir, shell, err := loadConfig(ctx, conf)
