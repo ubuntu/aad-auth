@@ -56,6 +56,8 @@ type options struct {
 	rootUID          int
 	rootGID          int
 	shadowGID        int // this bypass group lookup
+	passwdPermission fs.FileMode
+	shadowPermission fs.FileMode
 	teardownDuration time.Duration
 
 	offlineCredentialsExpiration int
@@ -142,10 +144,14 @@ func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 	var shadowMode int
 
 	o := options{
-		cacheDir:         defaultCachePath,
+		cacheDir: defaultCachePath,
+
 		rootUID:          0,
 		rootGID:          0,
 		shadowGID:        -1,
+		passwdPermission: 0644,
+		shadowPermission: 0640,
+
 		teardownDuration: 30 * time.Second,
 
 		offlineCredentialsExpiration: 90,
@@ -185,7 +191,7 @@ func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 		}
 	}
 
-	db, shadowMode, err := initDB(ctx, o.cacheDir, o.rootUID, o.rootGID, o.shadowGID)
+	db, shadowMode, err := initDB(ctx, o.cacheDir, o.rootUID, o.rootGID, o.shadowGID, o.passwdPermission, o.shadowPermission)
 	if err != nil {
 		return nil, err
 	}
