@@ -66,7 +66,7 @@ type rowScanner interface {
 	Scan(...any) error
 }
 
-func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGID int) (db *sql.DB, shadowMode int, err error) {
+func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGID int, passwdPermission, shadowPermission fs.FileMode) (db *sql.DB, shadowMode int, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("can't initiate database: %v", err)
@@ -75,9 +75,7 @@ func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGID in
 	logger.Debug(ctx, "Opening cache in %s", cacheDir)
 
 	passwdPath := filepath.Join(cacheDir, passwdDB)
-	var passwdPermission fs.FileMode = 0644
 	shadowPath := filepath.Join(cacheDir, shadowDB)
-	var shadowPermission fs.FileMode = 0640
 
 	dbFiles := map[string]struct {
 		sqlCreate      string
