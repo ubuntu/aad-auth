@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	defaultsFile = "/etc/adduser.conf"
+	adduserConfPath = "/etc/adduser.conf"
 )
 
 // loadConfig returns the loaded configuration from p.
@@ -44,12 +44,11 @@ func loadConfig(ctx context.Context, p string) (tenantID string, appID string, o
 		return "", "", 0, "", "", fmt.Errorf("missing 'app_id' entry in configuration file")
 	}
 
-	// It's not pretty, but at least it will only open the config file once
-	// and only if it's needed
+	// Only open the config file once, if required.
 	if homeDir == "" || shell == "" {
-		dh, ds := loadDefaultHomeAndShell(ctx, defaultsFile)
+		dh, ds := loadDefaultHomeAndShell(ctx, adduserConfPath)
 		if homeDir == "" {
-			homeDir = filepath.Join(dh, "%u")
+			homeDir = dh
 		}
 		if shell == "" {
 			shell = ds
@@ -59,16 +58,24 @@ func loadConfig(ctx context.Context, p string) (tenantID string, appID string, o
 	return tenantID, appID, offlineCredentialsExpiration, homeDir, shell, nil
 }
 
-func loadDefaultHomeAndShell(ctx context.Context, file string) (string, string) {
-	dh, ds := "/home/%u", "/bin/bash"
-	conf, err := ini.Load(file)
+const (
+	defaultHomePattern = "/home/%u"
+	defaultShell       = "/bin/bash"
+)
+
+// loadDefaultHomeAndShell returns default home and shell patterns for all users.
+// They will load from an adduser.conf formatted ini file.
+// In case they are commented or not defined, we will use hardcoded defaults.
+func loadDefaultHomeAndShell(ctx context.Context, path string) (home, shell string) {
+	dh, ds := defaultHomePattern, defaultShell
+	conf, err := ini.Load(path)
 	if err != nil {
-		logger.Debug(ctx, "Could not open %s, using defaults for homedir and shell\n", file)
+		logger.Debug(ctx, "Could not open %s, using defaults for homedir and shell", path)
 		return dh, ds
 	}
 
 	if tmp := conf.Section("").Key("DHOME").String(); tmp != "" {
-		dh = tmp
+		dh = filepath.Join(tmp, "%u")
 	}
 	if tmp := conf.Section("").Key("DSHELL").String(); tmp != "" {
 		ds = tmp
