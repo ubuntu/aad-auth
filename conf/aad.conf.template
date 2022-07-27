@@ -1,5 +1,18 @@
+# required values
 tenant_id = <TENANT_ID>
 app_id = <APPLICATION OR CLIENT ID>
 offline_credentials_expiration = 90
+
+# optional values
 homedir = /home/%u
-shell = /bin/bash
+shell = /bin/someShell
+
+# overriding values for a specific domain
+[someDomain.com]
+tenant_id = <TENANT_ID for someDomain.com>
+app_id = <APP OR CLIENT ID for someDomain.com>
+offline_credentials_expiration = <expiration interval for someDomain.com>
+
+# can still override homedir and shell, even though it is optional
+homedir = /home/%d/%l/%u
+shell = /bin/someDomainShell
