@@ -12,9 +12,8 @@ void pam_syslog_no_variadic(const pam_handle_t *pamh, int priority, const char *
 */
 import "C"
 import (
+	"fmt"
 	"unsafe"
-
-	"github.com/ubuntu/aad-auth/internal/logger"
 )
 
 // Priority is the level of the message
@@ -78,7 +77,7 @@ func (l Logger) Close() error {
 }
 
 func pamSyslog(pamh Handle, priority int, format string, a ...any) {
-	msg := logger.NormalizeMsg(format, a...)
+	msg := fmt.Sprintf(format, a...)
 
 	cMsg := C.CString(msg)
 	defer C.free(unsafe.Pointer(cMsg))

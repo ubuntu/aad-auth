@@ -101,9 +101,9 @@ func Crit(ctx context.Context, format string, a ...any) {
 	l.Crit(format, a...)
 }
 
-// NormalizeMsg use format to expand a to it.
+// normalizeMsg use format to expand a to it.
 // Returned msg will always ends with an EOL.
-func NormalizeMsg(format string, a ...any) string {
+func normalizeMsg(format string, a ...any) string {
 	if !strings.HasSuffix(format, "\n") {
 		format += "\n"
 	}
