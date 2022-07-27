@@ -10,7 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/termie/go-shutil"
 	"github.com/ubuntu/aad-auth/internal/cache"
 )
 
@@ -191,6 +193,59 @@ func TestCloseCacheDifferentOptions(t *testing.T) {
 	require.NotEqual(t, c1, c2, "cache should be separate elements")
 }
 
+func TestCleanupDB(t *testing.T) {
+	t.Parallel()
+
+	var zeroDuration int
+
+	tests := map[string]struct {
+		offlineCredentialsExpirationTime *int
+
+		wantKeepOldUsers bool
+	}{
+		"clean up old users":     {},
+		"do not clean up anyone": {offlineCredentialsExpirationTime: &zeroDuration, wantKeepOldUsers: true},
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			cacheDir := t.TempDir()
+			require.NoError(t, os.RemoveAll(cacheDir), "Setup: could not remove to prepare cache directory")
+			err := shutil.CopyTree("testdata/db_with_old_users", cacheDir, nil)
+			require.NoError(t, err, "Setup: could not copy initial database files in cache")
+
+			// This triggers a database cleanup if offlineCredentialsExpirationTime is not 0
+			uid, gid := getCurrentUidGid(t)
+			opts := append([]cache.Option{}, cache.WithCacheDir(cacheDir),
+				cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid))
+
+			if tc.offlineCredentialsExpirationTime != nil {
+				opts = append(opts, cache.WithOfflineCredentialsExpiration(*tc.offlineCredentialsExpirationTime))
+			}
+
+			c, err := cache.New(context.Background(), opts...)
+			require.NoError(t, err, "Should be able to create a cache and clean up")
+			t.Cleanup(func() { c.Close(context.Background()) })
+
+			_, errUserVeryOld := c.GetUserByName(context.Background(), "veryolduser@domain.com")
+			_, errUserMiddleOld := c.GetUserByName(context.Background(), "middleolduser@domain.com")
+			_, errUserRecentFuture := c.GetUserByName(context.Background(), "futureuser@domain.com")
+
+			if tc.wantKeepOldUsers {
+				assert.NoError(t, errUserVeryOld, "Very old user should not be cleaned up due to duration being 0")
+				assert.NoError(t, errUserMiddleOld, "Not that old user should not be cleaned up due to duration being 0")
+			} else {
+				assert.Error(t, errUserVeryOld, "Very old user should be cleaned up")
+				assert.Error(t, errUserMiddleOld, "Not that old user should be cleaned up")
+			}
+
+			assert.NoError(t, errUserRecentFuture, "Really recent of future user should not be cleaned up")
+		})
+	}
+}
+
 func TestUpdate(t *testing.T) {
 	t.Parallel()
 
@@ -225,7 +280,7 @@ func TestUpdate(t *testing.T) {
 
 			// First, try to get  user
 			cacheDir := t.TempDir()
-			c := newCacheForTests(t, cacheDir, true)
+			c := newCacheForTests(t, cacheDir, true, false)
 
 			if tc.shadowMode != nil {
 				c.SetShadowMode(*tc.shadowMode)
@@ -253,7 +308,7 @@ func TestUpdate(t *testing.T) {
 				// Close and reload a new cache object to ensure we do reload everything from files
 				c.Close(context.Background())
 				c.WaitForCacheClosed()
-				c = newCacheForTests(t, cacheDir, true)
+				c = newCacheForTests(t, cacheDir, true, false)
 				c.SetShadowMode(*tc.doRefreshWithShadowMode)
 
 				// we need one second as we are storing an unix timestamp for last online auth
@@ -277,7 +332,69 @@ func TestUpdate(t *testing.T) {
 	}
 }
 
-func newCacheForTests(t *testing.T, cacheDir string, closeWithoutDelay bool) (c *cache.Cache) {
+func TestCanAuthenticate(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		userPasswords  map[string]string
+		useoldaccounts bool
+		shadowMode     *int
+
+		wantErr bool
+	}{
+		"can authenticate one user":                     {userPasswords: map[string]string{"first user": "my password"}},
+		"handle separately multiple users and password": {userPasswords: map[string]string{"first user": "my password", "second user": "other password"}},
+		"can authenticate even with shadow file RO":     {userPasswords: map[string]string{"first user": "my password"}, shadowMode: &cache.ShadowROMode},
+
+		// error cases
+		"error on wrong password":                         {userPasswords: map[string]string{"first user": "wrong password"}, wantErr: true},
+		"error on wrong user":                             {userPasswords: map[string]string{"does not exist user": "my password"}, wantErr: true},
+		"error on checking when can’t access shadow file": {userPasswords: map[string]string{"first user": "my password"}, shadowMode: &cache.ShadowNotAvailableMode, wantErr: true},
+		"do not let too old unpurged accounts to log in ": {userPasswords: map[string]string{"veryolduser@domain.com": "my password"}, useoldaccounts: true, wantErr: true},
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			cacheDir := t.TempDir()
+
+			var c *cache.Cache
+			if !tc.useoldaccounts {
+				// create cache and users
+				c = newCacheForTests(t, cacheDir, true, false)
+				err := c.Update(context.Background(), "first user", "my password")
+				require.NoError(t, err, "Setup: should be able to create first user")
+				err = c.Update(context.Background(), "second user", "other password")
+				require.NoError(t, err, "Setup: should be able to create second user")
+			} else {
+				// copy old database and reopen the cache without cleaning up old account
+				require.NoError(t, os.RemoveAll(cacheDir), "Setup: could not remove to prepare cache directory")
+				err := shutil.CopyTree("testdata/db_with_old_users", cacheDir, nil)
+				require.NoError(t, err, "Setup: could not copy initial database files in cache")
+				c = newCacheForTests(t, cacheDir, true, true)
+			}
+
+			if tc.shadowMode != nil {
+				c.SetShadowMode(*tc.shadowMode)
+			}
+
+			for username, password := range tc.userPasswords {
+				err := c.CanAuthenticate(context.Background(), username, password)
+				if tc.wantErr {
+					require.Error(t, err, "CanAuthenticate should return an error but hasn’t")
+					if username == "veryolduser@domain.com" {
+						require.ErrorIs(t, err, cache.ErrOfflineCredentialsExpired, "CanAuthenticate should return a certain error type for expired unpurged users")
+					}
+					return
+				}
+				assert.NoError(t, err, "CanAuthenticate should not have returned an error but has")
+			}
+		})
+	}
+}
+
+func newCacheForTests(t *testing.T, cacheDir string, closeWithoutDelay, withoutCleanup bool) (c *cache.Cache) {
 	t.Helper()
 
 	uid, gid := getCurrentUidGid(t)
@@ -286,6 +403,9 @@ func newCacheForTests(t *testing.T, cacheDir string, closeWithoutDelay bool) (c 
 
 	if closeWithoutDelay {
 		opts = append(opts, cache.WithTeardownDuration(0))
+	}
+	if withoutCleanup {
+		opts = append(opts, cache.WithOfflineCredentialsExpiration(0))
 	}
 
 	c, err := cache.New(context.Background(), opts...)
