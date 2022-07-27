@@ -7,6 +7,7 @@ require (
 	github.com/go-ini/ini v1.66.6
 	github.com/mattn/go-sqlite3 v1.14.13
 	github.com/stretchr/testify v1.7.5
+	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
 )
 
