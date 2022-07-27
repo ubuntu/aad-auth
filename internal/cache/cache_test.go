@@ -213,6 +213,9 @@ func TestCleanupDB(t *testing.T) {
 			require.NoError(t, os.RemoveAll(cacheDir), "Setup: could not remove to prepare cache directory")
 			err := shutil.CopyTree("testdata/db_with_old_users", cacheDir, nil)
 			require.NoError(t, err, "Setup: could not copy initial database files in cache")
+			// apply expected permission as git will change them
+			require.NoError(t, os.Chmod(filepath.Join(cacheDir, cache.PasswdDB), 0644), "Setup: failed to set expected permission on passwd db file")
+			require.NoError(t, os.Chmod(filepath.Join(cacheDir, cache.ShadowDB), 0640), "Setup: failed to set expected permission on shadow db file")
 
 			// This triggers a database cleanup if offlineCredentialsExpirationTime is not 0
 			uid, gid := getCurrentUidGid(t)
@@ -370,6 +373,9 @@ func TestCanAuthenticate(t *testing.T) {
 				require.NoError(t, os.RemoveAll(cacheDir), "Setup: could not remove to prepare cache directory")
 				err := shutil.CopyTree("testdata/db_with_old_users", cacheDir, nil)
 				require.NoError(t, err, "Setup: could not copy initial database files in cache")
+				// apply expected permission as git will change them
+				require.NoError(t, os.Chmod(filepath.Join(cacheDir, cache.PasswdDB), 0644), "Setup: failed to set expected permission on passwd db file")
+				require.NoError(t, os.Chmod(filepath.Join(cacheDir, cache.ShadowDB), 0640), "Setup: failed to set expected permission on shadow db file")
 				c = newCacheForTests(t, cacheDir, true, true)
 			}
 
