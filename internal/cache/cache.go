@@ -303,7 +303,7 @@ func (c *Cache) CanAuthenticate(ctx context.Context, username, password string) 
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.ShadowPasswd), []byte(password)); err != nil {
-		return errors.New("password does not match: %v")
+		return fmt.Errorf("password does not match: %v", err)
 	}
 
 	return nil

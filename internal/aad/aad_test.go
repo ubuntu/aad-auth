@@ -57,7 +57,6 @@ func TestAuthenticate(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
-
 }
 
 func TestMain(m *testing.M) {
