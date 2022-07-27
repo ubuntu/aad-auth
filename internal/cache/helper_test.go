@@ -33,13 +33,24 @@ func newCacheForTests(t *testing.T, cacheDir string, closeWithoutDelay, withoutC
 }
 
 type userInfos struct {
+	name     string
 	uid      int
 	password string
 }
 
-var usersForTests = map[string]userInfos{
-	"myuser@domain.com":    {1929326240, "my password"},
-	"otheruser@domain.com": {165119648, "other password"},
+var (
+	usersForTests = map[string]userInfos{
+		"myuser@domain.com":    {"myuser@domain.com", 1929326240, "my password"},
+		"otheruser@domain.com": {"otheruser@domain.com", 165119648, "other password"},
+	}
+	usersForTestsByUid = make(map[uint]userInfos)
+)
+
+func init() {
+	// populate usersForTestByUid
+	for _, info := range usersForTests {
+		usersForTestsByUid[uint(info.uid)] = info
+	}
 }
 
 // insertUsersInDb inserts usersForTests after opening a cache at cacheDir.
