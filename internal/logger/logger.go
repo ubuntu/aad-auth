@@ -48,57 +48,57 @@ func CloseLoggerFromContext(ctx context.Context) error {
 
 // Debug calls the corresponding logger Debug() func from context.
 func Debug(ctx context.Context, format string, a ...any) {
+	msg := normalizeMsg(fmt.Sprintf(format, a...))
 	l, ok := ctx.Value(ctxloggerKey).(Logger)
 	if !ok {
-		msg := fmt.Sprintf(format, a...)
 		log.Printf("DEBUG: %v", msg)
 		return
 	}
-	l.Debug(format, a...)
+	l.Debug(msg)
 }
 
 // Info calls the corresponding logger Info() func from context.
 func Info(ctx context.Context, format string, a ...any) {
+	msg := normalizeMsg(fmt.Sprintf(format, a...))
 	l, ok := ctx.Value(ctxloggerKey).(Logger)
 	if !ok {
-		msg := fmt.Sprintf(format, a...)
 		log.Printf("INFO: %v", msg)
 		return
 	}
-	l.Info(format, a...)
+	l.Info(msg)
 }
 
 // Warn calls the corresponding logger Warn() func from context.
 func Warn(ctx context.Context, format string, a ...any) {
+	msg := normalizeMsg(fmt.Sprintf(format, a...))
 	l, ok := ctx.Value(ctxloggerKey).(Logger)
 	if !ok {
-		msg := fmt.Sprintf(format, a...)
 		log.Printf("WARNING: %v", msg)
 		return
 	}
-	l.Warn(format, a...)
+	l.Warn(msg)
 }
 
 // Err calls the corresponding logger Err() func from context.
 func Err(ctx context.Context, format string, a ...any) {
+	msg := normalizeMsg(fmt.Sprintf(format, a...))
 	l, ok := ctx.Value(ctxloggerKey).(Logger)
 	if !ok {
-		msg := fmt.Sprintf(format, a...)
 		log.Printf("ERROR: %v", msg)
 		return
 	}
-	l.Err(format, a...)
+	l.Err(msg)
 }
 
 // Crit calls the corresponding logger Crit() func from context.
 func Crit(ctx context.Context, format string, a ...any) {
+	msg := normalizeMsg(fmt.Sprintf(format, a...))
 	l, ok := ctx.Value(ctxloggerKey).(Logger)
 	if !ok {
-		msg := fmt.Sprintf(format, a...)
 		log.Printf("CRITICAL: %v", msg)
 		return
 	}
-	l.Crit(format, a...)
+	l.Crit(msg)
 }
 
 // normalizeMsg use format to expand a to it.
