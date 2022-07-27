@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -43,6 +44,9 @@ func TestLogging(t *testing.T) {
 
 		"crit, with logger": {logFn: logger.Crit, hasLoggerInContext: true, wantLoggerPrint: "CRITICAL: my log message"},
 		"crit, on stderr":   {logFn: logger.Crit, hasLoggerInContext: false, wantLoggerPrint: "CRITICAL: my log message"},
+
+		// special cases
+		"message already have an EOL": {logFn: logger.Debug, hasLoggerInContext: true, wantLoggerPrint: "DEBUG: my log message\n"},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -81,27 +85,7 @@ func TestLogging(t *testing.T) {
 				content = string(contentLog)
 			}
 			require.Contains(t, content, tc.wantLoggerPrint, "Logged expected content")
-		})
-	}
-}
-
-func TestNormalizeMsg(t *testing.T) {
-	t.Parallel()
-	tests := map[string]struct {
-		format string
-		a      string
-		want   string
-	}{
-		"msg will always end by EOL": {format: "My %s", a: "message", want: "My message\n"},
-		"msg with EOL is unchanged":  {format: "My %s with EOL\n", a: "message", want: "My message with EOL\n"},
-	}
-	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			got := logger.NormalizeMsg(tc.format, tc.a)
-			require.Equal(t, tc.want, got, "got expected message with EOL")
+			require.True(t, strings.HasSuffix(content, "\n"), "Logged message always ends with EOL")
 		})
 	}
 }
