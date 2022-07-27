@@ -3,8 +3,6 @@ package nss
 import (
 	"fmt"
 	"log/syslog"
-
-	"github.com/ubuntu/aad-auth/internal/logger"
 )
 
 // Logger is the logger connected to syslog.
@@ -40,31 +38,31 @@ func (l Logger) Debug(format string, a ...any) {
 	if l.priority < syslog.LOG_DEBUG {
 		return
 	}
-	l.w.Debug(normalizeMsgAndPrefixNss(format, a...))
+	l.w.Debug(prefixWithNss(format, a...))
 }
 
 // Info sends an informational message to the logger.
 func (l Logger) Info(format string, a ...any) {
-	l.w.Info(normalizeMsgAndPrefixNss(format, a...))
+	l.w.Info(prefixWithNss(format, a...))
 }
 
 // Warn sends a warning level message to the logger.
 func (l Logger) Warn(format string, a ...any) {
-	l.w.Warning(normalizeMsgAndPrefixNss(format, a...))
+	l.w.Warning(prefixWithNss(format, a...))
 }
 
 // Err sends an error level message to the logger.
 func (l Logger) Err(format string, a ...any) {
-	l.w.Err(normalizeMsgAndPrefixNss(format, a...))
+	l.w.Err(prefixWithNss(format, a...))
 }
 
 // Crit sends a critical message to the logger.
 func (l Logger) Crit(format string, a ...any) {
-	l.w.Crit(normalizeMsgAndPrefixNss(format, a...))
+	l.w.Crit(prefixWithNss(format, a...))
 }
 
-// normalizeMsgAndPrefixNss prefix msg with NSS before calling NormalizeMsg.
-func normalizeMsgAndPrefixNss(format string, a ...any) string {
+// prefixWithNss prefix msg with NSS before calling NormalizeMsg.
+func prefixWithNss(format string, a ...any) string {
 	format = fmt.Sprintf("nss_aad: %v", format)
-	return logger.NormalizeMsg(format, a...)
+	return fmt.Sprintf(format, a...)
 }
