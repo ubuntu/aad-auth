@@ -24,9 +24,9 @@ func loadConfig(ctx context.Context, p, domain string) (tenantID string, appID s
 		return "", "", 0, "", "", fmt.Errorf("loading configuration failed: %v", err)
 	}
 
-	domainSection := cfg.Section(domain)
-	if len(domainSection.Keys()) == 0 {
-		domainSection = cfg.Section("")
+	domainSection := cfg.Section("")
+	if cfg.HasSection(domain) {
+		domainSection = cfg.Section(domain)
 	}
 
 	tenantID = domainSection.Key("tenant_id").String()
