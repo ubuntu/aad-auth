@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -43,6 +44,9 @@ func TestLogging(t *testing.T) {
 
 		"crit, with logger": {logFn: logger.Crit, hasLoggerInContext: true, wantLoggerPrint: "CRITICAL: my log message"},
 		"crit, on stderr":   {logFn: logger.Crit, hasLoggerInContext: false, wantLoggerPrint: "CRITICAL: my log message"},
+
+		// special cases
+		"message already have an EOL": {logFn: logger.Debug, hasLoggerInContext: true, wantLoggerPrint: "DEBUG: my log message\n"},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -81,6 +85,7 @@ func TestLogging(t *testing.T) {
 				content = string(contentLog)
 			}
 			require.Contains(t, content, tc.wantLoggerPrint, "Logged expected content")
+			require.True(t, strings.HasSuffix(content, "\n"), "Logged message always ends with EOL")
 		})
 	}
 }
