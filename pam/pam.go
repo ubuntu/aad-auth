@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/ubuntu/aad-auth/internal/aad"
 	"github.com/ubuntu/aad-auth/internal/cache"
@@ -23,13 +24,6 @@ var (
 )
 
 func authenticate(ctx context.Context, conf string) error {
-	// Load configuration.
-	tenantID, appID, offlineCredentialsExpiration, homeDir, shell, err := loadConfig(ctx, conf)
-	if err != nil {
-		logger.Err(ctx, "No valid configuration found: %v", err)
-		return ErrPamSystem
-	}
-
 	// Get connection information
 	username, err := pam.GetUser(ctx)
 	if err != nil {
@@ -40,6 +34,14 @@ func authenticate(ctx context.Context, conf string) error {
 	password, err := pam.GetPassword(ctx)
 	if err != nil {
 		logError(ctx, "Could not read password from stdin", nil)
+		return ErrPamSystem
+	}
+
+	// Load configuration.
+	_, domain, _ := strings.Cut(username, "@")
+	tenantID, appID, offlineCredentialsExpiration, homeDir, shell, err := loadConfig(ctx, conf, domain)
+	if err != nil {
+		logger.Err(ctx, "No valid configuration found: %v", err)
 		return ErrPamSystem
 	}
 

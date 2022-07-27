@@ -465,7 +465,7 @@ func parseHomeDir(ctx context.Context, homeDirPattern, username, uid string) (ho
 }
 
 // parseHomeDirPattern returns the string that matches the given pattern.
-// If the pattern is not recognized, an error is returned.
+// If the pattern is not recognized, n error is returned
 func parseHomeDirPattern(ctx context.Context, pattern, username, uid string) (string, error) {
 	switch pattern {
 	case "u", "d":

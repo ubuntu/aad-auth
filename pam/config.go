@@ -14,8 +14,9 @@ const (
 	adduserConfPath = "/etc/adduser.conf"
 )
 
-// loadConfig returns the loaded configuration from p.
-func loadConfig(ctx context.Context, p string) (tenantID string, appID string, offlineCredentialsExpiration int, homeDir string, shell string, err error) {
+// loadConfig returns the loaded configuration of the specified domain from p.
+// If there is no section for the specified domain, the values on the beginning of p are used as default.
+func loadConfig(ctx context.Context, p, domain string) (tenantID string, appID string, offlineCredentialsExpiration int, homeDir string, shell string, err error) {
 	logger.Debug(ctx, "Loading configuration from %s", p)
 
 	cfg, err := ini.Load(p)
@@ -23,12 +24,18 @@ func loadConfig(ctx context.Context, p string) (tenantID string, appID string, o
 		return "", "", 0, "", "", fmt.Errorf("loading configuration failed: %v", err)
 	}
 
-	tenantID = cfg.Section("").Key("tenant_id").String()
-	appID = cfg.Section("").Key("app_id").String()
+	domainSection := cfg.Section(domain)
+	if len(domainSection.Keys()) == 0 {
+		domainSection = cfg.Section("")
+	}
+
+	tenantID = domainSection.Key("tenant_id").String()
+	appID = domainSection.Key("app_id").String()
 	offlineCredentialsExpiration = -1
-	homeDir = cfg.Section("").Key("homedir").String()
-	shell = cfg.Section("").Key("shell").String()
-	cacheRevalidationCfg := cfg.Section("").Key("offline_credentials_expiration").String()
+	homeDir = domainSection.Key("homedir").String()
+	shell = domainSection.Key("shell").String()
+
+	cacheRevalidationCfg := domainSection.Key("offline_credentials_expiration").String()
 	if cacheRevalidationCfg != "" {
 		v, err := strconv.Atoi(cacheRevalidationCfg)
 		if err != nil {
@@ -42,6 +49,15 @@ func loadConfig(ctx context.Context, p string) (tenantID string, appID string, o
 	}
 	if appID == "" {
 		return "", "", 0, "", "", fmt.Errorf("missing 'app_id' entry in configuration file")
+	}
+
+	// Tries to fall back to the aad.conf default homedir before looking into adduser.conf
+	if homeDir == "" && domainSection.Name() != "" {
+		homeDir = cfg.Section("").Key("homedir").String()
+	}
+	// Tries to fall back to the aad.conf default shell before looking into adduser.conf
+	if shell == "" && domainSection.Name() != "" {
+		shell = cfg.Section("").Key("shell").String()
 	}
 
 	// Only open the config file once, if required.
