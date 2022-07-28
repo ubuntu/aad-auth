@@ -1,0 +1,5 @@
+tenantid: "2"
+appid: "2"
+offlinecredentialsexpiration: 180
+homedir: /home/%d/%u
+shell: /bin/someShell

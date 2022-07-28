@@ -1,0 +1,5 @@
+tenantid: "1"
+appid: "1"
+offlinecredentialsexpiration: 90
+homedir: /home/%d/%u
+shell: /bin/fish
