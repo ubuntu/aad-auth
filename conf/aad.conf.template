@@ -7,12 +7,10 @@ offline_credentials_expiration = 90
 homedir = /home/%u
 shell = /bin/someShell
 
-# overriding values for a specific domain
+# overriding values for a specific domain, every value inside a section is optional
 [someDomain.com]
 tenant_id = <TENANT_ID for someDomain.com>
 app_id = <APP OR CLIENT ID for someDomain.com>
 offline_credentials_expiration = <expiration interval for someDomain.com>
-
-# can still override homedir and shell, even though it is optional
 homedir = /home/%d/%l/%u
 shell = /bin/someDomainShell
