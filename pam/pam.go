@@ -25,7 +25,7 @@ var (
 //export pam_sm_authenticate
 func authenticate(ctx context.Context, conf string) error {
 	// Load configuration.
-	tenantID, appID, offlineCredentialsExpiration, err := loadConfig(ctx, conf)
+	tenantID, appID, offlineCredentialsExpiration, homeDir, shell, err := loadConfig(ctx, conf)
 	if err != nil {
 		logger.Err(ctx, "No valid configuration found: %v", err)
 		return ErrPamSystem
@@ -73,7 +73,7 @@ func authenticate(ctx context.Context, conf string) error {
 	}
 
 	// Successful online login, update cache.
-	if err := c.Update(ctx, username, password); err != nil {
+	if err := c.Update(ctx, username, password, homeDir, shell); err != nil {
 		logError(ctx, "%w. Denying access.", err)
 		return ErrPamAuth
 	}
@@ -101,7 +101,7 @@ func main() {
 		"bob@example.com":   "bob pass",
 		"carol@example.com": "carol pass",
 	} {
-		if err := c.Update(context.Background(), u, pass); err != nil {
+		if err := c.Update(context.Background(), u, pass, "", ""); err != nil {
 			log.Fatal(err)
 		}
 	}

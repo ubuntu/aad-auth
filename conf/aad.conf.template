@@ -1,3 +1,5 @@
 tenant_id = <TENANT_ID>
 app_id = <APPLICATION OR CLIENT ID>
 offline_credentials_expiration = 90
+homedir = /home/%u
+shell = /bin/bash
