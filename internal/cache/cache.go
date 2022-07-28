@@ -319,7 +319,7 @@ func (c *Cache) Update(ctx context.Context, username, password, homeDir, shell s
 			return err
 		}
 
-		home, err := parseHomeDir(ctx, homeDir, username, fmt.Sprintf("%v", id))
+		home, err := parseHomeDir(ctx, homeDir, username, fmt.Sprintf("%d", id))
 		if err != nil {
 			return err
 		}
@@ -435,28 +435,31 @@ func parseHomeDir(ctx context.Context, homeDirPattern, username, uid string) (ho
 	for _, c := range homeDirPattern {
 		s := string(c)
 
+		// treat % and %% cases.
 		if c == '%' && !afterModifier {
 			afterModifier = true
 			continue
+		} else if c == '%' && afterModifier {
+			afterModifier = false // second % is now considered as a "normal" character to append.
 		}
 
-		if c == '%' || !afterModifier {
-			home += s
-			afterModifier = false
-			continue
+		// treat special modifiers.
+		if afterModifier {
+			s, err = parseHomeDirPattern(ctx, s, username, uid)
+			if err != nil {
+				return "", err
+			}
 		}
 
-		tmp, err := parseHomeDirPattern(ctx, s, username, uid)
-		if err != nil {
-			return "", err
-		}
-
+		// append converted characters or normal ones to the path, as if.
 		afterModifier = false
-		home += tmp
+		home += s
 	}
 	return home, nil
 }
 
+// parseHomeDirPattern returns the string that matches the given pattern.
+// If the pattern is not recognized, an error is returned.
 func parseHomeDirPattern(ctx context.Context, pattern, username, uid string) (string, error) {
 	switch pattern {
 	case "u", "d":

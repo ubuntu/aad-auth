@@ -70,11 +70,12 @@ func loadDefaultHomeAndShell(ctx context.Context, path string) (home, shell stri
 	dh, ds := defaultHomePattern, defaultShell
 	conf, err := ini.Load(path)
 	if err != nil {
-		logger.Debug(ctx, "Could not open %s, using defaults for homedir and shell", path)
+		logger.Debug(ctx, "Could not open %s, using defaults for homedir and shell: %v", path, err)
 		return dh, ds
 	}
 
 	if tmp := conf.Section("").Key("DHOME").String(); tmp != "" {
+		// DHOME is only the base home directory for all users.
 		dh = filepath.Join(tmp, "%u")
 	}
 	if tmp := conf.Section("").Key("DSHELL").String(); tmp != "" {
