@@ -52,20 +52,20 @@ func TestLogging(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		logFn           func(ctx context.Context, format string, a ...any)
-		defaultLogLevel bool
+		logFn      func(ctx context.Context, format string, a ...any)
+		forceDebug bool
 
 		wantLoggerPrint string
 	}{
-		"debug": {logFn: logger.Debug, wantLoggerPrint: "DEBUG: nss_aad: my log message\n"},
-		"info":  {logFn: logger.Info, wantLoggerPrint: "INFO: nss_aad: my log message\n"},
-		"warn":  {logFn: logger.Warn, wantLoggerPrint: "WARNING: nss_aad: my log message\n"},
-		"err":   {logFn: logger.Err, wantLoggerPrint: "ERROR: nss_aad: my log message\n"},
-		"crit":  {logFn: logger.Crit, wantLoggerPrint: "CRITICAL: nss_aad: my log message\n"},
+		"debug": {logFn: logger.Debug, forceDebug: true, wantLoggerPrint: "DEBUG: nss_aad: my log message\n"},
+		"info":  {logFn: logger.Info, forceDebug: true, wantLoggerPrint: "INFO: nss_aad: my log message\n"},
+		"warn":  {logFn: logger.Warn, forceDebug: true, wantLoggerPrint: "WARNING: nss_aad: my log message\n"},
+		"err":   {logFn: logger.Err, forceDebug: true, wantLoggerPrint: "ERROR: nss_aad: my log message\n"},
+		"crit":  {logFn: logger.Crit, forceDebug: true, wantLoggerPrint: "CRITICAL: nss_aad: my log message\n"},
 
 		// log level
-		"debug is not printed with default log level":    {logFn: logger.Debug, defaultLogLevel: true, wantLoggerPrint: ""},
-		"info message is printed with default log level": {logFn: logger.Info, defaultLogLevel: true, wantLoggerPrint: "INFO: nss_aad: my log message\n"},
+		"debug is not printed with default log level":    {logFn: logger.Debug, forceDebug: false, wantLoggerPrint: ""},
+		"info message is printed with default log level": {logFn: logger.Info, forceDebug: false, wantLoggerPrint: "INFO: nss_aad: my log message\n"},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -74,9 +74,10 @@ func TestLogging(t *testing.T) {
 
 			l := &dummyLogger{}
 			opts := []nss.Option{nss.WithLogWriter(l)}
-			if !tc.defaultLogLevel {
+			if tc.forceDebug {
 				opts = append(opts, nss.WithDebug())
 			}
+
 			ctx := nss.CtxWithSyslogLogger(context.Background(), opts...)
 			defer func() { logger.CloseLoggerFromContext(ctx) }()
 
