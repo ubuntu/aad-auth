@@ -14,13 +14,14 @@ import (
 	"unsafe"
 
 	"github.com/ubuntu/aad-auth/internal/logger"
+	"github.com/ubuntu/aad-auth/internal/nss"
 	"github.com/ubuntu/aad-auth/internal/nss/shadow"
 	"github.com/ubuntu/aad-auth/internal/user"
 )
 
 //export _nss_aad_getspnam_r
 func _nss_aad_getspnam_r(name *C.char, spwd *C.struct_spwd, buf *C.char, buflen C.size_t, errnop *C.int) C.nss_status {
-	ctx := ctxWithSyslogLogger(context.Background())
+	ctx := nss.CtxWithSyslogLogger(context.Background())
 	defer logger.CloseLoggerFromContext(ctx)
 	n := C.GoString(name)
 	logger.Debug(ctx, "_nss_aad_getspnam_r called for %q", n)
@@ -39,7 +40,7 @@ func _nss_aad_getspnam_r(name *C.char, spwd *C.struct_spwd, buf *C.char, buflen 
 
 //export _nss_aad_setspent
 func _nss_aad_setspent() C.nss_status {
-	ctx := ctxWithSyslogLogger(context.Background())
+	ctx := nss.CtxWithSyslogLogger(context.Background())
 	defer logger.CloseLoggerFromContext(ctx)
 	logger.Debug(ctx, "_nss_aad_setspent called")
 
@@ -54,7 +55,7 @@ func _nss_aad_setspent() C.nss_status {
 
 //export _nss_aad_endspent
 func _nss_aad_endspent() C.nss_status {
-	ctx := ctxWithSyslogLogger(context.Background())
+	ctx := nss.CtxWithSyslogLogger(context.Background())
 	defer logger.CloseLoggerFromContext(ctx)
 	logger.Debug(ctx, "_nss_aad_endspent called")
 
@@ -69,7 +70,7 @@ func _nss_aad_endspent() C.nss_status {
 
 //export _nss_aad_getspent_r
 func _nss_aad_getspent_r(spwd *C.struct_spwd, buf *C.char, buflen C.size_t, errnop *C.int) C.nss_status {
-	ctx := ctxWithSyslogLogger(context.Background())
+	ctx := nss.CtxWithSyslogLogger(context.Background())
 	defer logger.CloseLoggerFromContext(ctx)
 	logger.Debug(ctx, "_nss_aad_getspent_r called")
 
