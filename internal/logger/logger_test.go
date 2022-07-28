@@ -80,7 +80,6 @@ func TestLogging(t *testing.T) {
 			<-done
 
 			content := l.content
-			fmt.Println(content)
 			if !tc.hasLoggerInContext {
 				content = string(contentLog)
 			}
