@@ -13,13 +13,43 @@ const (
 	nssLogEnv = "NSS_AAD_DEBUG"
 )
 
-// ctxWithSyslogLogger attach a logger to the context and set priority based on environment.
-func ctxWithSyslogLogger(ctx context.Context) context.Context {
+type options struct {
+	debug  bool
+	writer logWriter
+}
+
+type logWriter interface {
+	Debug(msg string) error
+	Info(msg string) error
+	Warning(msg string) error
+	Err(msg string) error
+	Crit(msg string) error
+	Close() error
+}
+
+// Option represents the functional option passed to logger.
+type Option func(*options)
+
+// CtxWithSyslogLogger attach a logger to the context and set priority based on environment.
+func CtxWithSyslogLogger(ctx context.Context, opts ...Option) context.Context {
 	priority := syslog.LOG_INFO
+
+	o := options{
+		debug: false,
+	}
+	// applied options
+	for _, opt := range opts {
+		opt(&o)
+	}
 	if os.Getenv(nssLogEnv) != "" {
+		o.debug = true
+	}
+
+	if o.debug {
 		priority = syslog.LOG_DEBUG
 	}
-	nssLogger, err := NewLogger(priority)
+
+	nssLogger, err := newLogger(priority, opts...)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: can't find syslog to write to. Default to stderr\n")
 		return ctx
@@ -30,20 +60,28 @@ func ctxWithSyslogLogger(ctx context.Context) context.Context {
 
 // Logger is the logger connected to syslog.
 type Logger struct {
-	w *syslog.Writer
+	w logWriter
 
 	priority syslog.Priority
 }
 
-// NewLogger returns a logger ready to log to syslog.
-func NewLogger(priority syslog.Priority) (*Logger, error) {
+// newLogger returns a logger ready to log to syslog.
+func newLogger(priority syslog.Priority, opts ...Option) (*Logger, error) {
 	w, err := syslog.New(syslog.LOG_DEBUG, "")
 	if err != nil {
 		return nil, fmt.Errorf("can't create nss logger: %v", err)
 	}
 
+	o := options{
+		writer: w,
+	}
+	// applied options
+	for _, opt := range opts {
+		opt(&o)
+	}
+
 	l := &Logger{
-		w:        w,
+		w:        o.writer,
 		priority: priority,
 	}
 
