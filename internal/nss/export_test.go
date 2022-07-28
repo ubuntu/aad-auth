@@ -6,14 +6,14 @@ const (
 )
 
 // WithDebug forces debug mode, whatever environment variable is set.
-func WithDebug() func(o *options) {
+func WithDebug() Option {
 	return func(o *options) {
 		o.debug = true
 	}
 }
 
 // WithLogWriter override the syslog writer we assign.
-func WithLogWriter(w logWriter) func(o *options) {
+func WithLogWriter(w logWriter) Option {
 	return func(o *options) {
 		o.writer = w
 	}
