@@ -12,10 +12,7 @@ import (
 	"github.com/ubuntu/aad-auth/internal/cache"
 	"github.com/ubuntu/aad-auth/internal/nss/passwd"
 	"github.com/ubuntu/aad-auth/internal/testutils"
-	"gopkg.in/yaml.v3"
 )
-
-var update bool
 
 func TestNewByName(t *testing.T) {
 	t.Parallel()
@@ -53,30 +50,14 @@ func TestNewByName(t *testing.T) {
 			}
 			require.NoError(t, err, "NewByName should not have returned an error and has")
 
-			goldPath := filepath.Join("testdata", "golden", t.Name())
-			// Update golden file
-			if update {
-				t.Logf("updating golden file %s", goldPath)
-				err := os.MkdirAll(filepath.Dir(goldPath), 0755)
-				require.NoError(t, err, "Cannot create directory for updating golden files")
-				data, err := yaml.Marshal(got)
-				require.NoError(t, err, "Cannot marshal object to YAML")
-				err = os.WriteFile(goldPath, data, 0600)
-				require.NoError(t, err, "Cannot write golden file")
-			}
-			var want passwd.Passwd
-			data, err := os.ReadFile(goldPath)
-			require.NoError(t, err, "Cannot load golden file")
-			err = yaml.Unmarshal(data, &want)
-			require.NoError(t, err, "Cannot create object from golden file")
-
+			want := testutils.SaveAndLoadFromGolden(t, got)
 			require.Equal(t, want, got, "Passwd object is the expected one")
 		})
 	}
 }
 
 func TestMain(m *testing.M) {
-	flag.BoolVar(&update, "update", false, "update golden files")
+	testutils.InstallUpdateFlag()
 	flag.Parse()
 
 	m.Run()
