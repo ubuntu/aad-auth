@@ -251,14 +251,16 @@ func TestUpdate(t *testing.T) {
 
 		doRefreshWithShadowMode *int
 
-		wantErr        bool
-		wantErrRefresh bool
+		wantErr          bool
+		wantErrRefresh   bool
+		wantUIDCollision bool
 	}{
 		"insert a new user":                   {},
 		"insert 2 new users":                  {userNames: []string{"firstuser@domain.com", "seconduser@domain.com"}},
 		"we don’t create about the user case": {userNames: []string{"MyUser"}},
 
 		"update an existing user should refresh password and last online login": {doRefreshWithShadowMode: &cache.ShadowRWMode},
+		"collide generated uids": {userNames: []string{"firstuser@domain.com", "userfirst@domain.com"}, wantUIDCollision: true},
 
 		// error cases
 		"can't insert with shadow unavailable Only":                   {shadowMode: &cache.ShadowNotAvailableMode, wantErr: true},
@@ -282,6 +284,7 @@ func TestUpdate(t *testing.T) {
 				c.SetShadowMode(*tc.shadowMode)
 			}
 
+			var lastUID int
 			for _, n := range tc.userNames {
 				err := c.Update(context.Background(), n, "my password")
 				if tc.wantErr {
@@ -294,12 +297,17 @@ func TestUpdate(t *testing.T) {
 				u, err := c.GetUserByName(context.Background(), n)
 				require.NoError(t, err, "GetUserByName should get the user we just inserted")
 
-				firstEncryptedPass := u.ShadowPasswd
-				firstOnlineLoginTime := u.LastOnlineAuth
+				if lastUID != 0 && tc.wantUIDCollision {
+					assert.Equal(t, lastUID+1, u.UID, "Colliding user should have existing user UID+1")
+				}
+				lastUID = u.UID
 
 				if tc.doRefreshWithShadowMode == nil {
 					continue
 				}
+
+				firstEncryptedPass := u.ShadowPasswd
+				firstOnlineLoginTime := u.LastOnlineAuth
 
 				// Close and reload a new cache object to ensure we do reload everything from files
 				c.Close(context.Background())
