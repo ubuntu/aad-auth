@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/termie/go-shutil"
 	"github.com/ubuntu/aad-auth/internal/cache"
 	"github.com/ubuntu/aad-auth/internal/testutils"
 )
@@ -211,12 +210,7 @@ func TestCleanupDB(t *testing.T) {
 			t.Parallel()
 
 			cacheDir := t.TempDir()
-			require.NoError(t, os.RemoveAll(cacheDir), "Setup: could not remove to prepare cache directory")
-			err := shutil.CopyTree("testdata/db_with_old_users", cacheDir, nil)
-			require.NoError(t, err, "Setup: could not copy initial database files in cache")
-			// apply expected permission as git will change them
-			require.NoError(t, os.Chmod(filepath.Join(cacheDir, cache.PasswdDB), 0644), "Setup: failed to set expected permission on passwd db file")
-			require.NoError(t, os.Chmod(filepath.Join(cacheDir, cache.ShadowDB), 0640), "Setup: failed to set expected permission on shadow db file")
+			testutils.CopyDBAndFixPermissions(t, "testdata/db_with_old_users", cacheDir)
 
 			// This triggers a database cleanup if offlineCredentialsExpirationTime is not 0
 			uid, gid := testutils.GetCurrentUidGid(t)
@@ -371,12 +365,7 @@ func TestCanAuthenticate(t *testing.T) {
 				require.NoError(t, err, "Setup: should be able to create second user")
 			} else {
 				// copy old database and reopen the cache without cleaning up old account
-				require.NoError(t, os.RemoveAll(cacheDir), "Setup: could not remove to prepare cache directory")
-				err := shutil.CopyTree("testdata/db_with_old_users", cacheDir, nil)
-				require.NoError(t, err, "Setup: could not copy initial database files in cache")
-				// apply expected permission as git will change them
-				require.NoError(t, os.Chmod(filepath.Join(cacheDir, cache.PasswdDB), 0644), "Setup: failed to set expected permission on passwd db file")
-				require.NoError(t, os.Chmod(filepath.Join(cacheDir, cache.ShadowDB), 0640), "Setup: failed to set expected permission on shadow db file")
+				testutils.CopyDBAndFixPermissions(t, "testdata/db_with_old_users", cacheDir)
 				c = newCacheForTests(t, cacheDir, true, true)
 			}
 
