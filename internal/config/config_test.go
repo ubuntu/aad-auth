@@ -1,70 +1,19 @@
-package config
+package config_test
 
 import (
 	"context"
 	"flag"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/ubuntu/aad-auth/internal/config"
 	"gopkg.in/yaml.v3"
 )
 
 var update bool
-
-func TestLoadDefaultHomeAndShell(t *testing.T) {
-	testFilesPath := filepath.Join("testdata", "loadDefaultHomeAndShell")
-	log.Print(testFilesPath)
-	t.Parallel()
-
-	tests := map[string]struct {
-		path string
-
-		wantHome  string
-		wantShell string
-	}{
-		"file with both home and shell": {
-			path:      testFilesPath + "/adduser-both-values.conf",
-			wantHome:  "/home/users/%u",
-			wantShell: "/bin/fish",
-		},
-		"file with only dhome": {
-			path:      testFilesPath + "/adduser-dhome-only.conf",
-			wantHome:  "/home/users/%u",
-			wantShell: "/bin/bash",
-		},
-		"file with only dshell": {
-			path:      testFilesPath + "/adduser-dshell-only.conf",
-			wantHome:  "/home/%u",
-			wantShell: "/bin/fish",
-		},
-		"file with no values": {
-			path:      testFilesPath + "/adduser-commented.conf",
-			wantHome:  "/home/%u",
-			wantShell: "/bin/bash",
-		},
-		"file does not exists returns hardcoded defaults": {
-			path:      "/foo/doesnotexists.conf",
-			wantHome:  "/home/%u",
-			wantShell: "/bin/bash",
-		},
-	}
-
-	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			log.Print(tc.path)
-			home, shell := loadDefaultHomeAndShell(context.Background(), tc.path)
-			require.Equal(t, tc.wantHome, home, "Got expected homedir")
-			require.Equal(t, tc.wantShell, shell, "Got expected shell")
-		})
-	}
-}
 
 func TestLoadConfig(t *testing.T) {
 	t.Parallel()
@@ -73,65 +22,103 @@ func TestLoadConfig(t *testing.T) {
 	tests := map[string]struct {
 		aadConfigPath string
 		addUserPath   string
-		wantErr       bool
+		domain        string
+
+		wantErr bool
 	}{
-		"aad.conf with all values": {
-			aadConfigPath: testFilesPath + "/aad-with-section.conf",
+
+		// All values
+		"aad.conf, all values, no domain": {
+			aadConfigPath: "aad-all_values-no_domain.conf",
 		},
-		"aad.conf with no section": {
-			aadConfigPath: testFilesPath + "/aad-with-no-section.conf",
+		"aad.conf, all values, with domain": {
+			aadConfigPath: "aad-all_values-with_domain.conf",
 		},
-		"aad.conf with missing 'homedir' value in section": {
-			aadConfigPath: testFilesPath + "/aad-with-missing-homedir-value-section.conf",
+		"aad.conf, all values, mismatch domain": {
+			aadConfigPath: "aad-all_values-with_domain.conf",
+			domain:        "doesNotExist.com",
 		},
-		"aad.conf with missing 'homedir' value in section and in 'default'": {
-			aadConfigPath: testFilesPath + "/aad-with-missing-homedir-value.conf",
+		"aad.conf, all values, only in domain": {
+			aadConfigPath: "aad-all_values_only_in_domain.conf",
 		},
-		"aad.conf with missing 'shell' value in section": {
-			aadConfigPath: testFilesPath + "/aad-with-missing-shell-value-section.conf",
+
+		// Missing values in domain
+		"aad.conf with missing 'homedirpattern' value in domain": {
+			aadConfigPath: "aad-missing_homedirpattern-domain.conf",
 		},
-		"aad.conf with missing 'shell' value in section and in 'default'": {
-			aadConfigPath: testFilesPath + "/aad-with-missing-shell-value.conf",
+		"aad.conf with missing 'shell' value in domain": {
+			aadConfigPath: "aad-missing_shell-domain.conf",
 		},
-		"aad.conf with missing 'homedir' and 'shell' values in section": {
-			aadConfigPath: testFilesPath + "/aad-with-missing-homedirShell-values-section.conf",
+		"aad.conf with missing 'homedirpattern' and 'shell' values in domain": {
+			aadConfigPath: "aad-missing_homedirpatten_and_shell-domain.conf",
 		},
-		"aad.conf with missing 'homedir' and 'shell' values in section and in 'default'": {
-			aadConfigPath: testFilesPath + "/aad-with-missing-homedirShell-values.conf",
+		"aad.conf with missing 'offline_credentials_expiration' value in domain": {
+			aadConfigPath: "aad-missing_expiration-domain.conf",
 		},
-		"aad.conf with missing required 'offline_credentials_expiration' value in section": {
-			aadConfigPath: testFilesPath + "/aad-with-missing-expiration-value-section.conf",
+		"aad.conf with missing required 'tenant_id' value in domain": {
+			aadConfigPath: "aad-missing_tenantId-domain.conf",
 		},
-		"aad.conf with missing required 'tenant_id' value in section": {
-			aadConfigPath: testFilesPath + "/aad-with-missing-tenantId-value-section.conf",
+		"aad.conf with missing required 'app_id' value in domain": {
+			aadConfigPath: "aad-missing_appId-domain.conf",
 		},
-		"aad.conf with missing required 'app_id' value in section": {
-			aadConfigPath: testFilesPath + "/aad-with-missing-appId-value-section.conf",
+
+		// Missing values in file
+		"aad.conf with missing 'homedirpattern'": {
+			aadConfigPath: "aad-missing_homedirpattern.conf",
+		},
+		"aad.conf with missing 'shell'": {
+			aadConfigPath: "aad-missing_shell.conf",
+		},
+		"aad.conf with missing 'homedirpattern' and 'shell'": {
+			aadConfigPath: "aad-missing_homedirpattern_and_shell.conf",
+		},
+		"aad.conf with missing 'offline_credentials_expiration'": {
+			aadConfigPath: "aad-missing_expiration.conf",
+		},
+
+		// Values only in domain
+		"aad.conf with 'homedirpattern' only in domain": {
+			aadConfigPath: "aad-homedirpattern_only_in_domain.conf",
+		},
+		"add.conf with 'shell' only in domain": {
+			aadConfigPath: "aad-shell_only_in_domain.conf",
+		},
+		"aad.conf with 'homedirpattern' and 'shell' only in domain": {
+			aadConfigPath: "aad-homedirpattern_and_shell_only_in_domain.conf",
+		},
+		"aad.conf with 'offline_credentials_expiration' only in domain": {
+			aadConfigPath: "aad-expiration_only_in_domain.conf",
+		},
+		"aad.conf with 'tenant_id' only in domain": {
+			aadConfigPath: "aad-tenantId_only_in_domain.conf",
+		},
+		"aad.conf with 'app_id' only in domain": {
+			aadConfigPath: "aad-appId_only_in_domain.conf",
 		},
 
 		// Special Cases
-		"aad.conf with missing 'homedir' and 'shell' values in section and in 'default' and wrong adduser.conf": {
-			aadConfigPath: testFilesPath + "/aad-with-missing-homedirShell-values.conf",
-			addUserPath:   "/foo/bar/fizzbuzz",
+		"aad.conf with missing 'homedir' and 'shell' values and wrong adduser.conf": {
+			aadConfigPath: "aad-missing_homedirpattern_and_shell.conf",
+			addUserPath:   "doesnotexist.conf",
 		},
 		"aad.conf with invalid 'offline_credentials_expiration' value": {
-			aadConfigPath: testFilesPath + "/aad-with-invalid-expiration-value.conf",
+			aadConfigPath: "aad-invalid_expiration.conf",
 		},
-		"aad.conf with invalid 'offline_credentials_expiration' value in section": {
-			aadConfigPath: testFilesPath + "/aad-with-invalid-expiration-value-section.conf",
+		"aad.conf with invalid 'offline_credentials_expiration' value in domain": {
+			aadConfigPath: "aad-invalid_expiration-domain.conf",
 		},
 
-		// Err
+		// Error cases
 		"aad.conf does not exist": {
-			aadConfigPath: "/foo/bar/fizzbuzz.conf",
+			aadConfigPath: "doestnotexists.conf",
 			wantErr:       true,
 		},
 		"aad.conf missing 'tenant_id' value": {
-			aadConfigPath: testFilesPath + "/aad-with-missing-tenantId-value.conf",
+			aadConfigPath: "aad-missing_tenantId.conf",
 			wantErr:       true,
 		},
 		"aad.conf missing 'app_id' value": {
-			aadConfigPath: testFilesPath + "/aad-with-missing-appId-value.conf",
+			aadConfigPath: "aad-missing_appId.conf",
 			wantErr:       true,
 		},
 	}
@@ -142,8 +129,13 @@ func TestLoadConfig(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			tc.aadConfigPath = filepath.Join(testFilesPath, tc.aadConfigPath)
+
 			domain := "domain.com"
-			config, err := LoadConfig(context.Background(), tc.aadConfigPath, domain, WithCustomConfPath(tc.addUserPath))
+			if tc.domain != "" {
+				domain = tc.domain
+			}
+			cfg, err := config.Load(context.Background(), tc.aadConfigPath, domain, config.WithCustomConfPath(tc.addUserPath))
 			if tc.wantErr {
 				require.Error(t, err, "LoadConfig should have failed, but didn't")
 				return
@@ -152,19 +144,19 @@ func TestLoadConfig(t *testing.T) {
 			goldenPath := filepath.Join(testFilesPath, "golden", def)
 			if update {
 				t.Logf("updating golden file %s", goldenPath)
-				data, err := yaml.Marshal(config)
+				data, err := yaml.Marshal(cfg)
 				require.NoError(t, err, "Cannot marshal AADConfig to YAML")
 				err = os.WriteFile(goldenPath, data, 0600)
 				require.NoError(t, err, "Could not write golden file %s", goldenPath)
 			}
 
-			var wantConfig AADConfig
+			var wantConfig config.AAD
 			data, err := os.ReadFile(goldenPath)
 			require.NoError(t, err, "Could not read golden file %s", goldenPath)
 			err = yaml.Unmarshal(data, &wantConfig)
 			require.NoError(t, err, "Could not unmarshal golden file %s content", goldenPath)
 
-			require.Equal(t, wantConfig, config, "Got config and expected config are different")
+			require.Equal(t, wantConfig, cfg, "Got config and expected config are different")
 		})
 	}
 

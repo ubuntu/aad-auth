@@ -40,14 +40,14 @@ func authenticate(ctx context.Context, conf string) error {
 
 	// Load configuration.
 	_, domain, _ := strings.Cut(username, "@")
-	config, err := config.LoadConfig(ctx, conf, domain)
+	cfg, err := config.Load(ctx, conf, domain)
 	if err != nil {
 		logger.Err(ctx, "No valid configuration found: %v", err)
 		return ErrPamSystem
 	}
 
 	// AAD authentication
-	errAAD := aad.Authenticate(ctx, config.TenantID, config.AppID, username, password)
+	errAAD := aad.Authenticate(ctx, cfg.TenantID, cfg.AppID, username, password)
 	if errors.Is(errAAD, aad.ErrDeny) {
 		return ErrPamAuth
 	} else if errAAD != nil && !errors.Is(errAAD, aad.ErrNoNetwork) {
@@ -55,7 +55,7 @@ func authenticate(ctx context.Context, conf string) error {
 		return ErrPamAuth
 	}
 
-	c, err := cache.New(ctx, cache.WithOfflineCredentialsExpiration(config.OfflineCredentialsExpiration))
+	c, err := cache.New(ctx, cache.WithOfflineCredentialsExpiration(cfg.OfflineCredentialsExpiration))
 	if err != nil {
 		logger.Err(ctx, "%v. Denying access.", err)
 		return ErrPamAuth
@@ -75,7 +75,7 @@ func authenticate(ctx context.Context, conf string) error {
 	}
 
 	// Successful online login, update cache.
-	if err := c.Update(ctx, username, password, config.HomeDir, config.Shell); err != nil {
+	if err := c.Update(ctx, username, password, cfg.HomeDirPattern, cfg.Shell); err != nil {
 		logError(ctx, "%w. Denying access.", err)
 		return ErrPamAuth
 	}

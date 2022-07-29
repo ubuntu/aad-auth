@@ -12,14 +12,17 @@ import (
 
 const (
 	adduserConfPath = "/etc/adduser.conf"
+
+	defaultHomePattern = "/home/%u"
+	defaultShell       = "/bin/bash"
 )
 
-// AADConfig represents the configuration values that are used for AAD
-type AADConfig struct {
+// AAD represents the configuration values that are used for AAD
+type AAD struct {
 	TenantID                     string
 	AppID                        string
 	OfflineCredentialsExpiration int
-	HomeDir                      string
+	HomeDirPattern               string
 	Shell                        string
 }
 
@@ -30,32 +33,50 @@ type options struct {
 // Option represents the functional option passed to LoadDefaults
 type Option func(*options)
 
-// ! 	 this is a warn, for sure
-// ? 	 is this an info?
-// TODO: this is a TODO
-// * 	 what is this?
-
 //! IF THE TESTS FAIL, COVERAGE ISN'T UPDATED
 //* optional functional parameters (Option) for setting adduserConfPath -- only for tests.
 //* golden files for tests.
 
-// LoadConfig returns the loaded configuration of the specified domain from p.
+// Load returns the loaded configuration of the specified domain from p.
 // If there is no section for the specified domain, the values on the beginning of p are used as default.
-func LoadConfig(ctx context.Context, p, domain string, opts ...Option) (config AADConfig, err error) {
+// Should some required values not exist, an error is returned.
+func Load(ctx context.Context, p, domain string, opts ...Option) (config AAD, err error) {
 	// adding more info to the error message
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("could not load valid configuration from %s: %v", p, err)
 		}
 	}()
-
 	logger.Debug(ctx, "Loading configuration from %s", p)
+
+	o := options{
+		addUserConfPath: adduserConfPath,
+	}
+	// applies options
+	for _, opt := range opts {
+		opt(&o)
+	}
+
+	config = AAD{
+		HomeDirPattern: defaultHomePattern,
+		Shell:          defaultShell,
+	}
+
+	// Tries to load the defaults from the adduser.conf
+	dh, ds := loadDefaultHomeAndShell(ctx, o.addUserConfPath)
+	if dh == "" {
+		config.HomeDirPattern = dh
+	}
+	if ds == "" {
+		config.Shell = ds
+	}
 
 	cfg, err := ini.Load(p)
 	if err != nil {
-		return AADConfig{}, fmt.Errorf("could not open file %s: %v", p, err)
+		return AAD{}, fmt.Errorf("could not open file %s: %v", p, err)
 	}
 
+	// Load default section first, and then override with domain specified keys.
 	for _, section := range []string{"", domain} {
 		cfgSection := cfg.Section(section)
 		if tmp := cfgSection.Key("tenant_id").String(); tmp != "" {
@@ -72,7 +93,7 @@ func LoadConfig(ctx context.Context, p, domain string, opts ...Option) (config A
 			config.OfflineCredentialsExpiration = v
 		}
 		if tmp := cfgSection.Key("homedir").String(); tmp != "" {
-			config.HomeDir = tmp
+			config.HomeDirPattern = tmp
 		}
 		if tmp := cfgSection.Key("shell").String(); tmp != "" {
 			config.Shell = tmp
@@ -80,44 +101,24 @@ func LoadConfig(ctx context.Context, p, domain string, opts ...Option) (config A
 	}
 
 	if config.TenantID == "" {
-		return AADConfig{}, fmt.Errorf("missing required 'tenant_id' entry in configuration file")
+		return AAD{}, fmt.Errorf("missing required 'tenant_id' entry in configuration file")
 	}
 	if config.AppID == "" {
-		return AADConfig{}, fmt.Errorf("missing required 'app_id' entry in configuration file")
-	}
-
-	o := options{
-		addUserConfPath: adduserConfPath,
-	}
-	// applies options
-	for _, opt := range opts {
-		opt(&o)
-	}
-
-	// Only open the config file once, if required.
-	if config.HomeDir == "" || config.Shell == "" {
-		dh, ds := loadDefaultHomeAndShell(ctx, o.addUserConfPath)
-		if config.HomeDir == "" {
-			config.HomeDir = dh
-		}
-		if config.Shell == "" {
-			config.Shell = ds
-		}
+		return AAD{}, fmt.Errorf("missing required 'app_id' entry in configuration file")
 	}
 
 	return config, nil
 }
 
-const (
-	defaultHomePattern = "/home/%u"
-	defaultShell       = "/bin/bash"
-)
-
 // loadDefaultHomeAndShell returns default home and shell patterns for all users.
 // They will load from an adduser.conf formatted ini file.
 // In case they are commented or not defined, we will use hardcoded defaults.
 func loadDefaultHomeAndShell(ctx context.Context, path string) (home, shell string) {
-	dh, ds := defaultHomePattern, defaultShell
+	if path == "" {
+		return "", ""
+	}
+
+	var dh, ds string
 	conf, err := ini.Load(path)
 	if err != nil {
 		logger.Debug(ctx, "Could not open %s, using defaults for homedir and shell: %v", path, err)
@@ -128,8 +129,7 @@ func loadDefaultHomeAndShell(ctx context.Context, path string) (home, shell stri
 		// DHOME is only the base home directory for all users.
 		dh = filepath.Join(tmp, "%u")
 	}
-	if tmp := conf.Section("").Key("DSHELL").String(); tmp != "" {
-		ds = tmp
-	}
+	ds = conf.Section("").Key("DSHELL").String()
+
 	return dh, ds
 }
