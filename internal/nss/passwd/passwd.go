@@ -2,6 +2,7 @@ package passwd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/ubuntu/aad-auth/internal/cache"
@@ -86,28 +87,37 @@ func NewByUID(ctx context.Context, uid uint) (p Passwd, err error) {
 	}, nil
 }
 
+var passwdIterationCache *cache.Cache
+
 // StartEntryIteration open a new cache for iteration.
+// This needs to be called prior to calling NextEntry and be closed with EndEntryIteration.
 func StartEntryIteration(ctx context.Context) error {
+	if passwdIterationCache != nil {
+		return nss.ConvertErr(errors.New("passwd entry iteration already in progress. End it before starting a new one"))
+	}
+
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
 		return nss.ConvertErr(err)
 	}
-	defer c.Close(ctx)
-	return nss.ConvertErr(c.ClosePasswdIterator(ctx))
+	passwdIterationCache = c
+	return nil
 }
 
 // EndEntryIteration closes the underlying DB iterator.
 func EndEntryIteration(ctx context.Context) error {
-	c, err := cache.New(ctx, testopts...)
-	if err != nil {
-		return nss.ConvertErr(err)
+	if passwdIterationCache == nil {
+		logger.Warn(ctx, "passwd entry iteration ended without initialization first")
+		return nil
 	}
+	c := passwdIterationCache
 	defer c.Close(ctx)
+	passwdIterationCache = nil
 	return nss.ConvertErr(c.ClosePasswdIterator(ctx))
 }
 
 // NextEntry returns next available entry in Passwd. It will returns ENOENT from cache when the iteration is done.
-// It automatically opens and close the cache on first/last iteration.
+// You need to open StartEntryIteration prior to get to any Entry.
 func NextEntry(ctx context.Context) (p Passwd, err error) {
 	defer func() {
 		if err != nil {
@@ -116,13 +126,11 @@ func NextEntry(ctx context.Context) (p Passwd, err error) {
 	}()
 	logger.Debug(ctx, "get next passwd entry")
 
-	c, err := cache.New(ctx, testopts...)
-	if err != nil {
-		return Passwd{}, nss.ConvertErr(err)
+	if passwdIterationCache == nil {
+		return Passwd{}, nss.ConvertErr(errors.New("passwd entry iteration called without initialization first"))
 	}
-	defer c.Close(ctx)
 
-	u, err := c.NextPasswdEntry(ctx)
+	u, err := passwdIterationCache.NextPasswdEntry(ctx)
 	if err != nil {
 		return Passwd{}, nss.ConvertErr(err)
 	}
