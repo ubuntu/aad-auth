@@ -41,6 +41,7 @@ var (
 	usersForTests = map[string]userInfos{
 		"myuser@domain.com":    {"myuser@domain.com", 1929326240, "my password"},
 		"otheruser@domain.com": {"otheruser@domain.com", 165119648, "other password"},
+		"user@otherdomain.com": {"user@otherdomain.com", 165119649, "other user domain password"},
 	}
 	usersForTestsByUid = make(map[uint]userInfos)
 )
