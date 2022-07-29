@@ -21,9 +21,7 @@ type Shadow struct {
 	expire int    /* Number of days since 1970-01-01 until account expires.  */
 }
 
-var testopts = []cache.Option{
-	//cache.WithCacheDir("../cache"), cache.WithRootUid(1000), cache.WithRootGid(1000), cache.WithShadowGid(1000),
-}
+var testopts = []cache.Option{}
 
 // NewByName returns a passwd entry from a name.
 func NewByName(ctx context.Context, name string) (s Shadow, err error) {

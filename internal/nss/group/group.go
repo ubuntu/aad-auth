@@ -17,9 +17,7 @@ type Group struct {
 	members []string /* Members of the group */
 }
 
-var testopts = []cache.Option{
-	//cache.WithCacheDir("../cache"), cache.WithRootUid(1000), cache.WithRootGid(1000), cache.WithShadowGid(1000),
-}
+var testopts = []cache.Option{}
 
 // NewByName returns a passwd entry from a name.
 func NewByName(ctx context.Context, name string) (g Group, err error) {
