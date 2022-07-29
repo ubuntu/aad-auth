@@ -10,27 +10,50 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type option struct {
+	goldPath string
+}
+
+// Option is a supported option reference to change the golden files comparison.
+type Option func(*option)
+
+// WithCustomGoldPath overrides the default path for golden files used.
+func WithCustomGoldPath(path string) Option {
+	return func(o *option) {
+		if path != "" {
+			o.goldPath = path
+		}
+	}
+}
+
 var update bool
 
 // SaveAndLoadFromGolden loads the element from an yaml golden file in testdata/golden.
 // It will update the file if the update flag is used prior to deserializing it.
-func SaveAndLoadFromGolden[E any](t *testing.T, ref E) E {
+func SaveAndLoadFromGolden[E any](t *testing.T, ref E, opts ...Option) E {
 	t.Helper()
 
-	goldPath := filepath.Join("testdata", "golden", t.Name())
+	o := option{
+		goldPath: filepath.Join("testdata", "golden", t.Name()),
+	}
+
+	for _, opt := range opts {
+		opt(&o)
+	}
+
 	// Update golden file
 	if update {
-		t.Logf("updating golden file %s", goldPath)
-		err := os.MkdirAll(filepath.Dir(goldPath), 0755)
+		t.Logf("updating golden file %s", o.goldPath)
+		err := os.MkdirAll(filepath.Dir(o.goldPath), 0755)
 		require.NoError(t, err, "Cannot create directory for updating golden files")
 		data, err := yaml.Marshal(ref)
 		require.NoError(t, err, "Cannot marshal object to YAML")
-		err = os.WriteFile(goldPath, data, 0600)
+		err = os.WriteFile(o.goldPath, data, 0600)
 		require.NoError(t, err, "Cannot write golden file")
 	}
 
 	var want E
-	data, err := os.ReadFile(goldPath)
+	data, err := os.ReadFile(o.goldPath)
 	require.NoError(t, err, "Cannot load golden file")
 	err = yaml.Unmarshal(data, &want)
 	require.NoError(t, err, "Cannot create object from golden file")
