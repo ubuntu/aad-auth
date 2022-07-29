@@ -33,10 +33,6 @@ type options struct {
 // Option represents the functional option passed to LoadDefaults
 type Option func(*options)
 
-//! IF THE TESTS FAIL, COVERAGE ISN'T UPDATED
-//* optional functional parameters (Option) for setting adduserConfPath -- only for tests.
-//* golden files for tests.
-
 // Load returns the loaded configuration of the specified domain from p.
 // If there is no section for the specified domain, the values on the beginning of p are used as default.
 // Should some required values not exist, an error is returned.
@@ -64,10 +60,10 @@ func Load(ctx context.Context, p, domain string, opts ...Option) (config AAD, er
 
 	// Tries to load the defaults from the adduser.conf
 	dh, ds := loadDefaultHomeAndShell(ctx, o.addUserConfPath)
-	if dh == "" {
+	if dh != "" {
 		config.HomeDirPattern = dh
 	}
-	if ds == "" {
+	if ds != "" {
 		config.Shell = ds
 	}
 

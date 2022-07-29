@@ -2,18 +2,14 @@ package config_test
 
 import (
 	"context"
-	"flag"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/aad-auth/internal/config"
-	"gopkg.in/yaml.v3"
+	"github.com/ubuntu/aad-auth/internal/testutils"
 )
-
-var update bool
 
 func TestLoadConfig(t *testing.T) {
 	t.Parallel()
@@ -50,7 +46,7 @@ func TestLoadConfig(t *testing.T) {
 			aadConfigPath: "aad-missing_shell-domain.conf",
 		},
 		"aad.conf with missing 'homedirpattern' and 'shell' values in domain": {
-			aadConfigPath: "aad-missing_homedirpatten_and_shell-domain.conf",
+			aadConfigPath: "aad-missing_homedirpattern_and_shell-domain.conf",
 		},
 		"aad.conf with missing 'offline_credentials_expiration' value in domain": {
 			aadConfigPath: "aad-missing_expiration-domain.conf",
@@ -142,20 +138,7 @@ func TestLoadConfig(t *testing.T) {
 			}
 
 			goldenPath := filepath.Join(testFilesPath, "golden", def)
-			if update {
-				t.Logf("updating golden file %s", goldenPath)
-				data, err := yaml.Marshal(cfg)
-				require.NoError(t, err, "Cannot marshal AADConfig to YAML")
-				err = os.WriteFile(goldenPath, data, 0600)
-				require.NoError(t, err, "Could not write golden file %s", goldenPath)
-			}
-
-			var wantConfig config.AAD
-			data, err := os.ReadFile(goldenPath)
-			require.NoError(t, err, "Could not read golden file %s", goldenPath)
-			err = yaml.Unmarshal(data, &wantConfig)
-			require.NoError(t, err, "Could not unmarshal golden file %s content", goldenPath)
-
+			wantConfig := testutils.SaveAndLoadFromGolden(t, cfg, testutils.WithCustomGoldPath(goldenPath))
 			require.Equal(t, wantConfig, cfg, "Got config and expected config are different")
 		})
 	}
@@ -163,7 +146,6 @@ func TestLoadConfig(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	flag.BoolVar(&update, "update", false, "Updates the golden files")
-	flag.Parse()
+	testutils.InstallUpdateFlag()
 	m.Run()
 }
