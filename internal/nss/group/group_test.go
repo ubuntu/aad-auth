@@ -22,8 +22,9 @@ func TestNewByName(t *testing.T) {
 		"get existing group by name": {name: "myuser@domain.com"},
 
 		// error cases
-		"error on non existing group":  {name: "notexists@domain.com", wantErrType: nss.ErrNotFoundENoEnt},
-		"error on cache not available": {name: "myuser@domain.com", failingCache: true, wantErrType: nss.ErrUnavailableENoEnt},
+		"error on non existing group":                 {name: "notexists@domain.com", wantErrType: nss.ErrNotFoundENoEnt},
+		"shadow group is ignored, as not part of aad": {name: "shadow", wantErrType: nss.ErrNotFoundENoEnt},
+		"error on cache not available":                {name: "myuser@domain.com", failingCache: true, wantErrType: nss.ErrUnavailableENoEnt},
 	}
 	for name, tc := range tests {
 		tc := tc

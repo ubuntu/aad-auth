@@ -32,7 +32,7 @@ func NewByName(ctx context.Context, name string) (g Group, err error) {
 
 	if name == "shadow" {
 		logger.Debug(ctx, "Ignoring shadow group as it's not in our database")
-		return Group{}, nss.ConvertErr(err)
+		return Group{}, nss.ErrNotFoundENoEnt
 	}
 
 	c, err := cache.New(ctx, testopts...)
