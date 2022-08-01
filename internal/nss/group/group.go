@@ -2,6 +2,7 @@ package group
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/ubuntu/aad-auth/internal/cache"
@@ -83,23 +84,32 @@ func NewByGID(ctx context.Context, gid uint) (g Group, err error) {
 	}, nil
 }
 
+var groupIterationCache *cache.Cache
+
 // StartEntryIteration open a new cache for iteration.
+// This needs to be called prior to calling NextEntry and be closed with EndEntryIteration.
 func StartEntryIteration(ctx context.Context) error {
+	if groupIterationCache != nil {
+		return nss.ConvertErr(errors.New("group entry iteration already in progress. End it before starting a new one"))
+	}
+
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
 		return nss.ConvertErr(err)
 	}
-	defer c.Close(ctx)
-	return nss.ConvertErr(c.CloseGroupIterator(ctx))
+	groupIterationCache = c
+	return nil
 }
 
 // EndEntryIteration closes the underlying DB iteration.
 func EndEntryIteration(ctx context.Context) error {
-	c, err := cache.New(ctx, testopts...)
-	if err != nil {
-		return nss.ConvertErr(err)
+	if groupIterationCache == nil {
+		logger.Warn(ctx, "group entry iteration ended without initialization first")
+		return nil
 	}
+	c := groupIterationCache
 	defer c.Close(ctx)
+	groupIterationCache = nil
 	return nss.ConvertErr(c.CloseGroupIterator(ctx))
 }
 
@@ -112,13 +122,11 @@ func NextEntry(ctx context.Context) (g Group, err error) {
 	}()
 	logger.Debug(ctx, "get next group entry")
 
-	c, err := cache.New(ctx, testopts...)
-	if err != nil {
-		return Group{}, nss.ConvertErr(err)
+	if groupIterationCache == nil {
+		return Group{}, nss.ConvertErr(errors.New("group entry iteration called without initialization first"))
 	}
-	defer c.Close(ctx)
 
-	grp, err := c.NextGroupEntry(ctx)
+	grp, err := groupIterationCache.NextGroupEntry(ctx)
 	if err != nil {
 		return Group{}, nss.ConvertErr(err)
 	}
