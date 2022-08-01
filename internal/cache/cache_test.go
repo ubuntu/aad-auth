@@ -286,9 +286,9 @@ func TestUpdate(t *testing.T) {
 
 			var lastUID int
 			for _, n := range tc.userNames {
-				err := c.Update(context.Background(), n, "my password")
+				err := c.Update(context.Background(), n, "my password", "/home/%f", "/bin/bash")
 				if tc.wantErr {
-					require.Error(t, err, "Update should have returned an error but hasn’t")
+					require.Error(t, err, "Update should have returned an error but hasn't")
 					return
 				}
 				require.NoError(t, err, "Update should not have returned an error but has")
@@ -318,9 +318,9 @@ func TestUpdate(t *testing.T) {
 				// we need one second as we are storing an unix timestamp for last online auth
 				time.Sleep(time.Second)
 
-				err = c.Update(context.Background(), n, "other password")
+				err = c.Update(context.Background(), n, "other password", "/home/%f", "/bin/bash")
 				if tc.wantErrRefresh {
-					require.Error(t, err, "Second update should have returned an error but hasn’t")
+					require.Error(t, err, "Second update should have returned an error but hasn't")
 					return
 				}
 				require.NoError(t, err, "Second update should not have returned an error but has")
@@ -367,9 +367,9 @@ func TestCanAuthenticate(t *testing.T) {
 			if !tc.useoldaccounts {
 				// create cache and users
 				c = newCacheForTests(t, cacheDir, true, false)
-				err := c.Update(context.Background(), "first user", "my password")
+				err := c.Update(context.Background(), "first user", "my password", "/home/%f", "/bin/bash")
 				require.NoError(t, err, "Setup: should be able to create first user")
-				err = c.Update(context.Background(), "second user", "other password")
+				err = c.Update(context.Background(), "second user", "other password", "/home/%f", "/bin/bash")
 				require.NoError(t, err, "Setup: should be able to create second user")
 			} else {
 				// copy old database and reopen the cache without cleaning up old account
@@ -384,7 +384,7 @@ func TestCanAuthenticate(t *testing.T) {
 			for username, password := range tc.userPasswords {
 				err := c.CanAuthenticate(context.Background(), username, password)
 				if tc.wantErr {
-					require.Error(t, err, "CanAuthenticate should return an error but hasn’t")
+					require.Error(t, err, "CanAuthenticate should return an error but hasn't")
 					if username == "veryolduser@domain.com" {
 						require.ErrorIs(t, err, cache.ErrOfflineCredentialsExpired, "CanAuthenticate should return a certain error type for expired unpurged users")
 					}
