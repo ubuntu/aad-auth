@@ -17,7 +17,7 @@ const (
 	defaultShell       = "/bin/bash"
 )
 
-// AAD represents the configuration values that are used for AAD
+// AAD represents the configuration values that are used for AAD.
 type AAD struct {
 	TenantID                     string
 	AppID                        string
@@ -30,7 +30,7 @@ type options struct {
 	addUserConfPath string
 }
 
-// Option represents the functional option passed to LoadDefaults
+// Option represents the functional option passed to LoadDefaults.
 type Option func(*options)
 
 // Load returns the loaded configuration of the specified domain from p.

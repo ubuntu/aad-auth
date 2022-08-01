@@ -2,7 +2,6 @@ package config
 
 import (
 	"context"
-	"log"
 	"path/filepath"
 	"testing"
 
@@ -10,8 +9,7 @@ import (
 )
 
 func TestLoadDefaultHomeAndShell(t *testing.T) {
-	testFilesPath := filepath.Join("testdata", "loadDefaultHomeAndShell")
-	log.Print(testFilesPath)
+	testFilesPath := filepath.Join("testdata", "TestLoadDefaultHomeAndShell")
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -25,23 +23,31 @@ func TestLoadDefaultHomeAndShell(t *testing.T) {
 			wantHome:  "/home/users/%u",
 			wantShell: "/bin/fish",
 		},
+
 		"file with only dhome": {
 			path:      "adduser-dhome-only.conf",
 			wantHome:  "/home/users/%u",
-			wantShell: "/bin/bash",
+			wantShell: "",
 		},
 		"file with only dshell": {
 			path:      "adduser-dshell-only.conf",
-			wantHome:  "/home/%u",
+			wantHome:  "",
 			wantShell: "/bin/fish",
 		},
 		"file with no values": {
 			path:      "adduser-commented.conf",
-			wantHome:  "/home/%u",
-			wantShell: "/bin/bash",
+			wantHome:  "",
+			wantShell: "",
 		},
+
+		// Special cases
 		"file does not exists returns empty values": {
 			path:      "/foo/doesnotexists.conf",
+			wantHome:  "",
+			wantShell: "",
+		},
+		"empty path to adduser.conf returns empty values": {
+			path:      "",
 			wantHome:  "",
 			wantShell: "",
 		},
@@ -52,8 +58,12 @@ func TestLoadDefaultHomeAndShell(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			log.Print(tc.path)
-			home, shell := loadDefaultHomeAndShell(context.Background(), tc.path)
+			path := filepath.Join(testFilesPath, tc.path)
+			if tc.path == "" {
+				path = ""
+			}
+
+			home, shell := loadDefaultHomeAndShell(context.Background(), path)
 			require.Equal(t, tc.wantHome, home, "Got expected homedir")
 			require.Equal(t, tc.wantShell, shell, "Got expected shell")
 		})

@@ -13,7 +13,7 @@ import (
 
 func TestLoadConfig(t *testing.T) {
 	t.Parallel()
-	testFilesPath := filepath.Join("testdata", "LoadConfig")
+	testFilesPath := filepath.Join("testdata", "TestLoadConfig")
 
 	tests := map[string]struct {
 		aadConfigPath string
@@ -131,15 +131,16 @@ func TestLoadConfig(t *testing.T) {
 			if tc.domain != "" {
 				domain = tc.domain
 			}
-			cfg, err := config.Load(context.Background(), tc.aadConfigPath, domain, config.WithCustomConfPath(tc.addUserPath))
+
+			got, err := config.Load(context.Background(), tc.aadConfigPath, domain, config.WithAddUserConfPath(tc.addUserPath))
 			if tc.wantErr {
 				require.Error(t, err, "LoadConfig should have failed, but didn't")
 				return
 			}
 
 			goldenPath := filepath.Join(testFilesPath, "golden", def)
-			wantConfig := testutils.SaveAndLoadFromGolden(t, cfg, testutils.WithCustomGoldPath(goldenPath))
-			require.Equal(t, wantConfig, cfg, "Got config and expected config are different")
+			want := testutils.SaveAndLoadFromGolden(t, got, testutils.WithGoldPath(goldenPath))
+			require.Equal(t, want, got, "Got config and expected config are different")
 		})
 	}
 

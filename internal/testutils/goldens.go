@@ -17,8 +17,8 @@ type option struct {
 // Option is a supported option reference to change the golden files comparison.
 type Option func(*option)
 
-// WithCustomGoldPath overrides the default path for golden files used.
-func WithCustomGoldPath(path string) Option {
+// WithGoldPath overrides the default path for golden files used.
+func WithGoldPath(path string) Option {
 	return func(o *option) {
 		if path != "" {
 			o.goldPath = path
