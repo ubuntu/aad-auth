@@ -85,7 +85,7 @@ func newLogger(priority syslog.Priority, opts ...Option) (*Logger, error) {
 		priority: priority,
 	}
 
-	l.Debug("NSS AAD DEBUG enabled")
+	l.Debug("NSS AAD DEBUG enabled\n")
 	return l, nil
 }
 
