@@ -1,0 +1,8 @@
+name: myuser@domain.com
+passwd: '*'
+lstchg: -1
+min: -1
+max: -1
+warn: -1
+inact: -1
+expire: -1

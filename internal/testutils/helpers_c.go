@@ -4,6 +4,7 @@ package testutils
 	#include <grp.h>
 	#include <pwd.h>
 	#include <stdlib.h>
+	#include <shadow.h>
 */
 import "C"
 import (
@@ -92,5 +93,45 @@ func (g CGroup) ToPublicCGroup(membersNum int) PublicCGroup {
 		GrPasswd: C.GoString(g.gr_passwd),
 		GrGID:    uint(g.gr_gid),
 		GrMem:    members,
+	}
+}
+
+/*
+ * C representation of shadow helpers, as those can’t be in *_test.go files.
+ */
+
+// CShadow is the struct shadow
+type CShadow = *C.struct_spwd
+
+// NewCShadow allocates a new C struct group.
+func NewCShadow() CShadow {
+	return &C.struct_spwd{}
+}
+
+// PublicCShadow the public representation to be marshaled and unmashaled on disk.
+type PublicCShadow struct {
+	SpNamp   string `yaml:"sp_namp"`
+	SpPwdp   string `yaml:"sp_pwdp"`
+	SpLstchg int    `yaml:"sp_lstchg"`
+	SpMin    int    `yaml:"sp_min"`
+	SpMax    int    `yaml:"sp_max"`
+	SpWarn   int    `yaml:"sp_warn"`
+	SpInact  int    `yaml:"sp_inact"`
+	SpExpire int    `yaml:"sp_expire"`
+	SpFlag   uint   `yaml:"sp_flag"`
+}
+
+// ToPublicCShadow convert the CShadow struct to a form ready to be converted to yaml.
+func (s CShadow) ToPublicCShadow() PublicCShadow {
+	return PublicCShadow{
+		SpNamp:   C.GoString(s.sp_namp),
+		SpPwdp:   C.GoString(s.sp_pwdp),
+		SpLstchg: int(s.sp_lstchg),
+		SpMin:    int(s.sp_min),
+		SpMax:    int(s.sp_max),
+		SpWarn:   int(s.sp_warn),
+		SpInact:  int(s.sp_inact),
+		SpExpire: int(s.sp_expire),
+		SpFlag:   uint(s.sp_flag),
 	}
 }

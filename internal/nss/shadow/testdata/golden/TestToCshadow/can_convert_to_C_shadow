@@ -1,0 +1,9 @@
+sp_namp: testusername@domain.com
+sp_pwdp: '*'
+sp_lstchg: -1
+sp_min: -1
+sp_max: -1
+sp_warn: -1
+sp_inact: -1
+sp_expire: -1
+sp_flag: 18446744073709551615
