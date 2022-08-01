@@ -60,7 +60,7 @@ func insertUsersInDb(t *testing.T, cacheDir string) {
 	c := newCacheForTests(t, cacheDir, true, false)
 	defer c.Close(context.Background())
 	for u, info := range usersForTests {
-		err := c.Update(context.Background(), u, info.password, "", "")
+		err := c.Update(context.Background(), u, info.password, "/home/%f", "/bin/bash")
 		require.NoError(t, err, "Setup: can't insert user %v to db", u)
 	}
 }

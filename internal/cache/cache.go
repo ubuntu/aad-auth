@@ -310,7 +310,7 @@ func (c *Cache) CanAuthenticate(ctx context.Context, username, password string) 
 }
 
 // Update creates and update user nss cache when there has been an online verification.
-func (c *Cache) Update(ctx context.Context, username, password, homeDir, shell string) (err error) {
+func (c *Cache) Update(ctx context.Context, username, password, homeDirPattern, shell string) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("can not create/open cache for nss database: %v", err)
@@ -325,7 +325,7 @@ func (c *Cache) Update(ctx context.Context, username, password, homeDir, shell s
 			return err
 		}
 
-		home, err := parseHomeDir(ctx, homeDir, username, fmt.Sprintf("%d", id))
+		home, err := parseHomeDir(ctx, homeDirPattern, username, fmt.Sprintf("%d", id))
 		if err != nil {
 			return err
 		}
@@ -465,7 +465,7 @@ func parseHomeDir(ctx context.Context, homeDirPattern, username, uid string) (ho
 }
 
 // parseHomeDirPattern returns the string that matches the given pattern.
-// If the pattern is not recognized, an error is returned
+// If the pattern is not recognized, an error is returned.
 func parseHomeDirPattern(ctx context.Context, pattern, username, uid string) (string, error) {
 	switch pattern {
 	case "u", "d":
