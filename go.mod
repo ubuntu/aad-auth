@@ -9,6 +9,7 @@ require (
 	github.com/stretchr/testify v1.8.0
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -19,5 +20,4 @@ require (
 	github.com/pkg/browser v0.0.0-20210115035449-ce105d075bb4 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
