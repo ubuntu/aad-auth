@@ -2,6 +2,7 @@ package shadow
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/ubuntu/aad-auth/internal/cache"
@@ -57,23 +58,32 @@ func NewByName(ctx context.Context, name string) (s Shadow, err error) {
 	}, nil
 }
 
+var shadowIterationCache *cache.Cache
+
 // StartEntryIteration open a new cache for iteration.
+// This needs to be called prior to calling NextEntry and be closed with EndEntryIteration.
 func StartEntryIteration(ctx context.Context) error {
+	if shadowIterationCache != nil {
+		return nss.ConvertErr(errors.New("shadow entry iteration already in progress. End it before starting a new one"))
+	}
+
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
 		return nss.ConvertErr(err)
 	}
-	defer c.Close(ctx)
-	return nss.ConvertErr(c.CloseShadowIterator(ctx))
+	shadowIterationCache = c
+	return nil
 }
 
 // EndEntryIteration closes the underlying DB iterator.
 func EndEntryIteration(ctx context.Context) error {
-	c, err := cache.New(ctx, testopts...)
-	if err != nil {
-		return nss.ConvertErr(err)
+	if shadowIterationCache == nil {
+		logger.Warn(ctx, "shadow entry iteration ended without initialization first")
+		return nil
 	}
+	c := shadowIterationCache
 	defer c.Close(ctx)
+	shadowIterationCache = nil
 	return nss.ConvertErr(c.CloseShadowIterator(ctx))
 }
 
@@ -87,13 +97,11 @@ func NextEntry(ctx context.Context) (sp Shadow, err error) {
 	}()
 	logger.Debug(ctx, "get next shadow entry")
 
-	c, err := cache.New(ctx, testopts...)
-	if err != nil {
-		return Shadow{}, nss.ConvertErr(err)
+	if shadowIterationCache == nil {
+		return Shadow{}, nss.ConvertErr(errors.New("shadow entry iteration called without initialization first"))
 	}
-	defer c.Close(ctx)
 
-	spw, err := c.NextShadowEntry(ctx)
+	spw, err := shadowIterationCache.NextShadowEntry(ctx)
 	if err != nil {
 		return Shadow{}, nss.ConvertErr(err)
 	}
