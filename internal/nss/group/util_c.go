@@ -15,9 +15,9 @@ import (
 type (
 	// CPasswd is the struct passwd
 	CGroup = *C.struct_group
-	// CChat allow to cast to a char
+	// CChar allows to cast to a char
 	CChar = C.char
-	// CSizeT allow to cast to a size_t
+	// CSizeT allows to cast to a size_t
 	CSizeT = C.size_t
 )
 
@@ -37,7 +37,7 @@ func (g Group) ToCgroup(grp CGroup, buf *CChar, buflen CSizeT) error {
 		return nss.ErrTryAgainERange
 	}
 
-	// Transform the C guffer to a Go one.
+	// Transform the C buffer to a Go one.
 	gobuf := (*[1 << 30]byte)(unsafe.Pointer(buf))[:buflen:buflen]
 	b := bytes.NewBuffer(gobuf)
 	b.Reset()

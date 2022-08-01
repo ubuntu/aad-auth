@@ -46,7 +46,7 @@ func (c *Cache) GetGroupByName(ctx context.Context, groupname string) (group Gro
 // GetGroupByGID returns given group struct by its GID.
 // It returns an error if we couldn’t fetch the group (does not exist or not connected).
 func (c *Cache) GetGroupByGID(ctx context.Context, gid uint) (group GroupRecord, err error) {
-	logger.Debug(ctx, "getting group information from cache for uid %d", gid)
+	logger.Debug(ctx, "getting group information from cache for gid %d", gid)
 
 	// Nested query to avoid the case where the user is not found,
 	// then all the values are NULL due to the call to GROUP_CONCAT

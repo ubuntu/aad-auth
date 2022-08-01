@@ -84,7 +84,7 @@ func TestNewByUID(t *testing.T) {
 				require.ErrorIs(t, err, tc.wantErrType, "NewByUID has not returned expected error type")
 				return
 			}
-			require.NoError(t, err, "NewByName should not have returned an error and has")
+			require.NoError(t, err, "NewByUID should not have returned an error and has")
 
 			want := testutils.SaveAndLoadFromGolden(t, got)
 			require.Equal(t, want, got, "Passwd object is the expected one")
@@ -105,7 +105,7 @@ func TestNextEntry(t *testing.T) {
 		"partial iteration then ends works": {numNextIteration: 1, wantEndErrType: nil},
 
 		// error cases
-		"error on iteration not being initiliazed first": {noIterationInit: true, numNextIteration: 0, wantEndErrType: nss.ErrUnavailableENoEnt},
+		"error on iteration not being initialized first": {noIterationInit: true, numNextIteration: 0, wantEndErrType: nss.ErrUnavailableENoEnt},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -128,7 +128,7 @@ func TestNextEntry(t *testing.T) {
 			var got []passwd.Passwd
 			for i := 0; i < tc.numNextIteration; i++ {
 				p, err := passwd.NextEntry(context.Background())
-				require.NoError(t, err, "Should return users without any error")
+				require.NoError(t, err, "Should return users without any errors")
 				got = append(got, p)
 			}
 			_, err := passwd.NextEntry(context.Background())
@@ -216,7 +216,7 @@ func TestRestartIterationWithoutEndingPreviousOne(t *testing.T) {
 	defer passwd.EndEntryIteration(context.Background()) // in case of an error in the middle of the test. No-op otherwise
 
 	p, err := passwd.NextEntry(context.Background())
-	require.NoError(t, err, "Should return first user without any error")
+	require.NoError(t, err, "Should return first user without any errors")
 	require.NotNil(t, p, "Should return first user")
 
 	err = passwd.EndEntryIteration(context.Background())
@@ -230,7 +230,7 @@ func TestRestartIterationWithoutEndingPreviousOne(t *testing.T) {
 	var got []passwd.Passwd
 	for i := 0; i < 3; i++ {
 		p, err := passwd.NextEntry(context.Background())
-		require.NoError(t, err, "Should return users without any error")
+		require.NoError(t, err, "Should return users without any errors")
 		got = append(got, p)
 	}
 	_, err = passwd.NextEntry(context.Background())
