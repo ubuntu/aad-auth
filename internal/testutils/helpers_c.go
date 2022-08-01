@@ -1,6 +1,7 @@
 package testutils
 
 /*
+	#include <grp.h>
 	#include <pwd.h>
 	#include <stdlib.h>
 */
@@ -57,5 +58,39 @@ func (pwd CPasswd) ToPublicCPasswd() PublicCPasswd {
 		PwGecos:  C.GoString(pwd.pw_gecos),
 		PwDir:    C.GoString(pwd.pw_dir),
 		PwShell:  C.GoString(pwd.pw_shell),
+	}
+}
+
+/*
+ * C representation of group helpers, as those can’t be in *_test.go files.
+ */
+
+// CGroup is the struct group
+type CGroup = *C.struct_group
+
+// NewCGroup allocates a new C struct group.
+func NewCGroup() CGroup {
+	return &C.struct_group{}
+}
+
+// PublicCGroup the public representation to be marshaled and unmashaled on disk.
+type PublicCGroup struct {
+	GrName   string   `yaml:"gr_name"`
+	GrPasswd string   `yaml:"gr_passwd"`
+	GrGID    uint     `yaml:"gr_gid"`
+	GrMem    []string `yaml:"gr_mem"`
+}
+
+// ToPublicCGroup convert the CGroup struct to a form ready to be converted to yaml.
+func (g CGroup) ToPublicCGroup(membersNum int) PublicCGroup {
+	var members []string
+	for _, mem := range unsafe.Slice(g.gr_mem, membersNum) {
+		members = append(members, C.GoString(mem))
+	}
+	return PublicCGroup{
+		GrName:   C.GoString(g.gr_name),
+		GrPasswd: C.GoString(g.gr_passwd),
+		GrGID:    uint(g.gr_gid),
+		GrMem:    members,
 	}
 }

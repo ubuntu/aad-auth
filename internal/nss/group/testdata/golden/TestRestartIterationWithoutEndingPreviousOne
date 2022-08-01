@@ -1,0 +1,15 @@
+- name: myuser@domain.com
+  passwd: x
+  gid: 1929326240
+  members:
+    - myuser@domain.com
+- name: otheruser@domain.com
+  passwd: x
+  gid: 165119649
+  members:
+    - otheruser@domain.com
+- name: user@otherdomain.com
+  passwd: x
+  gid: 165119648
+  members:
+    - user@otherdomain.com

@@ -1,0 +1,5 @@
+name: myuser@domain.com
+passwd: x
+gid: 1929326240
+members:
+    - myuser@domain.com
