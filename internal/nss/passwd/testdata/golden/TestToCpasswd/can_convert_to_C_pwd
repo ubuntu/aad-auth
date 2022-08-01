@@ -1,0 +1,7 @@
+pw_name: testusername@domain.com
+pw_passwd: x
+pw_uid: 1234
+pw_gid: 2345
+pw_gecos: ""
+pw_dir: /home/testusername@domain.com
+pw_shell: /bin/bash

@@ -53,3 +53,16 @@ func (p *Passwd) UnmarshalYAML(value *yaml.Node) error {
 	}
 	return nil
 }
+
+// NewTestPasswd return a new passwd entry for tests.
+func NewTestPasswd() Passwd {
+	return Passwd{
+		name:   "testusername@domain.com",
+		passwd: "x",
+		uid:    1234,
+		gid:    2345,
+		gecos:  "",
+		dir:    "/home/testusername@domain.com",
+		shell:  "/bin/bash",
+	}
+}
