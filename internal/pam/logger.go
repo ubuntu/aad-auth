@@ -24,6 +24,8 @@ const (
 	LOG_INFO Priority = 6
 	// LOG_DEBUG matches the syslog Debug level
 	LOG_DEBUG Priority = 7
+
+	debugWelcome = "aad auth debug enabled\n"
 )
 
 // Handle allows to pass C.pam_handle_t to this package.
@@ -33,14 +35,35 @@ type Handle = *C.pam_handle_t
 type Logger struct {
 	pamHandle Handle
 	priority  Priority
+
+	logWithPam func(pamh Handle, priority int, format string, a ...any)
 }
 
+// options are the options supported by Logger.
+type options struct {
+	logWithPam func(pamh Handle, priority int, format string, a ...any)
+}
+
+// Option represents one functional option passed to Logger.
+type Option func(*options)
+
 // NewLogger returns a Logger hanging the Logger information.
-func NewLogger(pamHandle Handle, priority Priority) Logger {
-	return Logger{
-		pamHandle: pamHandle,
-		priority:  priority,
+func NewLogger(pamHandle Handle, priority Priority, opts ...Option) Logger {
+	o := options{
+		logWithPam: pamSyslog,
 	}
+	// applied options
+	for _, opt := range opts {
+		opt(&o)
+	}
+
+	l := Logger{
+		pamHandle:  pamHandle,
+		priority:   priority,
+		logWithPam: o.logWithPam,
+	}
+	l.Debug("aad auth debug enabled\n")
+	return l
 }
 
 // Debug sends a debug level message to the logger.
@@ -48,27 +71,27 @@ func (l Logger) Debug(format string, a ...any) {
 	if l.priority < LOG_DEBUG {
 		return
 	}
-	pamSyslog(l.pamHandle, C.LOG_DEBUG, format, a...)
+	l.logWithPam(l.pamHandle, C.LOG_DEBUG, format, a...)
 }
 
 // Info sends an informational message to the logger.
 func (l Logger) Info(format string, a ...any) {
-	pamSyslog(l.pamHandle, C.LOG_INFO, format, a...)
+	l.logWithPam(l.pamHandle, C.LOG_INFO, format, a...)
 }
 
 // Warn sends a warning level message to the logger.
 func (l Logger) Warn(format string, a ...any) {
-	pamSyslog(l.pamHandle, C.LOG_WARNING, format, a...)
+	l.logWithPam(l.pamHandle, C.LOG_WARNING, format, a...)
 }
 
 // Err sends an error level message to the logger.
 func (l Logger) Err(format string, a ...any) {
-	pamSyslog(l.pamHandle, C.LOG_ERR, format, a...)
+	l.logWithPam(l.pamHandle, C.LOG_ERR, format, a...)
 }
 
 // Crit sends a critical message to the logger.
 func (l Logger) Crit(format string, a ...any) {
-	pamSyslog(l.pamHandle, C.LOG_CRIT, format, a...)
+	l.logWithPam(l.pamHandle, C.LOG_CRIT, format, a...)
 }
 
 // Close does nothing for PAM
@@ -76,6 +99,7 @@ func (l Logger) Close() error {
 	return nil
 }
 
+// pamSyslog sends directly logs syslog via PAM.
 func pamSyslog(pamh Handle, priority int, format string, a ...any) {
 	msg := fmt.Sprintf(format, a...)
 

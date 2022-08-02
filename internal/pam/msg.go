@@ -14,7 +14,7 @@ import "C"
 import (
 	"context"
 	"fmt"
-	"os"
+	"log"
 	"unsafe"
 )
 
@@ -31,14 +31,15 @@ func Info(ctx context.Context, format string, a ...any) {
 
 	pamh, ok := ctx.Value(ctxPamhKey).(*C.pam_handle_t)
 	if !ok {
-		fmt.Fprintf(os.Stderr, "WARNING: Failed to display message to user (no pam attached): %v", msg)
-		pamSyslog(pamh, C.LOG_WARNING, "Failed to display message to user (no pam attached): %v", msg)
+		log.Printf("WARNING: Failed to display message to user (no pam attached): %v\n", msg)
+		return
 	}
 
 	cMsg := C.CString(msg)
 	defer C.free(unsafe.Pointer(cMsg))
 
 	if errInt := C.pam_info_no_variadic(pamh, cMsg); errInt != C.PAM_SUCCESS {
-		pamSyslog(pamh, C.LOG_WARNING, "Failed to display message to user (error %d): %v", errInt, msg)
+		pamSyslog(pamh, C.LOG_WARNING, "Failed to display message to user (error %d): %v\n", errInt, msg)
+		return
 	}
 }
