@@ -33,7 +33,7 @@ import (
 	"unsafe"
 )
 
-func GetUser(ctx context.Context) (string, error) {
+func getUser(ctx context.Context) (string, error) {
 	pamh, ok := ctx.Value(ctxPamhKey).(*C.pam_handle_t)
 	if !ok {
 		return "", errors.New("can't check for user: no pam context")
@@ -47,7 +47,7 @@ func GetUser(ctx context.Context) (string, error) {
 	return C.GoString(cUsername), nil
 }
 
-func GetPassword(ctx context.Context) (string, error) {
+func getPassword(ctx context.Context) (string, error) {
 	pamh, ok := ctx.Value(ctxPamhKey).(*C.pam_handle_t)
 	if !ok {
 		return "", errors.New("can't check for user: no pam context")

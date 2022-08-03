@@ -1,17 +1,15 @@
-package main
+package pam
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/ubuntu/aad-auth/internal/aad"
 	"github.com/ubuntu/aad-auth/internal/cache"
 	"github.com/ubuntu/aad-auth/internal/config"
 	"github.com/ubuntu/aad-auth/internal/logger"
-	"github.com/ubuntu/aad-auth/internal/pam"
 	"github.com/ubuntu/aad-auth/internal/user"
 )
 
@@ -24,15 +22,17 @@ var (
 	ErrPamIgnore = errors.New("PAM IGNORE")
 )
 
-func authenticate(ctx context.Context, conf string) error {
+// Authenticate tries to authenticate user with AAD.
+// It’s using the given aad configuration files to get tenant and client appid.
+func Authenticate(ctx context.Context, conf string) error {
 	// Get connection information
-	username, err := pam.GetUser(ctx)
+	username, err := getUser(ctx)
 	if err != nil {
 		logError(ctx, "Could not get user from stdin", nil)
 		return ErrPamSystem
 	}
 	username = user.NormalizeName(username)
-	password, err := pam.GetPassword(ctx)
+	password, err := getPassword(ctx)
 	if err != nil {
 		logError(ctx, "Could not read password from stdin", nil)
 		return ErrPamSystem
@@ -66,7 +66,7 @@ func authenticate(ctx context.Context, conf string) error {
 	if errors.Is(errAAD, aad.ErrNoNetwork) {
 		if err := c.CanAuthenticate(ctx, username, password); err != nil {
 			if errors.Is(err, cache.ErrOfflineCredentialsExpired) {
-				pam.Info(ctx, "Machine is offline and cached credentials expired. Please try again when the machine is online.")
+				Info(ctx, "Machine is offline and cached credentials expired. Please try again when the machine is online.")
 			}
 			logError(ctx, "%w. Denying access.", err)
 			return ErrPamAuth
@@ -89,22 +89,4 @@ func logError(ctx context.Context, format string, err error) {
 		msg = fmt.Errorf(format, err).Error()
 	}
 	logger.Err(ctx, msg)
-}
-
-func main() {
-	c, err := cache.New(context.Background(), cache.WithCacheDir("../cache"), cache.WithRootUID(1000), cache.WithRootGID(1000), cache.WithShadowGID(1000))
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer c.Close(context.Background())
-
-	for u, pass := range map[string]string{
-		"alice":             "alice pass",
-		"bob@example.com":   "bob pass",
-		"carol@example.com": "carol pass",
-	} {
-		if err := c.Update(context.Background(), u, pass, "", ""); err != nil {
-			log.Fatal(err)
-		}
-	}
 }

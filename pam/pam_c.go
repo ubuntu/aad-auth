@@ -12,8 +12,10 @@ char *string_from_argv(int i, char **argv);
 import "C"
 import (
 	"context"
+	"log"
 	"strings"
 
+	"github.com/ubuntu/aad-auth/internal/cache"
 	"github.com/ubuntu/aad-auth/internal/logger"
 	"github.com/ubuntu/aad-auth/internal/pam"
 )
@@ -48,13 +50,13 @@ func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 	ctx = logger.CtxWithLogger(ctx, pamLogger)
 	defer logger.CloseLoggerFromContext(ctx)
 
-	if err := authenticate(ctx, conf); err != nil {
+	if err := pam.Authenticate(ctx, conf); err != nil {
 		switch err {
-		case ErrPamSystem:
+		case pam.ErrPamSystem:
 			return C.PAM_SYSTEM_ERR
-		case ErrPamAuth:
+		case pam.ErrPamAuth:
 			return C.PAM_AUTH_ERR
-		case ErrPamIgnore:
+		case pam.ErrPamIgnore:
 			return C.PAM_IGNORE
 		}
 	}
@@ -75,4 +77,22 @@ func pam_sm_open_session(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 //export pam_sm_close_session
 func pam_sm_close_session(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char) C.int {
 	return C.PAM_SUCCESS
+}
+
+func main() {
+	c, err := cache.New(context.Background(), cache.WithCacheDir("../cache"), cache.WithRootUID(1000), cache.WithRootGID(1000), cache.WithShadowGID(1000))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer c.Close(context.Background())
+
+	for u, pass := range map[string]string{
+		"alice":             "alice pass",
+		"bob@example.com":   "bob pass",
+		"carol@example.com": "carol pass",
+	} {
+		if err := c.Update(context.Background(), u, pass, "", ""); err != nil {
+			log.Fatal(err)
+		}
+	}
 }
