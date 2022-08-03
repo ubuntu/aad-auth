@@ -1,4 +1,0 @@
-auth	[success=2 default=ignore]	pam_unix.so nullok debug
-auth    [success=1 default=ignore]  /home/j-lallement/shared/Ubuntu/Dev/ActiveDirectory/AAD/pam-auth/pam/pam_aad.so conf=/home/j-lallement/shared/Ubuntu/Dev/ActiveDirectory/AAD/pam-auth/conf/aad.conf debug
-auth	requisite			pam_deny.so
-auth	required			pam_permit.so
