@@ -1,6 +1,8 @@
 package group
 
 import (
+	"fmt"
+
 	"github.com/ubuntu/aad-auth/internal/cache"
 	"gopkg.in/yaml.v3"
 )
@@ -46,11 +48,15 @@ func (g *Group) UnmarshalYAML(value *yaml.Node) error {
 }
 
 // NewTestGroup return a new Group entry for tests.
-func NewTestGroup() Group {
+func NewTestGroup(nMembers int) Group {
+	members := make([]string, 0, nMembers)
+	for i := 0; i < nMembers; i++ {
+		members = append(members, fmt.Sprintf("testusername-%d@domain.com", i+1))
+	}
 	return Group{
 		name:    "testusername@domain.com",
 		passwd:  "x",
 		gid:     2345,
-		members: []string{"testusername@domain.com"},
+		members: members,
 	}
 }
