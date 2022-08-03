@@ -3,8 +3,6 @@ package aad_test
 import (
 	"context"
 	"errors"
-	"fmt"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -49,7 +47,7 @@ func TestAuthenticate(t *testing.T) {
 				tc.username = "success@domain.com"
 			}
 
-			auth := aad.AAD{}
+			auth := aad.NewWithMockClient()
 			cfg := config.AAD{
 				TenantID: "tenant id",
 				AppID:    tc.appID,
@@ -63,12 +61,4 @@ func TestAuthenticate(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
-}
-
-func TestMain(m *testing.M) {
-	if aad.Flavor != aad.TestFlavor {
-		fmt.Println("Running tests needs -tags=msalmock")
-		os.Exit(1)
-	}
-	m.Run()
 }

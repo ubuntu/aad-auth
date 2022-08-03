@@ -36,16 +36,22 @@ type publicClient interface {
 	AcquireTokenByUsernamePassword(ctx context.Context, scopes []string, username string, password string) (public.AuthResult, error)
 }
 
+// AAD holds the authentication mecanism (real or mock)
 type AAD struct {
+	newPublicClient func(clientID string, options ...public.Option) (publicClient, error)
 }
 
 // Authenticate tries to authenticate username against AAD.
-func (AAD) Authenticate(ctx context.Context, cfg config.AAD, username, password string) error {
+func (auth AAD) Authenticate(ctx context.Context, cfg config.AAD, username, password string) error {
 	authority := fmt.Sprintf("%s/%s", endpoint, cfg.TenantID)
 	logger.Debug(ctx, "Connecting to %q, with clientID %q for user %q", authority, cfg.AppID, username)
 
+	if auth.newPublicClient == nil {
+		auth.newPublicClient = publicNewRealClient
+	}
+
 	// Get client from network
-	app, errAcquireToken := newPublicClient(cfg.AppID, public.WithAuthority(authority))
+	app, errAcquireToken := auth.newPublicClient(cfg.AppID, public.WithAuthority(authority))
 	if errAcquireToken != nil {
 		logger.Err(ctx, "Connection to authority failed: %v", errAcquireToken)
 		return ErrNoNetwork
@@ -91,4 +97,8 @@ func (AAD) Authenticate(ctx context.Context, cfg config.AAD, username, password 
 
 	logger.Debug(ctx, "Authentication successful with user/password")
 	return nil
+}
+
+func publicNewRealClient(clientID string, options ...public.Option) (publicClient, error) {
+	return public.New(clientID, options...)
 }

@@ -1,5 +1,3 @@
-//go:build msalmock
-
 package aad
 
 import (
@@ -14,10 +12,14 @@ import (
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/public"
 )
 
-const flavor = TestFlavor
+// NewWithMockClient returns a mock AAD client that can be controlled through input for tests.
+func NewWithMockClient() AAD {
+	return AAD{
+		newPublicClient: publicNewMockClient,
+	}
+}
 
-func newPublicClient(clientID string, options ...public.Option) (publicClient, error) {
-	fmt.Println(clientID)
+func publicNewMockClient(clientID string, options ...public.Option) (publicClient, error) {
 	if clientID == "connection failed" {
 		return publicClientMock{}, errors.New("connection failed")
 	}
