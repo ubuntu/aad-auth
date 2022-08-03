@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/aad-auth/internal/aad"
+	"github.com/ubuntu/aad-auth/internal/config"
 )
 
 func TestAuthenticate(t *testing.T) {
@@ -48,7 +49,12 @@ func TestAuthenticate(t *testing.T) {
 				tc.username = "success@domain.com"
 			}
 
-			err := aad.Authenticate(context.Background(), "tenant id", tc.appID, tc.username, "password")
+			auth := aad.AAD{}
+			cfg := config.AAD{
+				TenantID: "tenant id",
+				AppID:    tc.appID,
+			}
+			err := auth.Authenticate(context.Background(), cfg, tc.username, "password")
 			if tc.wantErr != nil {
 				require.Error(t, err)
 				require.True(t, errors.Is(err, tc.wantErr), "Error should be %v", tc.wantErr)

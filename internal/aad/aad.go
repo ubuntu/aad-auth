@@ -9,6 +9,7 @@ import (
 
 	msalErrors "github.com/AzureAD/microsoft-authentication-library-for-go/apps/errors"
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/public"
+	"github.com/ubuntu/aad-auth/internal/config"
 	"github.com/ubuntu/aad-auth/internal/logger"
 )
 
@@ -35,13 +36,16 @@ type publicClient interface {
 	AcquireTokenByUsernamePassword(ctx context.Context, scopes []string, username string, password string) (public.AuthResult, error)
 }
 
+type AAD struct {
+}
+
 // Authenticate tries to authenticate username against AAD.
-func Authenticate(ctx context.Context, tenantID, appID, username, password string) error {
-	authority := fmt.Sprintf("%s/%s", endpoint, tenantID)
-	logger.Debug(ctx, "Connecting to %q, with clientID %q for user %q", authority, appID, username)
+func (AAD) Authenticate(ctx context.Context, cfg config.AAD, username, password string) error {
+	authority := fmt.Sprintf("%s/%s", endpoint, cfg.TenantID)
+	logger.Debug(ctx, "Connecting to %q, with clientID %q for user %q", authority, cfg.AppID, username)
 
 	// Get client from network
-	app, errAcquireToken := newPublicClient(appID, public.WithAuthority(authority))
+	app, errAcquireToken := newPublicClient(cfg.AppID, public.WithAuthority(authority))
 	if errAcquireToken != nil {
 		logger.Err(ctx, "Connection to authority failed: %v", errAcquireToken)
 		return ErrNoNetwork

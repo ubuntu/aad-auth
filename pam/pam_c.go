@@ -15,6 +15,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/ubuntu/aad-auth/internal/aad"
 	"github.com/ubuntu/aad-auth/internal/cache"
 	"github.com/ubuntu/aad-auth/internal/logger"
 	"github.com/ubuntu/aad-auth/internal/pam"
@@ -50,7 +51,7 @@ func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 	ctx = logger.CtxWithLogger(ctx, pamLogger)
 	defer logger.CloseLoggerFromContext(ctx)
 
-	if err := pam.Authenticate(ctx, conf); err != nil {
+	if err := pam.Authenticate(ctx, aad.AAD{}, conf); err != nil {
 		switch err {
 		case pam.ErrPamSystem:
 			return C.PAM_SYSTEM_ERR

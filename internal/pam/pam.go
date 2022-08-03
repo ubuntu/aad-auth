@@ -22,9 +22,13 @@ var (
 	ErrPamIgnore = errors.New("PAM IGNORE")
 )
 
-// Authenticate tries to authenticate user with AAD.
-// It’s using the given aad configuration files to get tenant and client appid.
-func Authenticate(ctx context.Context, conf string) error {
+type Authenticater interface {
+	Authenticate(ctx context.Context, cfg config.AAD, username, password string) error
+}
+
+// Authenticate tries to authenticate user with the given Authenticater.
+// It’s passing specific configuration, per domain, so that that Authenticater can use them.
+func Authenticate(ctx context.Context, auth Authenticater, conf string) error {
 	// Get connection information
 	username, err := getUser(ctx)
 	if err != nil {
@@ -46,8 +50,8 @@ func Authenticate(ctx context.Context, conf string) error {
 		return ErrPamSystem
 	}
 
-	// AAD authentication
-	errAAD := aad.Authenticate(ctx, cfg.TenantID, cfg.AppID, username, password)
+	// Authentication. Note that the errors are AAD errors for now, but we can decorelate them in the future.
+	errAAD := auth.Authenticate(ctx, cfg, username, password)
 	if errors.Is(errAAD, aad.ErrDeny) {
 		return ErrPamAuth
 	} else if errAAD != nil && !errors.Is(errAAD, aad.ErrNoNetwork) {
