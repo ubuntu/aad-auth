@@ -23,6 +23,8 @@ type (
 
 // ToCpasswd transforms the Go passwd struct to a C struct passwd, filling buffer, result and nss_status.
 // The function will check first for errors to transform them to corresponding nss status.
+//
+//go:nocheckptr
 func (g Group) ToCgroup(grp CGroup, buf *CChar, buflen CSizeT) error {
 	// Ensure the buffer is big enough for all fields of group, with an offset.
 	// Calculate the size of members array.

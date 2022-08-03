@@ -1,0 +1,66 @@
+name: QA
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - '*'
+  pull_request:
+
+jobs:
+  quality:
+    name: Code quality and mod files up to date
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo DEBIAN_FRONTEND=noninteractive apt update
+          sudo DEBIAN_FRONTEND=noninteractive apt install -y libpam-dev
+      - uses: actions/checkout@v3
+      - name: Code formatting, vet, static checker Security…
+        uses: golangci/golangci-lint-action@v3
+        with:
+          args: "--config .golangci-ci.yaml"
+      - name: Module files are up to date
+        run: |
+          set -eu
+
+          go mod tidy
+          MODIFIED=`git status --porcelain go.sum go.mod`
+          if [ -n "$MODIFIED" ]; then
+              echo "ERROR: go module files aren't up to date:"
+              git --no-pager diff go.mod go.sum
+              exit 1
+          fi
+        if: ${{ always() }}
+      - name: Building
+        run: |
+          # Build PAM library
+          go build -ldflags='-s -w' -buildmode=c-shared -o pam_aad.so ./pam
+
+          # Build NSS library
+          go build -ldflags='-s -w' -buildmode=c-shared -o libnss_aad.so.2 ./nss
+        if: ${{ always() }}
+
+  tests:
+    name: Tests
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Install dependencies
+        run: |
+          sudo DEBIAN_FRONTEND=noninteractive apt update
+          sudo DEBIAN_FRONTEND=noninteractive apt install -y gcc libpam-dev curl
+      - name: Run tests
+        run: go test -coverpkg=./... -coverprofile=/tmp/coverage.out -covermode=count ./...
+      - name: Run tests (with race detector)
+        run: go test -race ./...
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: /tmp/coverage.out

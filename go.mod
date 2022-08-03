@@ -9,7 +9,6 @@ require (
 	github.com/stretchr/testify v1.8.0
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa
-	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	gopkg.in/yaml.v3 v3.0.1
 )
 
