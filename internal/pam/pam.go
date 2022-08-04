@@ -59,7 +59,11 @@ func Authenticate(ctx context.Context, auth Authenticater, conf string) error {
 		return ErrPamAuth
 	}
 
-	c, err := cache.New(ctx, cache.WithOfflineCredentialsExpiration(cfg.OfflineCredentialsExpiration))
+	opts := []cache.Option{}
+	if cfg.OfflineCredentialsExpiration != nil {
+		opts = append(opts, cache.WithOfflineCredentialsExpiration(*cfg.OfflineCredentialsExpiration))
+	}
+	c, err := cache.New(ctx, opts...)
 	if err != nil {
 		logger.Err(ctx, "%v. Denying access.", err)
 		return ErrPamAuth
