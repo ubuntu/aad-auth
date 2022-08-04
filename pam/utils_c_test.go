@@ -1,7 +1,6 @@
-package pam
+package main
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -13,21 +12,19 @@ func TestGetUser(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		noPamContext bool
-
 		want    string
 		wantErr bool
 	}{
 		"got username info": {want: "myuser@domain.com"},
 
-		"error if username can't be retrieved": {noPamContext: true, wantErr: true},
+		// we can't simulate no user return without pam authenticate failing.
 	}
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			tx, err := pamCom.StartFunc("aadtest", "", func(s pamCom.Style, msg string) (string, error) {
+			tx, err := pamCom.StartFunc("aadtest-simple", "", func(s pamCom.Style, msg string) (string, error) {
 				switch s {
 				case pamCom.PromptEchoOn:
 					return "myuser@domain.com", nil
@@ -38,17 +35,12 @@ func TestGetUser(t *testing.T) {
 				return "", errors.New("unexpected request")
 			}, pamCom.WithConfDir("testdata"))
 			require.NoError(t, err, "Setup: pam should start a transaction with no error")
-			cpam := Handle(tx.Handle)
+			cpam := pamHandle(tx.Handle)
 
 			err = tx.Authenticate(0)
 			require.NoError(t, err, "Setup: Authenticate should not fail as we pam_permit without requiring pam_unix")
 
-			ctx := context.Background()
-			if !tc.noPamContext {
-				ctx = CtxWithPamh(context.Background(), cpam)
-			}
-
-			u, err := getUser(ctx)
+			u, err := getUser(cpam)
 			if tc.wantErr {
 				require.Error(t, err, "getUser should have errored out but hasn't")
 				return

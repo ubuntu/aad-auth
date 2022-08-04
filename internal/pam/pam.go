@@ -28,19 +28,8 @@ type Authenticater interface {
 
 // Authenticate tries to authenticate user with the given Authenticater.
 // It’s passing specific configuration, per domain, so that that Authenticater can use them.
-func Authenticate(ctx context.Context, auth Authenticater, conf string) error {
-	// Get connection information
-	username, err := getUser(ctx)
-	if err != nil {
-		logError(ctx, "Could not get user from stdin", nil)
-		return ErrPamSystem
-	}
+func Authenticate(ctx context.Context, auth Authenticater, username, password, conf string, opts ...Option) error {
 	username = user.NormalizeName(username)
-	password, err := getPassword(ctx)
-	if err != nil {
-		logError(ctx, "Could not read password from stdin", nil)
-		return ErrPamSystem
-	}
 
 	// Load configuration.
 	_, domain, _ := strings.Cut(username, "@")
