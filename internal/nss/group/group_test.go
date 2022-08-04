@@ -33,7 +33,7 @@ func TestNewByName(t *testing.T) {
 			testutils.CopyDBAndFixPermissions(t, "../testdata/users_in_db", cacheDir)
 
 			uid, gid := testutils.GetCurrentUidGid(t)
-			opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(uid)}
+			opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid)}
 			if tc.failingCache {
 				opts = append(opts, cache.WithRootUID(4242))
 			}
@@ -73,7 +73,7 @@ func TestNewByGID(t *testing.T) {
 			testutils.CopyDBAndFixPermissions(t, "../testdata/users_in_db", cacheDir)
 
 			uid, gid := testutils.GetCurrentUidGid(t)
-			opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(uid)}
+			opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid)}
 			if tc.failingCache {
 				opts = append(opts, cache.WithRootUID(4242))
 			}
@@ -117,7 +117,7 @@ func TestNextEntry(t *testing.T) {
 			}
 
 			uid, gid := testutils.GetCurrentUidGid(t)
-			opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(uid)}
+			opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid)}
 			group.SetCacheOption(opts...)
 
 			if !tc.noIterationInit {
@@ -173,7 +173,7 @@ func TestStartEndEntryIteration(t *testing.T) {
 			cacheDir := t.TempDir()
 
 			uid, gid := testutils.GetCurrentUidGid(t)
-			opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(uid)}
+			opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid)}
 			group.SetCacheOption(opts...)
 
 			if tc.alreadyIterationInProgress {
@@ -208,7 +208,7 @@ func TestRestartIterationWithoutEndingPreviousOne(t *testing.T) {
 	testutils.CopyDBAndFixPermissions(t, "../testdata/users_in_db", cacheDir)
 
 	uid, gid := testutils.GetCurrentUidGid(t)
-	opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(uid)}
+	opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid)}
 	group.SetCacheOption(opts...)
 
 	// First iteration group
