@@ -83,7 +83,7 @@ func Authenticate(ctx context.Context, username, password, conf string, opts ...
 
 	c, err := cache.New(ctx, o.cacheOpts...)
 	if err != nil {
-		logger.Err(ctx, "%v. Denying access.", err)
+		logError(ctx, "%w. Denying access.", err)
 		return ErrPamAuth
 	}
 	defer c.Close(ctx)
@@ -110,9 +110,6 @@ func Authenticate(ctx context.Context, username, password, conf string, opts ...
 }
 
 func logError(ctx context.Context, format string, err error) {
-	msg := format
-	if err != nil {
-		msg = fmt.Errorf(format, err).Error()
-	}
-	logger.Err(ctx, msg)
+	err = fmt.Errorf(format, err)
+	logger.Err(ctx, err.Error())
 }
