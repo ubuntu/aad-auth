@@ -20,18 +20,28 @@ func NewWithMockClient() AAD {
 }
 
 func publicNewMockClient(clientID string, options ...public.Option) (publicClient, error) {
-	if clientID == "connection failed" {
+	var forceOffline bool
+	switch clientID {
+	case "connection failed":
 		return publicClientMock{}, errors.New("connection failed")
+	case "force offline":
+		forceOffline = true
 	}
-	return publicClientMock{}, nil
+	return publicClientMock{forceOffline: forceOffline}, nil
 }
 
-type publicClientMock struct{}
+type publicClientMock struct {
+	forceOffline bool
+}
 
-func (publicClientMock) AcquireTokenByUsernamePassword(ctx context.Context, scopes []string, username string, password string) (public.AuthResult, error) {
+func (m publicClientMock) AcquireTokenByUsernamePassword(ctx context.Context, scopes []string, username string, password string) (public.AuthResult, error) {
 	r := public.AuthResult{}
 	callErr := msalErrors.CallErr{
 		Resp: &http.Response{},
+	}
+
+	if m.forceOffline {
+		return r, fmt.Errorf("Offline")
 	}
 
 	switch username {
