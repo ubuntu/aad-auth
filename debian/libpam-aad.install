@@ -1,0 +1,3 @@
+usr/lib/*/security/pam_aad.so
+usr/share/pam-configs/aad
+etc/aad.conf

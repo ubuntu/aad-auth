@@ -1,0 +1,38 @@
+Source: aad-auth
+Section: admin
+Priority: optional
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Build-Depends: debhelper-compat (= 13),
+               dh-apport,
+               dh-golang,
+               golang-go (>= 2:1.18~),
+               libpam0g-dev (>= 1.4),
+               libc6-dev (>= 2.35),
+Standards-Version: 4.6.0.1
+XS-Go-Import-Path: github.com/ubuntu/aad-auth
+Homepage: https://github.com/ubuntu/aad-auth
+Description: Azure Active Directory Authentication
+ Azure Active Directory Authentication enables authentication of Azure Active
+ Directory accounts on your local system. It dynamically creates local accounts,
+ supporting additional features like offline connectivity.
+
+
+Package: libpam-aad
+Architecture: any
+Built-Using: ${misc:Built-Using},
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+Description: ${source:Synopsis} module for PAM
+ ${source:Extended-Description}
+ .
+ This package contains the PAM module.
+
+Package: libnss-aad
+Architecture: any
+Built-Using: ${misc:Built-Using},
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+Description: ${source:Synopsis} module for NSS
+ ${source:Extended-Description}
+ .
+ This package contains the NSS module.

@@ -1,0 +1,2 @@
+# We need to call ldconfig for libnss-aad
+libpam-aad: package-has-unnecessary-activation-of-ldconfig-trigger

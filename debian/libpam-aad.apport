@@ -1,0 +1,12 @@
+'''apport package hook for libpam-aad
+
+(c) 2022 Canonical Ltd.
+'''
+
+import apport.hookutils
+
+def add_info(report):
+    apport.hookutils.attach_related_packages(report, ["libpam-runtime", "libpam0g"])
+    apport.hookutils.attach_conffiles(report, 'libpam-aad')
+    apport.hookutils.attach_file_if_exists(report, '/etc/pam.d/common-auth')
+    apport.hookutils.attach_file_if_exists(report, '/etc/adduser.conf')

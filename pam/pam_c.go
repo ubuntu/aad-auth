@@ -24,7 +24,7 @@ const (
 	defaultConfigPath = "/etc/aad.conf"
 )
 
-//go:generate sh -c "go build -ldflags='-s -w' -buildmode=c-shared -o pam_aad.so"
+//go:generate sh -c "go build -ldflags='-extldflags -Wl,-soname,pam_aad.so' -buildmode=c-shared -o pam_aad.so"
 
 var (
 	opts         []pam.Option
