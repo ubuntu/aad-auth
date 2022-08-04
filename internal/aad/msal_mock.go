@@ -62,6 +62,10 @@ func (publicClientMock) AcquireTokenByUsernamePassword(ctx context.Context, scop
 	case "multiple errors, first known is invalid credential":
 		callErr.Resp.Body = io.NopCloser(strings.NewReader(fmt.Sprintf("{\"error_codes\": [4242, %d, 4243, %d]}", invalidCredCode, requiresMFACode)))
 		return r, callErr
+	default:
+		// default is unknown user
+		callErr.Resp.Body = io.NopCloser(strings.NewReader(fmt.Sprintf("{\"error_codes\": [%d]}", noSuchUserCode)))
+		return r, callErr
 	}
 
 	return r, nil
