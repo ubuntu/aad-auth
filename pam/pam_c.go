@@ -15,7 +15,6 @@ import (
 	"log"
 	"strings"
 
-	"github.com/ubuntu/aad-auth/internal/aad"
 	"github.com/ubuntu/aad-auth/internal/cache"
 	"github.com/ubuntu/aad-auth/internal/logger"
 	"github.com/ubuntu/aad-auth/internal/pam"
@@ -62,7 +61,7 @@ func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 		return C.PAM_SYSTEM_ERR
 	}
 
-	if err := pam.Authenticate(ctx, aad.AAD{}, username, password, conf); err != nil {
+	if err := pam.Authenticate(ctx, username, password, conf); err != nil {
 		switch err {
 		case pam.ErrPamSystem:
 			return C.PAM_SYSTEM_ERR
