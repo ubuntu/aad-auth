@@ -21,7 +21,7 @@ const (
 type AAD struct {
 	TenantID                     string
 	AppID                        string
-	OfflineCredentialsExpiration int
+	OfflineCredentialsExpiration *int
 	HomeDirPattern               string
 	Shell                        string
 }
@@ -85,8 +85,10 @@ func Load(ctx context.Context, p, domain string, opts ...Option) (config AAD, er
 			v, err := strconv.Atoi(tmp)
 			if err != nil {
 				logger.Warn(ctx, "Invalid cache revalidation period %v", err)
+				config.OfflineCredentialsExpiration = nil
+			} else {
+				config.OfflineCredentialsExpiration = &v
 			}
-			config.OfflineCredentialsExpiration = v
 		}
 		if tmp := cfgSection.Key("homedir").String(); tmp != "" {
 			config.HomeDirPattern = tmp
