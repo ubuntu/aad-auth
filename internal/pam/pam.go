@@ -84,7 +84,7 @@ func Authenticate(ctx context.Context, username, password, conf string, opts ...
 	c, err := cache.New(ctx, o.cacheOpts...)
 	if err != nil {
 		logError(ctx, "%w. Denying access.", err)
-		return ErrPamAuth
+		return ErrPamSystem
 	}
 	defer c.Close(ctx)
 
