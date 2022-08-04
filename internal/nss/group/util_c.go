@@ -24,6 +24,8 @@ type (
 // ToCpasswd transforms the Go passwd struct to a C struct passwd, filling buffer, result and nss_status.
 // The function will check first for errors to transform them to corresponding nss status.
 //
+// We are casting an array of char* (adresses) in a char* buffer. Forces the checker to say we know
+// what we do and don’t error on it.
 //go:nocheckptr
 func (g Group) ToCgroup(grp CGroup, buf *CChar, buflen CSizeT) error {
 	// Ensure the buffer is big enough for all fields of group, with an offset.
@@ -40,6 +42,7 @@ func (g Group) ToCgroup(grp CGroup, buf *CChar, buflen CSizeT) error {
 	}
 
 	// Transform the C buffer to a Go one.
+	// TODO: test replacing with C.GoBytes…
 	gobuf := (*[1 << 30]byte)(unsafe.Pointer(buf))[:buflen:buflen]
 	b := bytes.NewBuffer(gobuf)
 	b.Reset()
