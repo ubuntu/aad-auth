@@ -1,2 +1,0 @@
-auth	optional pam_unix.so nullok debug
-auth	required			pam_permit.so
