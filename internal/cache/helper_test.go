@@ -2,6 +2,7 @@ package cache_test
 
 import (
 	"context"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -59,8 +60,22 @@ func insertUsersInDb(t *testing.T, cacheDir string) {
 
 	c := newCacheForTests(t, cacheDir, true, false)
 	defer c.Close(context.Background())
-	for u, info := range usersForTests {
-		err := c.Update(context.Background(), u, info.password, "/home/%f", "/bin/bash")
-		require.NoError(t, err, "Setup: can't insert user %v to db", u)
+
+	// Sorts the userForTests in ASCII order
+	keys := getSortedKeys(usersForTests)
+
+	for _, key := range keys {
+		user := usersForTests[key]
+		err := c.Update(context.Background(), user.name, user.password, "/home/%f", "/bin/bash")
+		require.NoError(t, err, "Setup: can't insert user %v to db", user.name)
 	}
+}
+
+func getSortedKeys(usersMap map[string]userInfos) []string {
+	keys := make([]string, 0, len(usersForTests))
+	for k, _ := range usersMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }
