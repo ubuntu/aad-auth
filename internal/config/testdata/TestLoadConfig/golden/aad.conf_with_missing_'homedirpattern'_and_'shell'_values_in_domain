@@ -1,5 +1,5 @@
 tenantid: "2"
 appid: "2"
-offlinecredentialsexpiration: 180
-homedirpattern: /home/%d/%u
+offlinecredentialsexpiration: null
+homedirpattern: /home/users/%f
 shell: /bin/fish
