@@ -50,9 +50,12 @@ func (g *Group) UnmarshalYAML(value *yaml.Node) error {
 // NewTestGroup return a new Group entry for tests.
 func NewTestGroup(nMembers int) Group {
 	members := make([]string, 0, nMembers)
-	for i := 0; i < nMembers; i++ {
-		members = append(members, fmt.Sprintf("testusername-%d@domain.com", i+1))
+
+	members = append(members, fmt.Sprint("testusername@domain.com"))
+	for i := 1; i < nMembers; i++ {
+		members = append(members, fmt.Sprintf("testusername-%d@domain.com", i))
 	}
+
 	return Group{
 		name:    "testusername@domain.com",
 		passwd:  "x",

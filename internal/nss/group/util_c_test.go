@@ -26,11 +26,10 @@ func TestToCgroup(t *testing.T) {
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			nMembers := tc.nMembers
 			if tc.nMembers == 0 {
-				nMembers = 1
+				tc.nMembers = 1
 			}
-			g := group.NewTestGroup(nMembers)
+			g := group.NewTestGroup(tc.nMembers)
 
 			t.Parallel()
 
@@ -45,7 +44,7 @@ func TestToCgroup(t *testing.T) {
 			}
 			require.NoError(t, err, "ToCgroup should have not returned an error but hasn’t")
 
-			grpGot := got.ToPublicCGroup(nMembers)
+			grpGot := got.ToPublicCGroup(tc.nMembers)
 			want := testutils.SaveAndLoadFromGolden(t, grpGot)
 
 			require.Equal(t, want, grpGot, "Should have C group with expected fields content")
