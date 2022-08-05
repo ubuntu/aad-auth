@@ -81,7 +81,7 @@ func TestPamSmAuthenticate(t *testing.T) {
 			}
 
 			// pam service configuration
-			err = os.WriteFile(filepath.Join(pamConfDir, "addtest"), []byte(fmt.Sprintf(`
+			err = os.WriteFile(filepath.Join(pamConfDir, "aadtest"), []byte(fmt.Sprintf(`
 			auth	[success=2 default=ignore]	pam_unix.so nullok debug
 			auth    [success=1 default=ignore]  %s conf=%s debug reset logswithdebugonstderr rootUID=%d rootGID=%d shadowGID=%d cachedir=%s mockaad
 			auth	requisite			pam_deny.so
@@ -90,7 +90,7 @@ func TestPamSmAuthenticate(t *testing.T) {
 			require.NoError(t, err, "Setup: could not create pam stack config file")
 
 			// pam communication
-			tx, err := pamCom.StartFunc("addtest", "", func(s pamCom.Style, msg string) (string, error) {
+			tx, err := pamCom.StartFunc("aadtest", "", func(s pamCom.Style, msg string) (string, error) {
 				switch s {
 				case pamCom.PromptEchoOn:
 					return tc.username, nil
