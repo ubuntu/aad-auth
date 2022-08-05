@@ -24,7 +24,7 @@ type (
 // ToCpasswd transforms the Go passwd struct to a C struct passwd, filling buffer, result and nss_status.
 // The function will check first for errors to transform them to corresponding nss status.
 //
-// We are casting an array of char* (adresses) in a char* buffer. Forces the checker to say we know
+// We are casting an array of char* (addresses) in a char* buffer. Forces the checker to say we know
 // what we do and don’t error on it.
 //go:nocheckptr
 func (g Group) ToCgroup(grp CGroup, buf *CChar, buflen CSizeT) error {
