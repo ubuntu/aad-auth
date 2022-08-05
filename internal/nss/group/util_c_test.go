@@ -12,20 +12,25 @@ import (
 
 func TestToCgroup(t *testing.T) {
 	t.Parallel()
-	g := group.NewTestGroup()
 
 	tests := map[string]struct {
-		bufsize int
+		bufsize  int
+		nMembers int
 
 		wantErr bool
 	}{
-		"can convert to C group": {bufsize: 100000},
-
-		"can't allocate with buffer too small": {bufsize: 5, wantErr: true},
+		"can convert group to C group":                   {bufsize: 100000},
+		"can convert group with five members to C group": {bufsize: 100000, nMembers: 5},
+		"can't allocate with buffer too small":           {bufsize: 5, wantErr: true},
 	}
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
+			if tc.nMembers == 0 {
+				tc.nMembers = 1
+			}
+			g := group.NewTestGroup(tc.nMembers)
+
 			t.Parallel()
 
 			got := testutils.NewCGroup()
@@ -39,7 +44,7 @@ func TestToCgroup(t *testing.T) {
 			}
 			require.NoError(t, err, "ToCgroup should have not returned an error but hasn’t")
 
-			grpGot := got.ToPublicCGroup(1)
+			grpGot := got.ToPublicCGroup(tc.nMembers)
 			want := testutils.SaveAndLoadFromGolden(t, grpGot)
 
 			require.Equal(t, want, grpGot, "Should have C group with expected fields content")

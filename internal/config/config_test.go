@@ -2,6 +2,7 @@ package config_test
 
 import (
 	"context"
+	"flag"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -148,5 +149,6 @@ func TestLoadConfig(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	testutils.InstallUpdateFlag()
+	flag.Parse()
 	m.Run()
 }

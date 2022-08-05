@@ -2,6 +2,7 @@ package cache_test
 
 import (
 	"context"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -59,8 +60,25 @@ func insertUsersInDb(t *testing.T, cacheDir string) {
 
 	c := newCacheForTests(t, cacheDir, true, false)
 	defer c.Close(context.Background())
-	for u, info := range usersForTests {
-		err := c.Update(context.Background(), u, info.password, "/home/%f", "/bin/bash")
-		require.NoError(t, err, "Setup: can't insert user %v to db", u)
+
+	// The randomness in map iterating was causing problems with the tests.
+	// Some test users were getting different IDs based on the order they were
+	// inserted in the cache. To fix that, the test users will be inserted in
+	// ASCII order.
+	keys := getSortedKeys(usersForTests)
+
+	for _, k := range keys {
+		u := usersForTests[k]
+		err := c.Update(context.Background(), u.name, u.password, "/home/%f", "/bin/bash")
+		require.NoError(t, err, "Setup: can't insert user %v to db", u.name)
 	}
+}
+
+func getSortedKeys(usersMap map[string]userInfos) []string {
+	keys := make([]string, 0, len(usersForTests))
+	for k := range usersMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }

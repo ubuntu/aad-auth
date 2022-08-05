@@ -1,0 +1,9 @@
+gr_name: testusername@domain.com
+gr_passwd: x
+gr_gid: 2345
+gr_mem:
+    - testusername@domain.com
+    - testusername-1@domain.com
+    - testusername-2@domain.com
+    - testusername-3@domain.com
+    - testusername-4@domain.com
