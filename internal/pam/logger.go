@@ -40,16 +40,16 @@ type Logger struct {
 }
 
 // options are the options supported by Logger.
-type options struct {
+type optionsLogger struct {
 	logWithPam func(pamh Handle, priority int, format string, a ...any)
 }
 
 // Option represents one functional option passed to Logger.
-type Option func(*options)
+type OptionLogger func(*optionsLogger)
 
 // NewLogger returns a Logger hanging the Logger information.
-func NewLogger(pamHandle Handle, priority Priority, opts ...Option) Logger {
-	o := options{
+func NewLogger(pamHandle Handle, priority Priority, opts ...OptionLogger) Logger {
+	o := optionsLogger{
 		logWithPam: pamSyslog,
 	}
 	// applied options

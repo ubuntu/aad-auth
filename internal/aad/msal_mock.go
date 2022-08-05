@@ -20,18 +20,28 @@ func NewWithMockClient() AAD {
 }
 
 func publicNewMockClient(clientID string, options ...public.Option) (publicClient, error) {
-	if clientID == "connection failed" {
+	var forceOffline bool
+	switch clientID {
+	case "connection failed":
 		return publicClientMock{}, errors.New("connection failed")
+	case "force offline":
+		forceOffline = true
 	}
-	return publicClientMock{}, nil
+	return publicClientMock{forceOffline: forceOffline}, nil
 }
 
-type publicClientMock struct{}
+type publicClientMock struct {
+	forceOffline bool
+}
 
-func (publicClientMock) AcquireTokenByUsernamePassword(ctx context.Context, scopes []string, username string, password string) (public.AuthResult, error) {
+func (m publicClientMock) AcquireTokenByUsernamePassword(ctx context.Context, scopes []string, username string, password string) (public.AuthResult, error) {
 	r := public.AuthResult{}
 	callErr := msalErrors.CallErr{
 		Resp: &http.Response{},
+	}
+
+	if m.forceOffline {
+		return r, fmt.Errorf("Offline")
 	}
 
 	switch username {
@@ -61,6 +71,10 @@ func (publicClientMock) AcquireTokenByUsernamePassword(ctx context.Context, scop
 		return r, callErr
 	case "multiple errors, first known is invalid credential":
 		callErr.Resp.Body = io.NopCloser(strings.NewReader(fmt.Sprintf("{\"error_codes\": [4242, %d, 4243, %d]}", invalidCredCode, requiresMFACode)))
+		return r, callErr
+	default:
+		// default is unknown user
+		callErr.Resp.Body = io.NopCloser(strings.NewReader(fmt.Sprintf("{\"error_codes\": [%d]}", noSuchUserCode)))
 		return r, callErr
 	}
 

@@ -26,21 +26,32 @@ type Authenticater interface {
 	Authenticate(ctx context.Context, cfg config.AAD, username, password string) error
 }
 
+type option struct {
+	auth      Authenticater
+	cacheOpts []cache.Option
+}
+
+// Option allows to change Authenticate for mocking in tests.
+type Option func(*option)
+
+// WithAuthenticater overrides the default authenticator.
+func WithAuthenticater(auth Authenticater) Option {
+	return func(o *option) {
+		o.auth = auth
+	}
+}
+
+// WithCacheOptions overrides append additional cache options.
+func WithCacheOptions(cacheOpts []cache.Option) Option {
+	return func(o *option) {
+		o.cacheOpts = append(o.cacheOpts, cacheOpts...)
+	}
+}
+
 // Authenticate tries to authenticate user with the given Authenticater.
 // It’s passing specific configuration, per domain, so that that Authenticater can use them.
-func Authenticate(ctx context.Context, auth Authenticater, conf string) error {
-	// Get connection information
-	username, err := getUser(ctx)
-	if err != nil {
-		logError(ctx, "Could not get user from stdin", nil)
-		return ErrPamSystem
-	}
+func Authenticate(ctx context.Context, username, password, conf string, opts ...Option) error {
 	username = user.NormalizeName(username)
-	password, err := getPassword(ctx)
-	if err != nil {
-		logError(ctx, "Could not read password from stdin", nil)
-		return ErrPamSystem
-	}
 
 	// Load configuration.
 	_, domain, _ := strings.Cut(username, "@")
@@ -50,8 +61,19 @@ func Authenticate(ctx context.Context, auth Authenticater, conf string) error {
 		return ErrPamSystem
 	}
 
+	// Apply options and config
+	o := option{
+		auth: aad.AAD{},
+	}
+	if cfg.OfflineCredentialsExpiration != nil {
+		o.cacheOpts = append(o.cacheOpts, cache.WithOfflineCredentialsExpiration(*cfg.OfflineCredentialsExpiration))
+	}
+	for _, opt := range opts {
+		opt(&o)
+	}
+
 	// Authentication. Note that the errors are AAD errors for now, but we can decorelate them in the future.
-	errAAD := auth.Authenticate(ctx, cfg, username, password)
+	errAAD := o.auth.Authenticate(ctx, cfg, username, password)
 	if errors.Is(errAAD, aad.ErrDeny) {
 		return ErrPamAuth
 	} else if errAAD != nil && !errors.Is(errAAD, aad.ErrNoNetwork) {
@@ -59,14 +81,10 @@ func Authenticate(ctx context.Context, auth Authenticater, conf string) error {
 		return ErrPamAuth
 	}
 
-	opts := []cache.Option{}
-	if cfg.OfflineCredentialsExpiration != nil {
-		opts = append(opts, cache.WithOfflineCredentialsExpiration(*cfg.OfflineCredentialsExpiration))
-	}
-	c, err := cache.New(ctx, opts...)
+	c, err := cache.New(ctx, o.cacheOpts...)
 	if err != nil {
-		logger.Err(ctx, "%v. Denying access.", err)
-		return ErrPamAuth
+		logError(ctx, "%w. Denying access.", err)
+		return ErrPamSystem
 	}
 	defer c.Close(ctx)
 
@@ -92,9 +110,6 @@ func Authenticate(ctx context.Context, auth Authenticater, conf string) error {
 }
 
 func logError(ctx context.Context, format string, err error) {
-	msg := format
-	if err != nil {
-		msg = fmt.Errorf(format, err).Error()
-	}
-	logger.Err(ctx, msg)
+	err = fmt.Errorf(format, err)
+	logger.Err(ctx, err.Error())
 }

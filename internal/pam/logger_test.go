@@ -40,7 +40,6 @@ func TestNewLogger(t *testing.T) {
 			require.Equal(t, tc.want, content, "Logged the expected content")
 		})
 	}
-
 }
 
 func TestLogging(t *testing.T) {

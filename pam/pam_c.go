@@ -15,7 +15,6 @@ import (
 	"log"
 	"strings"
 
-	"github.com/ubuntu/aad-auth/internal/aad"
 	"github.com/ubuntu/aad-auth/internal/cache"
 	"github.com/ubuntu/aad-auth/internal/logger"
 	"github.com/ubuntu/aad-auth/internal/pam"
@@ -27,9 +26,13 @@ const (
 
 //go:generate sh -c "go build -ldflags='-s -w' -buildmode=c-shared -o pam_aad.so"
 
+var (
+	opts         []pam.Option
+	logsOnStderr bool
+)
+
 //export pam_sm_authenticate
 func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char) C.int {
-
 	// Attach logger and info handler.
 	ctx := pam.CtxWithPamh(context.Background(), pam.Handle(pamh))
 	pamLogger := pam.NewLogger(pam.Handle(pamh), pam.LOG_INFO)
@@ -45,13 +48,30 @@ func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 			pamLogger = pam.NewLogger(pam.Handle(pamh), pam.LOG_DEBUG)
 			pamLogger.Debug("PAM AAD DEBUG enabled")
 		default:
-			pamLogger.Warn("unknown option: %s\n", opt[0])
+			// we have additional supported option when built for integration tests
+			if supportedOption(&pamLogger, opt, optarg) {
+				continue
+			}
+			pamLogger.Warn("unknown option: %s\n", opt)
 		}
 	}
-	ctx = logger.CtxWithLogger(ctx, pamLogger)
-	defer logger.CloseLoggerFromContext(ctx)
+	if !logsOnStderr {
+		ctx = logger.CtxWithLogger(ctx, pamLogger)
+		defer logger.CloseLoggerFromContext(ctx)
+	}
 
-	if err := pam.Authenticate(ctx, aad.AAD{}, conf); err != nil {
+	username, err := getUser(pamh)
+	if err != nil {
+		pamLogger.Err("%v", err)
+		return C.PAM_SYSTEM_ERR
+	}
+	password, err := getPassword(pamh)
+	if err != nil {
+		pamLogger.Err("%v", err)
+		return C.PAM_SYSTEM_ERR
+	}
+
+	if err := pam.Authenticate(ctx, username, password, conf, opts...); err != nil {
 		switch err {
 		case pam.ErrPamSystem:
 			return C.PAM_SYSTEM_ERR
