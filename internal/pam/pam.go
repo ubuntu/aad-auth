@@ -22,12 +22,12 @@ var (
 	ErrPamIgnore = errors.New("PAM IGNORE")
 )
 
-type Authenticater interface {
+type Authenticator interface {
 	Authenticate(ctx context.Context, cfg config.AAD, username, password string) error
 }
 
 type option struct {
-	auth      Authenticater
+	auth      Authenticator
 	cacheOpts []cache.Option
 }
 
@@ -35,7 +35,7 @@ type option struct {
 type Option func(*option)
 
 // WithAuthenticater overrides the default authenticator.
-func WithAuthenticater(auth Authenticater) Option {
+func WithAuthenticator(auth Authenticator) Option {
 	return func(o *option) {
 		o.auth = auth
 	}

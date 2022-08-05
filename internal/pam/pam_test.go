@@ -77,7 +77,7 @@ func TestAuthenticate(t *testing.T) {
 			}
 
 			err := pam.Authenticate(context.Background(), tc.username, tc.password, tc.conf,
-				pam.WithAuthenticater(auth),
+				pam.WithAuthenticator(auth),
 				pam.WithCacheOptions(cacheOpts))
 			if tc.wantErrType != nil {
 				require.Error(t, err, "Authenticate should have returned an error but did not")
