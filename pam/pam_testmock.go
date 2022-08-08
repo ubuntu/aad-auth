@@ -52,7 +52,7 @@ func supportedOption(pamLogger *pam.Logger, opt, arg string) bool {
 	case "cachedir":
 		newOpt = pam.WithCacheOptions([]cache.Option{cache.WithCacheDir(arg)})
 	case "mockaad":
-		newOpt = pam.WithAuthenticater(aad.NewWithMockClient())
+		newOpt = pam.WithAuthenticator(aad.NewWithMockClient())
 	default:
 		return false
 	}
