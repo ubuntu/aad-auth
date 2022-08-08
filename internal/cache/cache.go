@@ -468,18 +468,18 @@ func parseHomeDir(ctx context.Context, homeDirPattern, username, uid string) (ho
 // If the pattern is not recognized, an error is returned.
 func parseHomeDirPattern(ctx context.Context, pattern, username, uid string) (string, error) {
 	switch pattern {
+	case "f":
+		return username, nil
+	case "U":
+		return uid, nil
+	case "l":
+		return string(username[0]), nil
 	case "u", "d":
 		user, domain, _ := strings.Cut(username, "@")
 		if pattern == "u" {
 			return string(user), nil
 		}
 		return string(domain), nil
-	case "U":
-		return uid, nil
-	case "f":
-		return username, nil
-	case "l":
-		return string(username[0]), nil
 	}
 	return "", fmt.Errorf("%%%v is not a valid pattern", pattern)
 }

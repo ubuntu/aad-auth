@@ -13,7 +13,7 @@ import (
 const (
 	adduserConfPath = "/etc/adduser.conf"
 
-	defaultHomePattern = "/home/%u"
+	defaultHomePattern = "/home/%f"
 	defaultShell       = "/bin/bash"
 )
 

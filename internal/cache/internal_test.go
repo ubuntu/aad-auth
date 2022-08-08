@@ -17,10 +17,10 @@ func TestParseHomeDir(t *testing.T) {
 		want    string
 		wantErr bool
 	}{
+		"handle %f":                         {path: "/home/%f", want: "/home/user1@test.com"},
 		"handle %u":                         {path: "/home/%u", want: "/home/user1"},
 		"handle %U":                         {path: "/home/%U", want: "/home/42"},
 		"handle %d":                         {path: "/home/%d", want: "/home/test.com"},
-		"handle %f":                         {path: "/home/%f", want: "/home/user1@test.com"},
 		"handle %f without domain attached": {username: "userWithoutDomain", path: "/home/%f", want: "/home/userWithoutDomain"},
 		"handle %l":                         {path: "/home/%l", want: "/home/u"},
 		"handle %%":                         {path: "/home/user%%test.com", want: "/home/user%test.com"},
