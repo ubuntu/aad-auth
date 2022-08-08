@@ -56,6 +56,7 @@ type options struct {
 	rootUID          int
 	rootGID          int
 	shadowGID        int // this bypass group lookup
+	forceShadowMode  int // this forces a particular shadow mode
 	passwdPermission fs.FileMode
 	shadowPermission fs.FileMode
 	teardownDuration time.Duration
@@ -94,6 +95,14 @@ func WithRootGID(gid int) func(o *options) error {
 func WithShadowGID(shadowGID int) func(o *options) error {
 	return func(o *options) error {
 		o.shadowGID = shadowGID
+		return nil
+	}
+}
+
+// WithShadowMode allow to override current Shadow Gid for tests.
+func WithShadowMode(mode int) func(o *options) error {
+	return func(o *options) error {
+		o.forceShadowMode = mode
 		return nil
 	}
 }
@@ -147,6 +156,7 @@ func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 		rootUID:          0,
 		rootGID:          0,
 		shadowGID:        -1,
+		forceShadowMode:  -1,
 		passwdPermission: 0644,
 		shadowPermission: 0640,
 
@@ -189,7 +199,7 @@ func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 		}
 	}
 
-	db, shadowMode, err := initDB(ctx, o.cacheDir, o.rootUID, o.rootGID, o.shadowGID, o.passwdPermission, o.shadowPermission)
+	db, shadowMode, err := initDB(ctx, o.cacheDir, o.rootUID, o.rootGID, o.shadowGID, o.forceShadowMode, o.passwdPermission, o.shadowPermission)
 	if err != nil {
 		return nil, err
 	}

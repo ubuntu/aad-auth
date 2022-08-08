@@ -18,7 +18,7 @@ var libPath string
 
 // outNSSCommandForLib returns the specific part by the nss command to got, filtering originOut.
 // It uses the locally build aad nss module.
-func outNSSCommandForLib(t *testing.T, rootUID, rootGID, shadowGID int, cacheDir string, originOut []byte, cmds ...string) (got string, err error) {
+func outNSSCommandForLib(t *testing.T, rootUID, rootGID, shadowMode int, cacheDir string, originOut []byte, cmds ...string) (got string, err error) {
 	t.Helper()
 
 	cmd := exec.Command(cmds[0], cmds[1:]...)
@@ -26,12 +26,16 @@ func outNSSCommandForLib(t *testing.T, rootUID, rootGID, shadowGID int, cacheDir
 		"NSS_AAD_DEBUG=stderr",
 		fmt.Sprintf("NSS_AAD_ROOT_UID=%d", rootUID),
 		fmt.Sprintf("NSS_AAD_ROOT_GID=%d", rootGID),
-		fmt.Sprintf("NSS_AAD_SHADOW_GID=%d", shadowGID),
+		fmt.Sprintf("NSS_AAD_SHADOW_GID=%d", rootGID),
 		fmt.Sprintf("NSS_AAD_CACHEDIR=%s", cacheDir),
 		// nss needs both LD_PRELOAD and LD_LIBRARY_PATH to load the nss module lib
 		fmt.Sprintf("LD_PRELOAD=%s:%s", libPath, os.Getenv("LD_PRELOAD")),
 		fmt.Sprintf("LD_LIBRARY_PATH=%s:%s", filepath.Dir(libPath), os.Getenv("LD_LIBRARY_PATH")),
 	)
+
+	if shadowMode != -1 {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("NSS_AAD_SHADOWMODE=%d", shadowMode))
+	}
 
 	var out bytes.Buffer
 	cmd.Stdout = io.MultiWriter(os.Stdout, &out)

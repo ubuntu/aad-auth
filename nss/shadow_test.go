@@ -15,12 +15,14 @@ func TestNssGetShadowByName(t *testing.T) {
 
 	uid, gid := testutils.GetCurrentUidGid(t)
 
+	noShadow := 0
+
 	tests := map[string]struct {
 		name string
 
-		cacheDB   string
-		rootUid   int
-		shadowGid int
+		cacheDB    string
+		rootUid    int
+		shadowMode *int
 
 		wantErr bool
 	}{
@@ -30,7 +32,7 @@ func TestNssGetShadowByName(t *testing.T) {
 		"no cache no error on existing local shadow user": {name: "root", cacheDB: "-"},
 
 		// error cases
-		"error on no access to shadow":                {shadowGid: 4242, wantErr: true},
+		"error on no access to shadow":                {shadowMode: &noShadow, wantErr: true},
 		"shadow user does not exists":                 {name: "doesnotexist@domain.com", wantErr: true},
 		"no cache can't get shadow user":              {cacheDB: "-", wantErr: true},
 		"invalid permissions on cache can't get user": {rootUid: 4242, wantErr: true},
@@ -58,11 +60,12 @@ func TestNssGetShadowByName(t *testing.T) {
 			if tc.rootUid == 0 {
 				tc.rootUid = uid
 			}
-			if tc.shadowGid == 0 {
-				tc.shadowGid = gid
+			shadowMode := -1
+			if tc.shadowMode != nil {
+				shadowMode = *tc.shadowMode
 			}
 
-			got, err := outNSSCommandForLib(t, tc.rootUid, gid, tc.shadowGid, cacheDir, nil, "getent", "shadow", tc.name)
+			got, err := outNSSCommandForLib(t, tc.rootUid, gid, shadowMode, cacheDir, nil, "getent", "shadow", tc.name)
 			if tc.wantErr {
 				require.Error(t, err, "getent should have errored out but didn't")
 				return
@@ -83,16 +86,18 @@ func TestNssGetShadow(t *testing.T) {
 
 	uid, gid := testutils.GetCurrentUidGid(t)
 
+	noShadow := 0
+
 	tests := map[string]struct {
 		cacheDB string
 
-		rootUid   int
-		shadowGid int
+		rootUid    int
+		shadowMode *int
 	}{
 		"list all shadow users": {},
 
 		// special cases
-		"no access to shadow list no users":                  {shadowGid: 4242},
+		"no access to shadow list no users":                  {shadowMode: &noShadow},
 		"no cache lists no shadow user":                      {cacheDB: "-"},
 		"invalid permissions on cache lists no shadow users": {rootUid: 4242},
 		"old shadow users are cleaned up":                    {cacheDB: "db_with_old_users"},
@@ -113,11 +118,12 @@ func TestNssGetShadow(t *testing.T) {
 			if tc.rootUid == 0 {
 				tc.rootUid = uid
 			}
-			if tc.shadowGid == 0 {
-				tc.shadowGid = gid
+			shadowMode := -1
+			if tc.shadowMode != nil {
+				shadowMode = *tc.shadowMode
 			}
 
-			got, err := outNSSCommandForLib(t, tc.rootUid, gid, tc.shadowGid, cacheDir, originOut, "getent", "shadow")
+			got, err := outNSSCommandForLib(t, tc.rootUid, gid, shadowMode, cacheDir, originOut, "getent", "shadow")
 			require.NoError(t, err, "getent should succeed")
 
 			want := testutils.SaveAndLoadFromGolden(t, got)

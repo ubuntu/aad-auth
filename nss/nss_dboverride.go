@@ -22,7 +22,7 @@ nsstest_ctor(void)
 {
     __nss_configure_lookup("passwd", "files aad");
     __nss_configure_lookup("group", "files aad");
-    __nss_configure_lookup("shadow", "files aad");
+    __nss_configure_lookup("shadow", "go  aad");
 
 }
 */
@@ -58,6 +58,13 @@ func init() {
 	}
 	if cacheDir := os.Getenv("NSS_AAD_CACHEDIR"); cacheDir != "" {
 		opts = append(opts, cache.WithCacheDir(cacheDir))
+	}
+	if shadowMode := os.Getenv("NSS_AAD_SHADOWMODE"); shadowMode != "" {
+		mode, err := strconv.Atoi(shadowMode)
+		if err != nil {
+			log.Fatalf("passed shadow mode override is not a valid int: %s", err)
+		}
+		opts = append(opts, cache.WithShadowMode(mode))
 	}
 
 	passwd.SetCacheOption(opts...)
