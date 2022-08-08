@@ -1,5 +1,5 @@
 tenantid: "1"
 appid: "2"
 offlinecredentialsexpiration: null
-homedirpattern: /home/%u
+homedirpattern: /home/%f
 shell: /bin/bash
