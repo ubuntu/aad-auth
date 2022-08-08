@@ -55,7 +55,7 @@ func CtxWithSyslogLogger(ctx context.Context, opts ...Option) context.Context {
 
 	nssLogger, err := newLogger(priority, opts...)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: can't find syslog to write to. Default to stderr\n")
+		fmt.Fprintf(os.Stderr, "ERROR: can't find syslog to write to, defaulting to stderr: %v\n", err)
 		return ctx
 	}
 
@@ -71,17 +71,21 @@ type Logger struct {
 
 // newLogger returns a logger ready to log to syslog.
 func newLogger(priority syslog.Priority, opts ...Option) (*Logger, error) {
-	w, err := syslog.New(syslog.LOG_DEBUG, "")
-	if err != nil {
-		return nil, fmt.Errorf("can't create nss logger: %v", err)
-	}
-
-	o := options{
-		writer: w,
-	}
+	o := options{}
 	// applied options
 	for _, opt := range opts {
 		opt(&o)
+	}
+
+	// We break the set default and override pattern of applying functional
+	// options in order to avoid setting up a syslog connection when we
+	// explicitly specify a writer to use. This is useful for testing.
+	if o.writer == nil {
+		var err error
+		o.writer, err = syslog.New(syslog.LOG_DEBUG, "")
+		if err != nil {
+			return nil, fmt.Errorf("can't create nss logger: %v", err)
+		}
 	}
 
 	l := &Logger{
