@@ -48,7 +48,7 @@ func init() {
 		}
 		opts = append(opts, cache.WithRootGID(gid))
 	}
-	shadowGIDEnv := os.Getenv("NSS_AAD_ROOT_GID")
+	shadowGIDEnv := os.Getenv("NSS_AAD_SHADOW_GID")
 	if shadowGIDEnv != "" {
 		shadowGID, err := strconv.Atoi(shadowGIDEnv)
 		if err != nil {

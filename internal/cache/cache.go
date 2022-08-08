@@ -74,8 +74,6 @@ func WithCacheDir(p string) func(o *options) error {
 	}
 }
 
-//////////////////// to move for tests
-
 // WithRootUID allows to change current Root Uid for tests.
 func WithRootUID(uid int) func(o *options) error {
 	return func(o *options) error {
