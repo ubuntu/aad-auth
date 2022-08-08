@@ -108,7 +108,7 @@ func TestPamSmAuthenticate(t *testing.T) {
 				require.Error(t, err, "Authenticate should have returned an error but did not")
 				return
 			}
-			require.NoError(t, err, "Setup: Authenticate should succeed")
+			require.NoError(t, err, "Authenticate should succeed")
 		})
 	}
 }
@@ -124,7 +124,7 @@ func TestMain(m *testing.M) {
 	out, err := exec.Command("go", "build", "-buildmode=c-shared", "-tags", "integrationtests", "-o", libPath).CombinedOutput()
 	if err != nil {
 		cleanup()
-		fmt.Fprintf(os.Stderr, "Can not build pam module (%v) : %v", err, out)
+		fmt.Fprintf(os.Stderr, "Can not build pam module (%v) : %s", err, out)
 		os.Exit(1)
 	}
 
