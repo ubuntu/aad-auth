@@ -96,7 +96,7 @@ func TestLoadConfig(t *testing.T) {
 		// Special Cases
 		"aad.conf with missing 'homedir' and 'shell' values, but valid adduser.conf": {
 			aadConfigPath: "aad-missing_homedirpattern_and_shell.conf",
-			addUserPath:   "/etc/adduser.conf",
+			addUserPath:   "valid_adduser.conf",
 		},
 		"aad.conf with missing 'homedir' and 'shell' values and wrong adduser.conf": {
 			aadConfigPath: "aad-missing_homedirpattern_and_shell.conf",
