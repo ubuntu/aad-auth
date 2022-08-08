@@ -1,0 +1,4 @@
+|
+    myuser@domain.com:x:1929326240:1929326240::/home/myuser@domain.com:/bin/bash
+    otheruser@domain.com:x:165119649:165119649::/home/otheruser@domain.com:/bin/bash
+    user@otherdomain.com:x:165119648:165119648::/home/user@otherdomain.com:/bin/bash

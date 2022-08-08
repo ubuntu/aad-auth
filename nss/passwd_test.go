@@ -1,15 +1,62 @@
 package main
 
-import "testing"
+import (
+	"os/exec"
+	"path/filepath"
+	"testing"
 
-func TestGetpwnamR(t *testing.T) {
+	"github.com/stretchr/testify/require"
+	"github.com/ubuntu/aad-auth/internal/testutils"
+)
 
-	// Load cache with env variables to point to copy of testdata
+// TODO: process coverage once https://github.com/golang/go/issues/51430 is implemented in Go.
+func TestNssGetPasswd(t *testing.T) {
+	t.Parallel()
 
-	// We build the .so
-	// We have tags to build with or without AAD mock. The mock can be controlled with environment variables
+	originOut, err := exec.Command("getent", "passwd").CombinedOutput()
+	require.NoError(t, err, "Setup: can't run getent to get original output from system")
 
-	// LD_LIBRARY_PATH=*.so ->
-	// LD_PRELOAD=./libnss_aad.so.2 getent passwd u6@uaadtest.onmicrosoft.com
+	uid, gid := testutils.GetCurrentUidGid(t)
 
+	tests := map[string]struct {
+		cacheDB string
+
+		rootUid   int
+		shadowGid int
+	}{
+		"list all users": {},
+		"access to shadow is not needed to list users": {shadowGid: 4242},
+
+		// special cases
+		"no cache lists no user":                      {cacheDB: "-"},
+		"invalid permissions on cache lists no users": {rootUid: 4242},
+		"old users are cleaned up":                    {cacheDB: "db_with_old_users"},
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			cacheDir := t.TempDir()
+			if tc.cacheDB == "" {
+				tc.cacheDB = "users_in_db"
+			}
+			if tc.cacheDB != "-" {
+				testutils.CopyDBAndFixPermissions(t, filepath.Join("testdata", tc.cacheDB), cacheDir)
+			}
+
+			if tc.rootUid == 0 {
+				tc.rootUid = uid
+			}
+			if tc.shadowGid == 0 {
+				tc.shadowGid = gid
+			}
+
+			got, err := outNSSCommandForLib(t, tc.rootUid, gid, tc.shadowGid, cacheDir, originOut, "getent", "passwd")
+			require.NoError(t, err, "getent should succeed")
+
+			want := testutils.SaveAndLoadFromGolden(t, got)
+			require.Equal(t, want, got, "Should get expected aad users listed")
+		})
+	}
 }

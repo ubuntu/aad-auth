@@ -55,7 +55,3 @@ func errToCStatus(ctx context.Context, err error, errnop *C.int) C.nss_status {
 
 	return nssStatus
 }
-
-func main() {
-
-}
