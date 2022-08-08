@@ -20,6 +20,12 @@ type Group struct {
 
 var testopts = []cache.Option{}
 
+// setCacheOption set opts everytime we open a cache.
+// This is not compatible with parallel testing as it needs to change a global state.
+func setCacheOption(opts ...cache.Option) {
+	testopts = opts
+}
+
 // NewByName returns a passwd entry from a name.
 func NewByName(ctx context.Context, name string) (g Group, err error) {
 	defer func() {
