@@ -118,7 +118,7 @@ type PublicCShadow struct {
 	SpWarn   int    `yaml:"sp_warn"`
 	SpInact  int    `yaml:"sp_inact"`
 	SpExpire int    `yaml:"sp_expire"`
-	SpFlag   uint   `yaml:"sp_flag"`
+	SpFlag   uint64 `yaml:"sp_flag"`
 }
 
 // ToPublicCShadow convert the CShadow struct to a form ready to be converted to yaml.
@@ -132,6 +132,6 @@ func (s CShadow) ToPublicCShadow() PublicCShadow {
 		SpWarn:   int(s.sp_warn),
 		SpInact:  int(s.sp_inact),
 		SpExpire: int(s.sp_expire),
-		SpFlag:   uint(s.sp_flag),
+		SpFlag:   uint64(s.sp_flag),
 	}
 }

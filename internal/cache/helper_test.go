@@ -34,7 +34,7 @@ func newCacheForTests(t *testing.T, cacheDir string, closeWithoutDelay, withoutC
 
 type userInfos struct {
 	name     string
-	uid      int
+	uid      int64
 	password string
 }
 

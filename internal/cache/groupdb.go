@@ -13,7 +13,7 @@ import (
 // GroupRecord  returns a group record from the cache.
 type GroupRecord struct {
 	Name     string
-	GID      int
+	GID      int64
 	Password string
 	Members  []string
 }

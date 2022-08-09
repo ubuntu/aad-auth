@@ -340,8 +340,8 @@ func (c *Cache) Update(ctx context.Context, username, password, homeDirPattern, 
 
 		user = UserRecord{
 			Name:  username,
-			UID:   int(id),
-			GID:   int(id),
+			UID:   int64(id),
+			GID:   int64(id),
 			Home:  home,
 			Shell: shell,
 		}
