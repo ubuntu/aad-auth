@@ -1,69 +1,48 @@
+//go:build integrationtests
+
+// This tag is only used for integration tests. It allows to safeguard the cache
+// dump, which can contain sensitive information.
+
 package cache
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
-	"os"
+	"strings"
 )
 
-/*
-
-Should the process of opening the file be part of the function?
-Seems better if the function just print to a Writer.
-
-dir := filepath.Join("testdata", t.Name())
-os.MkdirAll(dir, os.ModePerm)
-file, err := os.Create(filepath.Join(dir, "cache_dump"))
-if err != nil {
-	log.Fatal(err)
-}
-defer file.Close()
-
-err = c.DumpData(context.Background(), file)
-if err != nil {
-	log.Fatal(err)
-}
-
-*/
-
 // DumpData dumps the data of all tables from Cache into the specified output.
-// If out is nil, then a cache_dump file is created and the data is written to it instead.
-func (c *Cache) DumpData(ctx context.Context, out io.Writer) (err error) {
+// If w is nil, an error is returned.
+func (c *Cache) DumpData(ctx context.Context, w io.Writer) (err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("Could not dump data from cache: %v", err)
+			err = fmt.Errorf("could not dump data from cache: %w", err)
 		}
 	}()
 
-	// Creates a file for output if no writer was provided.
-	if out == nil {
-		file, err := os.Create("cache_dump")
-		if err != nil {
-			return fmt.Errorf("could not create file %s: %v", "cache_dump", err)
-		}
-		defer file.Close()
-		out = file
+	if w == nil {
+		return fmt.Errorf("nil writer")
 	}
 
 	// Selects the table names from the database.
 	query, err := c.db.Query("SELECT name FROM sqlite_schema WHERE type = 'table'")
 	if err != nil {
-		return fmt.Errorf("could not query tables names from cache: %v", err)
+		return fmt.Errorf("could not query tables names from cache: %w", err)
 	}
 
 	// Iterates through each table and dumps their data.
 	var tableName string
 	for query.Next() {
-		query.Scan(&tableName)
-		if err != nil {
-			return fmt.Errorf("could not scan from query result: %v", err)
+		if err = query.Scan(&tableName); err != nil {
+			return fmt.Errorf("could not scan from query result: %w", err)
 		}
 
-		out.Write([]byte(tableName + "\n"))
-		err = c.DumpDataFromTable(ctx, tableName, out)
-		if err != nil {
+		if _, err = w.Write([]byte(tableName + "\n")); err != nil {
+			return fmt.Errorf("something went wrong when writing to writer: %w", err)
+		}
+
+		if err = c.DumpDataFromTable(ctx, tableName, w); err != nil {
 			return err
 		}
 	}
@@ -72,63 +51,51 @@ func (c *Cache) DumpData(ctx context.Context, out io.Writer) (err error) {
 }
 
 // DumpDataFromTable prints all the data contained in the specified table.
-// If out is nil, then a table_dump file is created and the data is written to it instead.
-func (c *Cache) DumpDataFromTable(ctx context.Context, tableName string, out io.Writer) (err error) {
+// If w is nil, an error is returned.
+func (c *Cache) DumpDataFromTable(ctx context.Context, tableName string, w io.Writer) (err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("Could not dump data from table %s: %v", tableName, err)
+			err = fmt.Errorf("could not dump data from table %s: %w", tableName, err)
 		}
 	}()
 
-	// Creates a file for output if no io.Writer was provided.
-	if out == nil {
-		file, err := os.Create(tableName + "_dump")
-		if err != nil {
-			return fmt.Errorf("could not create file %s: %v", tableName+"_dump", err)
-		}
-		defer file.Close()
-		out = file
+	if w == nil {
+		return fmt.Errorf("nil writer")
 	}
 
 	// Queries for all rows in the table.
 	rows, err := c.db.Query(fmt.Sprintf("select * from %s", tableName))
 	if err != nil {
-		return fmt.Errorf("could not query from %s: %v", tableName, err)
+		return fmt.Errorf("could not query from %s: %w", tableName, err)
 	}
 
 	cols, err := rows.Columns()
 	if err != nil {
-		return fmt.Errorf("Could not get the db rows: %v", err)
+		return fmt.Errorf("could not get the db rows: %w", err)
 	}
 
-	for i, col := range cols {
-		out.Write([]byte(col))
-		if i < len(cols)-1 {
-			out.Write([]byte(","))
-		}
+	// Prints the names of the columns as the first line of the table dump
+	if _, err = w.Write([]byte(strings.Join(cols, ",") + "\n")); err != nil {
+		return fmt.Errorf("could not write columns names to file: %w", err)
 	}
-	out.Write([]byte("\n"))
 
-	// In order to make the function less static, the data of the row is read into a slice of bytes.
-	data := make([][]byte, len(cols))
+	// Initializes the structures that will be used for reading the rows values
+	data := make([]string, len(cols))
 	ptr := make([]any, len(cols))
 	for i := range data {
 		ptr[i] = &data[i]
 	}
 
-	// Iterates through every row of the table, printing the results as csv to the io.Writer.
+	// Iterates through every row of the table, printing the results to w.
 	for rows.Next() {
-		err = rows.Scan(ptr...)
-		if err != nil {
-			return fmt.Errorf("Could not scan row: %v", err)
+		if err = rows.Scan(ptr...); err != nil {
+			return fmt.Errorf("could not scan row: %w", err)
 		}
 
-		b := bytes.Join(data, []byte(","))
-		_, err := out.Write(b)
-		if err != nil {
-			return fmt.Errorf("Could not write to file: %v", err)
+		// Joins the strings in data into a single string with a newline and writes it to w
+		if _, err = w.Write([]byte(strings.Join(data, ",") + "\n")); err != nil {
+			return fmt.Errorf("could not write to file: %w", err)
 		}
-		out.Write([]byte("\n"))
 	}
 
 	return nil
