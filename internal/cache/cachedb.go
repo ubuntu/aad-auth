@@ -66,7 +66,7 @@ type rowScanner interface {
 	Scan(...any) error
 }
 
-func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGID int, passwdPermission, shadowPermission fs.FileMode) (db *sql.DB, shadowMode int, err error) {
+func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGID, forceShadowMode int, passwdPermission, shadowPermission fs.FileMode) (db *sql.DB, shadowMode int, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("can't initiate database: %v", err)
@@ -140,12 +140,14 @@ func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGID in
 	}
 
 	// Attach shadow if our user has access to the file (even read-only)
-	if f, err := os.OpenFile(shadowPath, os.O_RDWR, 0); err == nil {
-		f.Close()
-		shadowMode = shadowRWMode
-	} else if f, err := os.Open(shadowPath); err == nil {
-		f.Close()
-		shadowMode = shadowROMode
+	if forceShadowMode == -1 {
+		if f, err := os.OpenFile(shadowPath, os.O_RDWR, 0); err == nil {
+			f.Close()
+			shadowMode = shadowRWMode
+		} else if f, err := os.Open(shadowPath); err == nil {
+			f.Close()
+			shadowMode = shadowROMode
+		}
 	}
 	if shadowMode > shadowNotAvailableMode {
 		_, err = db.Exec(fmt.Sprintf("attach database '%s' as shadow;", shadowPath))

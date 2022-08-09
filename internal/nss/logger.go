@@ -45,6 +45,10 @@ func CtxWithSyslogLogger(ctx context.Context, opts ...Option) context.Context {
 		o.debug = true
 	}
 
+	if os.Getenv(nssLogEnv) == "stderr" {
+		return ctx
+	}
+
 	if o.debug {
 		priority = syslog.LOG_DEBUG
 	}

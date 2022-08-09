@@ -10,7 +10,7 @@ import (
 )
 
 // TODO: process coverage once https://github.com/golang/go/issues/51430 is implemented in Go.
-func TestNssGetPasswdByName(t *testing.T) {
+func TestNssGetGroupByName(t *testing.T) {
 	t.Parallel()
 
 	uid, gid := testutils.GetCurrentUidGid(t)
@@ -26,15 +26,15 @@ func TestNssGetPasswdByName(t *testing.T) {
 
 		wantErr bool
 	}{
-		"list existing user": {},
-		"access to shadow is not needed to list existing user": {shadowMode: &noShadow},
+		"list existing group": {},
+		"access to shadow is not needed to list existing group": {shadowMode: &noShadow},
 
-		"no cache no error on existing local user": {name: "root", cacheDB: "-"},
+		"no cache no error on existing local group": {name: "root", cacheDB: "-"},
 
 		// error cases
-		"user does not exists":                        {name: "doesnotexist@domain.com", wantErr: true},
-		"no cache can't get user":                     {cacheDB: "-", wantErr: true},
-		"invalid permissions on cache can't get user": {rootUid: 4242, wantErr: true},
+		"group does not exists":                        {name: "doesnotexist@domain.com", wantErr: true},
+		"no cache can't get group":                     {cacheDB: "-", wantErr: true},
+		"invalid permissions on cache can't get group": {rootUid: 4242, wantErr: true},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -60,7 +60,7 @@ func TestNssGetPasswdByName(t *testing.T) {
 				shadowMode = *tc.shadowMode
 			}
 
-			got, err := outNSSCommandForLib(t, tc.rootUid, gid, shadowMode, cacheDir, nil, "getent", "passwd", tc.name)
+			got, err := outNSSCommandForLib(t, tc.rootUid, gid, shadowMode, cacheDir, nil, "getent", "group", tc.name)
 			if tc.wantErr {
 				require.Error(t, err, "getent should have errored out but didn't")
 				return
@@ -68,11 +68,12 @@ func TestNssGetPasswdByName(t *testing.T) {
 			require.NoError(t, err, "getent should succeed")
 
 			want := testutils.SaveAndLoadFromGolden(t, got)
-			require.Equal(t, want, got, "Should get expected aad user")
+			require.Equal(t, want, got, "Should get expected aad group")
 		})
 	}
 }
-func TestNssGetPasswdByUID(t *testing.T) {
+
+func TestNssGetGroupByGID(t *testing.T) {
 	t.Parallel()
 
 	uid, gid := testutils.GetCurrentUidGid(t)
@@ -80,7 +81,7 @@ func TestNssGetPasswdByUID(t *testing.T) {
 	noShadow := 0
 
 	tests := map[string]struct {
-		uid string
+		gid string
 
 		cacheDB    string
 		rootUid    int
@@ -88,15 +89,15 @@ func TestNssGetPasswdByUID(t *testing.T) {
 
 		wantErr bool
 	}{
-		"list existing user": {},
-		"access to shadow is not needed to list existing user": {shadowMode: &noShadow},
+		"list existing group": {},
+		"access to shadow is not needed to list existing group": {shadowMode: &noShadow},
 
-		"no cache no error on existing local user": {uid: "0", cacheDB: "-"},
+		"no cache no error on existing local group": {gid: "0", cacheDB: "-"},
 
 		// error cases
-		"user does not exists":                        {uid: "4242", wantErr: true},
-		"no cache can't get user":                     {cacheDB: "-", wantErr: true},
-		"invalid permissions on cache can't get user": {rootUid: 4242, wantErr: true},
+		"group does not exists":                        {gid: "4242", wantErr: true},
+		"no cache can't get group":                     {cacheDB: "-", wantErr: true},
+		"invalid permissions on cache can't get group": {rootUid: 4242, wantErr: true},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -104,8 +105,8 @@ func TestNssGetPasswdByUID(t *testing.T) {
 			t.Parallel()
 
 			cacheDir := t.TempDir()
-			if tc.uid == "" {
-				tc.uid = "1929326240"
+			if tc.gid == "" {
+				tc.gid = "1929326240"
 			}
 			if tc.cacheDB == "" {
 				tc.cacheDB = "users_in_db"
@@ -122,7 +123,7 @@ func TestNssGetPasswdByUID(t *testing.T) {
 				shadowMode = *tc.shadowMode
 			}
 
-			got, err := outNSSCommandForLib(t, tc.rootUid, gid, shadowMode, cacheDir, nil, "getent", "passwd", tc.uid)
+			got, err := outNSSCommandForLib(t, tc.rootUid, gid, shadowMode, cacheDir, nil, "getent", "group", tc.gid)
 			if tc.wantErr {
 				require.Error(t, err, "getent should have errored out but didn't")
 				return
@@ -130,14 +131,15 @@ func TestNssGetPasswdByUID(t *testing.T) {
 			require.NoError(t, err, "getent should succeed")
 
 			want := testutils.SaveAndLoadFromGolden(t, got)
-			require.Equal(t, want, got, "Should get expected aad user")
+			require.Equal(t, want, got, "Should get expected aad group")
 		})
 	}
 }
-func TestNssGetPasswd(t *testing.T) {
+
+func TestNssGetGroup(t *testing.T) {
 	t.Parallel()
 
-	originOut, err := exec.Command("getent", "passwd").CombinedOutput()
+	originOut, err := exec.Command("getent", "group").CombinedOutput()
 	require.NoError(t, err, "Setup: can't run getent to get original output from system")
 
 	uid, gid := testutils.GetCurrentUidGid(t)
@@ -148,15 +150,16 @@ func TestNssGetPasswd(t *testing.T) {
 		cacheDB string
 
 		rootUid    int
+		shadowGid  int
 		shadowMode *int
 	}{
-		"list all users": {},
-		"access to shadow is not needed to list users": {shadowMode: &noShadow},
+		"list all groups": {},
+		"access to shadow is not needed to list groups": {shadowMode: &noShadow},
 
 		// special cases
-		"no cache lists no user":                      {cacheDB: "-"},
-		"invalid permissions on cache lists no users": {rootUid: 4242},
-		"old users are cleaned up":                    {cacheDB: "db_with_old_users"},
+		"no cache lists no groups":                     {cacheDB: "-"},
+		"invalid permissions on cache lists no groups": {rootUid: 4242},
+		"old groups are cleaned up":                    {cacheDB: "db_with_old_users"},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -179,11 +182,11 @@ func TestNssGetPasswd(t *testing.T) {
 				shadowMode = *tc.shadowMode
 			}
 
-			got, err := outNSSCommandForLib(t, tc.rootUid, gid, shadowMode, cacheDir, originOut, "getent", "passwd")
+			got, err := outNSSCommandForLib(t, tc.rootUid, gid, shadowMode, cacheDir, originOut, "getent", "group")
 			require.NoError(t, err, "getent should succeed")
 
 			want := testutils.SaveAndLoadFromGolden(t, got)
-			require.Equal(t, want, got, "Should get expected aad users listed")
+			require.Equal(t, want, got, "Should get expected aad groups listed")
 		})
 	}
 }

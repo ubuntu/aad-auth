@@ -108,7 +108,7 @@ func TestPamSmAuthenticate(t *testing.T) {
 				require.Error(t, err, "Authenticate should have returned an error but did not")
 				return
 			}
-			require.NoError(t, err, "Setup: Authenticate should succeed")
+			require.NoError(t, err, "Authenticate should succeed")
 		})
 	}
 }
@@ -124,7 +124,7 @@ func TestMain(m *testing.M) {
 	out, err := exec.Command("go", "build", "-buildmode=c-shared", "-tags", "integrationtests", "-o", libPath).CombinedOutput()
 	if err != nil {
 		cleanup()
-		fmt.Fprintf(os.Stderr, "Can not build pam module (%v) : %v", err, out)
+		fmt.Fprintf(os.Stderr, "Can not build pam module (%v) : %s", err, out)
 		os.Exit(1)
 	}
 
@@ -133,8 +133,7 @@ func TestMain(m *testing.M) {
 
 // createTempDir to create a temporary directory with a cleanup teardown not having a testing.T
 func createTempDir() (tmp string, cleanup func(), err error) {
-	tmp = os.TempDir()
-	if err := os.MkdirAll(tmp, 0750); err != nil {
+	if tmp, err = os.MkdirTemp("", "aad-auth-integration-tests-pam"); err != nil {
 		fmt.Fprintf(os.Stderr, "Can not create temporary directory %q", tmp)
 		return "", nil, err
 	}
