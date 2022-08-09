@@ -125,7 +125,7 @@ func loadDefaultHomeAndShell(ctx context.Context, path string) (home, shell stri
 
 	if tmp := conf.Section("").Key("DHOME").String(); tmp != "" {
 		// DHOME is only the base home directory for all users.
-		dh = filepath.Join(tmp, "%u")
+		dh = filepath.Join(tmp, "%f")
 	}
 	ds = conf.Section("").Key("DSHELL").String()
 
