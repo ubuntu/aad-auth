@@ -13,7 +13,7 @@ import (
 func TestNssGetGroupByName(t *testing.T) {
 	t.Parallel()
 
-	uid, gid := testutils.GetCurrentUidGid(t)
+	uid, gid := testutils.GetCurrentUIDGID(t)
 
 	noShadow := 0
 
@@ -21,7 +21,7 @@ func TestNssGetGroupByName(t *testing.T) {
 		name string
 
 		cacheDB    string
-		rootUid    int
+		rootUID    int
 		shadowMode *int
 
 		wantErr bool
@@ -34,7 +34,7 @@ func TestNssGetGroupByName(t *testing.T) {
 		// error cases
 		"group does not exists":                        {name: "doesnotexist@domain.com", wantErr: true},
 		"no cache can't get group":                     {cacheDB: "-", wantErr: true},
-		"invalid permissions on cache can't get group": {rootUid: 4242, wantErr: true},
+		"invalid permissions on cache can't get group": {rootUID: 4242, wantErr: true},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -52,15 +52,15 @@ func TestNssGetGroupByName(t *testing.T) {
 				testutils.CopyDBAndFixPermissions(t, filepath.Join("testdata", tc.cacheDB), cacheDir)
 			}
 
-			if tc.rootUid == 0 {
-				tc.rootUid = uid
+			if tc.rootUID == 0 {
+				tc.rootUID = uid
 			}
 			shadowMode := -1
 			if tc.shadowMode != nil {
 				shadowMode = *tc.shadowMode
 			}
 
-			got, err := outNSSCommandForLib(t, tc.rootUid, gid, shadowMode, cacheDir, nil, "getent", "group", tc.name)
+			got, err := outNSSCommandForLib(t, tc.rootUID, gid, shadowMode, cacheDir, nil, "getent", "group", tc.name)
 			if tc.wantErr {
 				require.Error(t, err, "getent should have errored out but didn't")
 				return
@@ -76,7 +76,7 @@ func TestNssGetGroupByName(t *testing.T) {
 func TestNssGetGroupByGID(t *testing.T) {
 	t.Parallel()
 
-	uid, gid := testutils.GetCurrentUidGid(t)
+	uid, gid := testutils.GetCurrentUIDGID(t)
 
 	noShadow := 0
 
@@ -84,7 +84,7 @@ func TestNssGetGroupByGID(t *testing.T) {
 		gid string
 
 		cacheDB    string
-		rootUid    int
+		rootUID    int
 		shadowMode *int
 
 		wantErr bool
@@ -97,7 +97,7 @@ func TestNssGetGroupByGID(t *testing.T) {
 		// error cases
 		"group does not exists":                        {gid: "4242", wantErr: true},
 		"no cache can't get group":                     {cacheDB: "-", wantErr: true},
-		"invalid permissions on cache can't get group": {rootUid: 4242, wantErr: true},
+		"invalid permissions on cache can't get group": {rootUID: 4242, wantErr: true},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -115,15 +115,15 @@ func TestNssGetGroupByGID(t *testing.T) {
 				testutils.CopyDBAndFixPermissions(t, filepath.Join("testdata", tc.cacheDB), cacheDir)
 			}
 
-			if tc.rootUid == 0 {
-				tc.rootUid = uid
+			if tc.rootUID == 0 {
+				tc.rootUID = uid
 			}
 			shadowMode := -1
 			if tc.shadowMode != nil {
 				shadowMode = *tc.shadowMode
 			}
 
-			got, err := outNSSCommandForLib(t, tc.rootUid, gid, shadowMode, cacheDir, nil, "getent", "group", tc.gid)
+			got, err := outNSSCommandForLib(t, tc.rootUID, gid, shadowMode, cacheDir, nil, "getent", "group", tc.gid)
 			if tc.wantErr {
 				require.Error(t, err, "getent should have errored out but didn't")
 				return
@@ -142,14 +142,14 @@ func TestNssGetGroup(t *testing.T) {
 	originOut, err := exec.Command("getent", "group").CombinedOutput()
 	require.NoError(t, err, "Setup: can't run getent to get original output from system")
 
-	uid, gid := testutils.GetCurrentUidGid(t)
+	uid, gid := testutils.GetCurrentUIDGID(t)
 
 	noShadow := 0
 
 	tests := map[string]struct {
 		cacheDB string
 
-		rootUid    int
+		rootUID    int
 		shadowGid  int
 		shadowMode *int
 	}{
@@ -158,7 +158,7 @@ func TestNssGetGroup(t *testing.T) {
 
 		// special cases
 		"no cache lists no groups":                     {cacheDB: "-"},
-		"invalid permissions on cache lists no groups": {rootUid: 4242},
+		"invalid permissions on cache lists no groups": {rootUID: 4242},
 		"old groups are cleaned up":                    {cacheDB: "db_with_old_users"},
 	}
 	for name, tc := range tests {
@@ -174,15 +174,15 @@ func TestNssGetGroup(t *testing.T) {
 				testutils.CopyDBAndFixPermissions(t, filepath.Join("testdata", tc.cacheDB), cacheDir)
 			}
 
-			if tc.rootUid == 0 {
-				tc.rootUid = uid
+			if tc.rootUID == 0 {
+				tc.rootUID = uid
 			}
 			shadowMode := -1
 			if tc.shadowMode != nil {
 				shadowMode = *tc.shadowMode
 			}
 
-			got, err := outNSSCommandForLib(t, tc.rootUid, gid, shadowMode, cacheDir, originOut, "getent", "group")
+			got, err := outNSSCommandForLib(t, tc.rootUID, gid, shadowMode, cacheDir, originOut, "getent", "group")
 			require.NoError(t, err, "getent should succeed")
 
 			want := testutils.SaveAndLoadFromGolden(t, got)

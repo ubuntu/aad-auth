@@ -20,10 +20,10 @@ import (
 type Priority int
 
 const (
-	// LOG_INFO matches the syslog Info level
-	LOG_INFO Priority = 6
-	// LOG_DEBUG matches the syslog Debug level
-	LOG_DEBUG Priority = 7
+	// LogInfo matches the syslog Info level
+	LogInfo Priority = 6
+	// LogDebug matches the syslog Debug level
+	LogDebug Priority = 7
 
 	debugWelcome = "aad auth debug enabled\n"
 )
@@ -39,12 +39,12 @@ type Logger struct {
 	logWithPam func(pamh Handle, priority int, format string, a ...any)
 }
 
-// options are the options supported by Logger.
+// optionsLogger are the options supported by Logger.
 type optionsLogger struct {
 	logWithPam func(pamh Handle, priority int, format string, a ...any)
 }
 
-// Option represents one functional option passed to Logger.
+// OptionLogger represents one functional option passed to Logger.
 type OptionLogger func(*optionsLogger)
 
 // NewLogger returns a Logger hanging the Logger information.
@@ -68,7 +68,7 @@ func NewLogger(pamHandle Handle, priority Priority, opts ...OptionLogger) Logger
 
 // Debug sends a debug level message to the logger.
 func (l Logger) Debug(format string, a ...any) {
-	if l.priority < LOG_DEBUG {
+	if l.priority < LogDebug {
 		return
 	}
 	l.logWithPam(l.pamHandle, C.LOG_DEBUG, format, a...)

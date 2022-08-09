@@ -17,7 +17,7 @@ var libPath string
 
 // TODO: process coverage once https://github.com/golang/go/issues/51430 is implemented in Go.
 func TestPamSmAuthenticate(t *testing.T) {
-	uid, gid := testutils.GetCurrentUidGid(t)
+	uid, gid := testutils.GetCurrentUIDGID(t)
 
 	tests := map[string]struct {
 		username            string

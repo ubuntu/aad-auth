@@ -19,7 +19,7 @@ type (
 	CSizeT = C.size_t
 )
 
-// AllowCBuffer returns a new C buffer of buflen. Memory is freed when the test ends.
+// AllocCBuffer returns a new C buffer of buflen. Memory is freed when the test ends.
 func AllocCBuffer(t *testing.T, buflen CSizeT) *CChar {
 	buf := (*CChar)(C.malloc(C.size_t(buflen)))
 	t.Cleanup(func() { C.free(unsafe.Pointer(buf)) })
@@ -38,7 +38,7 @@ func NewCPasswd() CPasswd {
 	return &C.struct_passwd{}
 }
 
-// PubliCPasswd is the public representation to be marshaled and unmashaled on disk.
+// PublicCPasswd is the public representation to be marshaled and unmashaled on disk.
 type PublicCPasswd struct {
 	PwName   string `yaml:"pw_name"`
 	PwPasswd string `yaml:"pw_passwd"`

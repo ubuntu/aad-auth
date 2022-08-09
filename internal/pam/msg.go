@@ -18,14 +18,18 @@ import (
 	"unsafe"
 )
 
+type pamhCtxKey string
+
 const (
-	ctxPamhKey = "pamhCtxKey"
+	ctxPamhKey pamhCtxKey = "pamhCtxKey"
 )
 
+// CtxWithPamh returns a context with pam handler struct attached.
 func CtxWithPamh(ctx context.Context, pamh Handle) context.Context {
 	return context.WithValue(ctx, ctxPamhKey, pamh)
 }
 
+// Info prints a info message to the pam log.
 func Info(ctx context.Context, format string, a ...any) {
 	msg := fmt.Sprintf(format, a...)
 

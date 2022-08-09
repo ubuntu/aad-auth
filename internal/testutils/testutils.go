@@ -11,8 +11,8 @@ import (
 	"github.com/termie/go-shutil"
 )
 
-// GetCurrentUidGid return current uid/gid for the user running the tests.
-func GetCurrentUidGid(t *testing.T) (int, int) {
+// GetCurrentUIDGID return current uid/gid for the user running the tests.
+func GetCurrentUIDGID(t *testing.T) (int, int) {
 	t.Helper()
 
 	u, err := user.Current()

@@ -58,7 +58,7 @@ func TestNew(t *testing.T) {
 			uid, gid := 4243, 4243
 			// mock current user as having permission to UID/GID
 			if !tc.isNotRootUIDGID {
-				uid, gid = testutils.GetCurrentUidGid(t)
+				uid, gid = testutils.GetCurrentUIDGID(t)
 			}
 
 			shadowGid := 424242
@@ -127,7 +127,7 @@ func TestCloseCacheRetention(t *testing.T) {
 	t.Parallel()
 	cacheDir := t.TempDir()
 
-	uid, gid := testutils.GetCurrentUidGid(t)
+	uid, gid := testutils.GetCurrentUIDGID(t)
 
 	opts := append([]cache.Option{}, cache.WithCacheDir(cacheDir),
 		cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid),
@@ -172,7 +172,7 @@ func TestCloseCacheDifferentOptions(t *testing.T) {
 	t.Parallel()
 	cacheDir1, cacheDir2 := t.TempDir(), t.TempDir()
 
-	uid, gid := testutils.GetCurrentUidGid(t)
+	uid, gid := testutils.GetCurrentUIDGID(t)
 
 	opts := append([]cache.Option{},
 		cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid),
@@ -213,7 +213,7 @@ func TestCleanupDB(t *testing.T) {
 			testutils.CopyDBAndFixPermissions(t, "testdata/db_with_old_users", cacheDir)
 
 			// This triggers a database cleanup if offlineCredentialsExpirationTime is not 0
-			uid, gid := testutils.GetCurrentUidGid(t)
+			uid, gid := testutils.GetCurrentUIDGID(t)
 			opts := append([]cache.Option{}, cache.WithCacheDir(cacheDir),
 				cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid))
 

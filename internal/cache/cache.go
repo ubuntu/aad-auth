@@ -459,7 +459,7 @@ func parseHomeDir(ctx context.Context, homeDirPattern, username, uid string) (ho
 
 		// treat special modifiers.
 		if afterModifier {
-			s, err = parseHomeDirPattern(ctx, s, username, uid)
+			s, err = parseHomeDirPattern(s, username, uid)
 			if err != nil {
 				return "", err
 			}
@@ -474,7 +474,7 @@ func parseHomeDir(ctx context.Context, homeDirPattern, username, uid string) (ho
 
 // parseHomeDirPattern returns the string that matches the given pattern.
 // If the pattern is not recognized, an error is returned.
-func parseHomeDirPattern(ctx context.Context, pattern, username, uid string) (string, error) {
+func parseHomeDirPattern(pattern, username, uid string) (string, error) {
 	switch pattern {
 	case "f":
 		return username, nil

@@ -14,7 +14,7 @@ import (
 func newCacheForTests(t *testing.T, cacheDir string, closeWithoutDelay, withoutCleanup bool) (c *cache.Cache) {
 	t.Helper()
 
-	uid, gid := testutils.GetCurrentUidGid(t)
+	uid, gid := testutils.GetCurrentUIDGID(t)
 	opts := append([]cache.Option{}, cache.WithCacheDir(cacheDir),
 		cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid))
 
