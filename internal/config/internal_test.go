@@ -20,13 +20,13 @@ func TestLoadDefaultHomeAndShell(t *testing.T) {
 	}{
 		"file with both home and shell": {
 			path:      "adduser-both-values.conf",
-			wantHome:  "/home/users/%u",
+			wantHome:  "/home/users/%f",
 			wantShell: "/bin/fish",
 		},
 
 		"file with only dhome": {
 			path:      "adduser-dhome-only.conf",
-			wantHome:  "/home/users/%u",
+			wantHome:  "/home/users/%f",
 			wantShell: "",
 		},
 		"file with only dshell": {
