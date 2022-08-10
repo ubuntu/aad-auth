@@ -31,7 +31,7 @@ func TestToCshadow(t *testing.T) {
 
 			got := testutils.NewCShadow()
 			buf := (*shadow.CChar)(testutils.AllocCBuffer(t, testutils.CSizeT(tc.bufsize)))
-
+			//! G103: Use of unsafe calls should be audited (gosec)
 			err := s.ToCshadow(shadow.CShadow(unsafe.Pointer(got)), buf, shadow.CSizeT(tc.bufsize))
 			if tc.wantErr {
 				require.Error(t, err, "ToCshadow should have returned an error but hasn't")

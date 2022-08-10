@@ -35,7 +35,7 @@ func TestToCgroup(t *testing.T) {
 
 			got := testutils.NewCGroup()
 			buf := (*group.CChar)(testutils.AllocCBuffer(t, testutils.CSizeT(tc.bufsize)))
-
+			//! G103: Use of unsafe calls should be audited (gosec)
 			err := g.ToCgroup(group.CGroup(unsafe.Pointer(got)), buf, group.CSizeT(tc.bufsize))
 			if tc.wantErr {
 				require.Error(t, err, "ToCgroup should have returned an error but hasn't")
