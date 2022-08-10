@@ -10,16 +10,16 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type option struct {
+type goldenOption struct {
 	goldPath string
 }
 
-// Option is a supported option reference to change the golden files comparison.
-type Option func(*option)
+// OptionGolden is a supported option reference to change the golden files comparison.
+type OptionGolden func(*goldenOption)
 
 // WithGoldPath overrides the default path for golden files used.
-func WithGoldPath(path string) Option {
-	return func(o *option) {
+func WithGoldPath(path string) OptionGolden {
+	return func(o *goldenOption) {
 		if path != "" {
 			o.goldPath = path
 		}
@@ -30,10 +30,10 @@ var update bool
 
 // SaveAndLoadFromGolden loads the element from an yaml golden file in testdata/golden.
 // It will update the file if the update flag is used prior to deserializing it.
-func SaveAndLoadFromGolden[E any](t *testing.T, ref E, opts ...Option) E {
+func SaveAndLoadFromGolden[E any](t *testing.T, ref E, opts ...OptionGolden) E {
 	t.Helper()
 
-	o := option{
+	o := goldenOption{
 		goldPath: filepath.Join("testdata", "golden", t.Name()),
 	}
 
