@@ -72,7 +72,6 @@ func NewByGID(ctx context.Context, gid uint) (g Group, err error) {
 
 	c, err := cache.New(ctx, testopts...)
 	if err != nil {
-
 		return Group{}, nss.ConvertErr(err)
 	}
 	defer c.Close(ctx)

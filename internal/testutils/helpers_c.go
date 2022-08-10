@@ -21,7 +21,8 @@ type (
 
 // AllocCBuffer returns a new C buffer of buflen. Memory is freed when the test ends.
 func AllocCBuffer(t *testing.T, buflen CSizeT) *CChar {
-	buf := (*CChar)(C.malloc(C.size_t(buflen)))
+	t.Helper()
+	buf := (*CChar)(C.malloc(buflen))
 	t.Cleanup(func() { C.free(unsafe.Pointer(buf)) })
 	return buf
 }

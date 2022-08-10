@@ -26,12 +26,12 @@ func TestToCgroup(t *testing.T) {
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			if tc.nMembers == 0 {
 				tc.nMembers = 1
 			}
 			g := group.NewTestGroup(tc.nMembers)
-
-			t.Parallel()
 
 			got := testutils.NewCGroup()
 			buf := (*group.CChar)(testutils.AllocCBuffer(t, testutils.CSizeT(tc.bufsize)))

@@ -38,7 +38,7 @@ func TestGetUserByName(t *testing.T) {
 			insertUsersInDb(t, cacheDir)
 			endTime := time.Now()
 
-			c := newCacheForTests(t, cacheDir, true, true)
+			c := newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
 			c.SetShadowMode(tc.shadowMode)
 
 			u, err := c.GetUserByName(context.Background(), tc.name)
@@ -103,7 +103,7 @@ func TestGetUserByUID(t *testing.T) {
 			insertUsersInDb(t, cacheDir)
 			endTime := time.Now()
 
-			c := newCacheForTests(t, cacheDir, true, true)
+			c := newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
 			c.SetShadowMode(tc.shadowMode)
 
 			u, err := c.GetUserByUID(context.Background(), tc.uid)
@@ -121,17 +121,17 @@ func TestGetUserByUID(t *testing.T) {
 
 			// Validate password
 			if tc.shadowMode > 0 {
-				err := bcrypt.CompareHashAndPassword([]byte(u.ShadowPasswd), []byte(usersForTestsByUid[tc.uid].password))
+				err := bcrypt.CompareHashAndPassword([]byte(u.ShadowPasswd), []byte(usersForTestsByUID[tc.uid].password))
 				assert.NoError(t, err, "Encrypted passwords should match the insertion")
 				u.ShadowPasswd = ""
 			}
 
 			wantUser := cache.UserRecord{
-				Name:           usersForTestsByUid[tc.uid].name,
+				Name:           usersForTestsByUID[tc.uid].name,
 				Passwd:         "x",
 				UID:            int64(tc.uid),
 				GID:            int64(tc.uid),                                           // GID match UID
-				Home:           filepath.Join("/home", usersForTestsByUid[tc.uid].name), // Default (fallback) home
+				Home:           filepath.Join("/home", usersForTestsByUID[tc.uid].name), // Default (fallback) home
 				Shell:          "/bin/bash",                                             // Default (fallback) home
 				ShadowPasswd:   "",                                                      // already hanlded
 				LastOnlineAuth: time.Unix(0, 0),                                         // we will match it manually
@@ -166,7 +166,7 @@ func TestNextPasswdEntry(t *testing.T) {
 	insertUsersInDb(t, cacheDir)
 	endTime := time.Now()
 
-	c := newCacheForTests(t, cacheDir, true, true)
+	c := newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
 
 	// Iterate over all entries
 	numIteration := len(wanted)
@@ -191,7 +191,7 @@ func TestNextPasswdEntry(t *testing.T) {
 func TestNextPasswdEntryNoUser(t *testing.T) {
 	t.Parallel()
 
-	c := newCacheForTests(t, t.TempDir(), true, true)
+	c := newCacheForTests(t, t.TempDir(), cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
 	u, err := c.NextPasswdEntry(context.Background())
 	require.ErrorIs(t, err, cache.ErrNoEnt, "first and final iteration should return ENOENT, but we got %v", u)
 }
@@ -202,13 +202,14 @@ func TestNextPasswdCloseBeforeIterationEnds(t *testing.T) {
 	cacheDir := t.TempDir()
 	insertUsersInDb(t, cacheDir)
 
-	c := newCacheForTests(t, cacheDir, true, true)
+	c := newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
 
 	_, err := c.NextPasswdEntry(context.Background())
 	require.NoError(t, err, "NextPasswdEntry should initiate and returns values without any error")
 
 	// This closes underlying iterator
-	c.ClosePasswdIterator(context.Background())
+	err = c.ClosePasswdIterator(context.Background())
+	require.NoError(t, err, "No error should occur when closing the iterator in tests")
 
 	// Trying to iterate for all entries
 	numIteration := len(usersForTests)

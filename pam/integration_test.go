@@ -131,7 +131,7 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-// createTempDir to create a temporary directory with a cleanup teardown not having a testing.T
+// createTempDir to create a temporary directory with a cleanup teardown not having a testing.T.
 func createTempDir() (tmp string, cleanup func(), err error) {
 	if tmp, err = os.MkdirTemp("", "aad-auth-integration-tests-pam"); err != nil {
 		fmt.Fprintf(os.Stderr, "Can not create temporary directory %q", tmp)

@@ -2,5 +2,5 @@
 
 package shadow
 
-// Expose setCacheOption for package tests
+// Expose setCacheOption for package tests.
 var SetCacheOption = setCacheOption

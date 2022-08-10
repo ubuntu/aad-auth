@@ -44,7 +44,7 @@ func SaveAndLoadFromGolden[E any](t *testing.T, ref E, opts ...Option) E {
 	// Update golden file
 	if update {
 		t.Logf("updating golden file %s", o.goldPath)
-		err := os.MkdirAll(filepath.Dir(o.goldPath), 0755)
+		err := os.MkdirAll(filepath.Dir(o.goldPath), 0750)
 		require.NoError(t, err, "Cannot create directory for updating golden files")
 		data, err := yaml.Marshal(ref)
 		require.NoError(t, err, "Cannot marshal object to YAML")

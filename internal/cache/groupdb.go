@@ -73,7 +73,7 @@ func (c *Cache) GetGroupByGID(ctx context.Context, gid uint) (group GroupRecord,
 func (c *Cache) NextGroupEntry(ctx context.Context) (g GroupRecord, err error) {
 	defer func() {
 		if err != nil && !errors.Is(err, ErrNoEnt) {
-			err = fmt.Errorf("failed to read group entry in db: %v", err)
+			err = fmt.Errorf("failed to read group entry in db: %w", err)
 		}
 	}()
 	logger.Debug(ctx, "request next group entry in db")
@@ -114,11 +114,11 @@ func (c *Cache) CloseGroupIterator(ctx context.Context) error {
 		return nil
 	}
 
-	err := c.cursorGroup.Close()
-	c.cursorGroup = nil
-	if err != nil {
+	if err := c.cursorGroup.Close(); err != nil {
+		c.cursorGroup = nil
 		return fmt.Errorf("failed to close group iterator in db: %w", err)
 	}
+	c.cursorGroup = nil
 	return nil
 }
 

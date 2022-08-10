@@ -35,7 +35,7 @@ func TestGetShadowByName(t *testing.T) {
 			cacheDir := t.TempDir()
 			insertUsersInDb(t, cacheDir)
 
-			c := newCacheForTests(t, cacheDir, true, true)
+			c := newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
 			c.SetShadowMode(tc.shadowMode)
 
 			s, err := c.GetShadowByName(context.Background(), tc.name)
@@ -91,7 +91,7 @@ func TestNextShadowEntry(t *testing.T) {
 	cacheDir := t.TempDir()
 	insertUsersInDb(t, cacheDir)
 
-	c := newCacheForTests(t, cacheDir, true, true)
+	c := newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
 
 	// Iterate over all entries
 	numIteration := len(wanted)
@@ -118,7 +118,7 @@ func TestNextShadowEntry(t *testing.T) {
 func TestNextShadowEntryNoShadow(t *testing.T) {
 	t.Parallel()
 
-	c := newCacheForTests(t, t.TempDir(), true, true)
+	c := newCacheForTests(t, t.TempDir(), cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
 	s, err := c.NextShadowEntry(context.Background())
 	require.ErrorIs(t, err, cache.ErrNoEnt, "first and final iteration should return ENOENT, but we got %v", s)
 }
@@ -129,13 +129,14 @@ func TestNextShadowCloseBeforeIterationEnds(t *testing.T) {
 	cacheDir := t.TempDir()
 	insertUsersInDb(t, cacheDir)
 
-	c := newCacheForTests(t, cacheDir, true, true)
+	c := newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
 
 	_, err := c.NextShadowEntry(context.Background())
 	require.NoError(t, err, "NextShadowEntry should initiate and returns values without any error")
 
 	// This closes underlying iterator
-	c.CloseShadowIterator(context.Background())
+	err = c.CloseShadowIterator(context.Background())
+	require.NoError(t, err, "No error should occur when closing the iterator in tests")
 
 	// Trying to iterate for all entries
 	numIteration := len(usersForTests)

@@ -97,7 +97,7 @@ func newLogger(priority syslog.Priority, opts ...Option) (*Logger, error) {
 	return l, nil
 }
 
-// Close closes the underlying syslog connection
+// Close closes the underlying syslog connection.
 func (l Logger) Close() error {
 	return l.w.Close()
 }

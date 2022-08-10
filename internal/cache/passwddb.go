@@ -102,7 +102,7 @@ WHERE p.uid = ?
 func (c *Cache) NextPasswdEntry(ctx context.Context) (u UserRecord, err error) {
 	defer func() {
 		if err != nil && !errors.Is(err, ErrNoEnt) {
-			err = fmt.Errorf("failed to read passwd entry in db: %v", err)
+			err = fmt.Errorf("failed to read passwd entry in db: %w", err)
 		}
 	}()
 	logger.Debug(ctx, "request next passwd entry in db")
@@ -136,11 +136,11 @@ func (c *Cache) ClosePasswdIterator(ctx context.Context) error {
 		return nil
 	}
 
-	err := c.cursorPasswd.Close()
-	c.cursorPasswd = nil
-	if err != nil {
+	if err := c.cursorPasswd.Close(); err != nil {
+		c.cursorPasswd = nil
 		return fmt.Errorf("failed to close passwd iterator in db: %w", err)
 	}
+	c.cursorPasswd = nil
 	return nil
 }
 
@@ -159,7 +159,7 @@ func newUserFromScanner(r rowScanner) (u UserRecord, err error) {
 	return u, nil
 }
 
-//  uidOrGidExists check if uid in passwd or gid in groups does exists.
+// uidOrGidExists check if uid in passwd or gid in groups does exists.
 func uidOrGidExists(db *sql.DB, id uint32, username string) (bool, error) {
 	row := db.QueryRow("SELECT login,'',-1,-1,-1,-1,-1,-1,-1 from passwd where uid = ? UNION SELECT name,'',-1,-1,-1,-1,-1,-1,-1 from groups where gid = ?", id, id)
 
@@ -167,7 +167,7 @@ func uidOrGidExists(db *sql.DB, id uint32, username string) (bool, error) {
 	if errors.Is(err, ErrNoEnt) {
 		return false, nil
 	} else if err != nil {
-		return true, fmt.Errorf("failed to verify that %d is unique: %v", id, err)
+		return true, fmt.Errorf("failed to verify that %d is unique: %w", id, err)
 	}
 
 	// We found one entry, check db inconsistency

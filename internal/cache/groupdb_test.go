@@ -30,7 +30,7 @@ func TestGetGroupByName(t *testing.T) {
 			cacheDir := t.TempDir()
 			insertUsersInDb(t, cacheDir)
 
-			c := newCacheForTests(t, cacheDir, true, true)
+			c := newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
 
 			g, err := c.GetGroupByName(context.Background(), tc.name)
 			if tc.wantErr {
@@ -73,7 +73,7 @@ func TestGetGroupByGID(t *testing.T) {
 			cacheDir := t.TempDir()
 			insertUsersInDb(t, cacheDir)
 
-			c := newCacheForTests(t, cacheDir, true, true)
+			c := newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
 
 			g, err := c.GetGroupByGID(context.Background(), tc.gid)
 			if tc.wantErr {
@@ -84,10 +84,10 @@ func TestGetGroupByGID(t *testing.T) {
 			require.NoError(t, err, "GetGroupByGID should not have returned an error and has")
 
 			wantGroup := cache.GroupRecord{
-				Name:     usersForTestsByUid[tc.gid].name, // Name match user with same name UID/GID.
+				Name:     usersForTestsByUID[tc.gid].name, // Name match user with same name UID/GID.
 				GID:      int64(tc.gid),
 				Password: "x",
-				Members:  []string{usersForTestsByUid[tc.gid].name}, // there is one member, which is the user with the same UID/GID..
+				Members:  []string{usersForTestsByUID[tc.gid].name}, // there is one member, which is the user with the same UID/GID..
 			}
 
 			assert.Equal(t, wantGroup, g, "Group should match input")
@@ -113,7 +113,7 @@ func TestNextGroupEntry(t *testing.T) {
 	cacheDir := t.TempDir()
 	insertUsersInDb(t, cacheDir)
 
-	c := newCacheForTests(t, cacheDir, true, true)
+	c := newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
 
 	// Iterate over all entries
 	numIteration := len(wanted)
@@ -134,7 +134,7 @@ func TestNextGroupEntry(t *testing.T) {
 func TestNextGroupEntryNoGroup(t *testing.T) {
 	t.Parallel()
 
-	c := newCacheForTests(t, t.TempDir(), true, true)
+	c := newCacheForTests(t, t.TempDir(), cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
 	g, err := c.NextGroupEntry(context.Background())
 	require.ErrorIs(t, err, cache.ErrNoEnt, "first and final iteration should return ENOENT, but we got %v", g)
 }
@@ -145,13 +145,14 @@ func TestNextGroupCloseBeforeIterationEnds(t *testing.T) {
 	cacheDir := t.TempDir()
 	insertUsersInDb(t, cacheDir)
 
-	c := newCacheForTests(t, cacheDir, true, true)
+	c := newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
 
 	_, err := c.NextGroupEntry(context.Background())
 	require.NoError(t, err, "NextGroupEntry should initiate and returns values without any error")
 
 	// This closes underlying iterator
-	c.CloseGroupIterator(context.Background())
+	err = c.CloseGroupIterator(context.Background())
+	require.NoError(t, err, "No error should occur when closing the iterator in tests")
 
 	// Trying to iterate for all entries
 	numIteration := len(usersForTests)

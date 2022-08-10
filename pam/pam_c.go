@@ -12,6 +12,7 @@ char *string_from_argv(int i, char **argv);
 import "C"
 import (
 	"context"
+	"errors"
 	"log"
 	"strings"
 
@@ -72,16 +73,16 @@ func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 	}
 
 	if err := pam.Authenticate(ctx, username, password, conf, opts...); err != nil {
-		switch err {
-		case pam.ErrPamSystem:
+		if errors.Is(err, pam.ErrPamSystem) {
 			return C.PAM_SYSTEM_ERR
-		case pam.ErrPamAuth:
+		}
+		if errors.Is(err, pam.ErrPamAuth) {
 			return C.PAM_AUTH_ERR
-		case pam.ErrPamIgnore:
+		}
+		if errors.Is(err, pam.ErrPamIgnore) {
 			return C.PAM_IGNORE
 		}
 	}
-
 	return C.PAM_SUCCESS
 }
 

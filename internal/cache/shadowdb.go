@@ -50,7 +50,7 @@ func (c *Cache) GetShadowByName(ctx context.Context, username string) (swr Shado
 func (c *Cache) NextShadowEntry(ctx context.Context) (swr ShadowRecord, err error) {
 	defer func() {
 		if err != nil && !errors.Is(err, ErrNoEnt) {
-			err = fmt.Errorf("failed to read shadow entry in db: %v", err)
+			err = fmt.Errorf("failed to read shadow entry in db: %w", err)
 		}
 	}()
 	logger.Debug(ctx, "request next shadow entry in db")
@@ -86,11 +86,11 @@ func (c *Cache) CloseShadowIterator(ctx context.Context) error {
 		return nil
 	}
 
-	err := c.cursorShadow.Close()
-	c.cursorShadow = nil
-	if err != nil {
+	if err := c.cursorShadow.Close(); err != nil {
+		c.cursorShadow = nil
 		return fmt.Errorf("failed to close shadow iterator in db: %w", err)
 	}
+	c.cursorShadow = nil
 	return nil
 }
 

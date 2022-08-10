@@ -26,8 +26,7 @@ func (g Group) MarshalYAML() (interface{}, error) {
 // UnmarshalYAML use a public object to Unmarhsal to.
 func (g *Group) UnmarshalYAML(value *yaml.Node) error {
 	o := publicGroup{}
-	err := value.Decode(&o)
-	if err != nil {
+	if err := value.Decode(&o); err != nil {
 		return err
 	}
 
@@ -44,7 +43,7 @@ func (g *Group) UnmarshalYAML(value *yaml.Node) error {
 func NewTestGroup(nMembers int) Group {
 	members := make([]string, 0, nMembers)
 
-	members = append(members, fmt.Sprint("testusername@domain.com"))
+	members = append(members, "testusername@domain.com")
 	for i := 1; i < nMembers; i++ {
 		members = append(members, fmt.Sprintf("testusername-%d@domain.com", i))
 	}
