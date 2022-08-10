@@ -13,7 +13,7 @@ linters:
     - exportloopref
     - forbidigo
     - forcetypeassert
-    # - gci
+    - gci
     - godot
     - gofmt
     - gosec
@@ -37,6 +37,12 @@ issues:
   exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0
+
+  exclude-rules:
+    - linters:
+      - gci
+      path: _c\.go
+
   exclude:
     # EXC0001 errcheck: most errors are in defer calls, which are safe to ignore and idiomatic Go (would be good to only ignore defer ones though)
     - 'Error return value of .((os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*print(f|ln)?|os\.(Un)?Setenv|w\.Stop|logger.Close.*|tx.Rollback*|l.w.*|(passwd|group|shadow).End.*). is not checked'

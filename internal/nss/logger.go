@@ -84,7 +84,7 @@ func newLogger(priority syslog.Priority, opts ...Option) (*Logger, error) {
 		var err error
 		o.writer, err = syslog.New(syslog.LOG_DEBUG, "")
 		if err != nil {
-			return nil, fmt.Errorf("can't create nss logger: %v", err)
+			return nil, fmt.Errorf("can't create nss logger: %w", err)
 		}
 	}
 
