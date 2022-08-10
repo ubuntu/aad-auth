@@ -1,0 +1,9 @@
+passwd
+login,password,uid,gid,gecos,home,shell,last_online_auth
+futureuser@domain.com,x,80938656,80938656,,/home/futureuser@domain.com,/bin/bash,2658836168
+groups
+name,password,gid
+futureuser@domain.com,x,80938656
+uid_gid
+uid,gid
+80938656,80938656

@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -76,6 +77,7 @@ func TestPamSmAuthenticate(t *testing.T) {
 			require.NoError(t, err, "Setup: could not create pam.d temporary directory")
 
 			cacheDir := filepath.Join(tmp, "cache")
+
 			if tc.initialCache != "" {
 				testutils.CopyDBAndFixPermissions(t, filepath.Join("testdata", tc.initialCache), cacheDir)
 			}
@@ -109,11 +111,32 @@ func TestPamSmAuthenticate(t *testing.T) {
 				return
 			}
 			require.NoError(t, err, "Authenticate should succeed")
+
+			gotDumps := make(map[string]string)
+			dbs := []string{"passwd", "shadow"}
+
+			for _, db := range dbs {
+				dbPath := filepath.Join(cacheDir, db+".db")
+				f, err := os.Create(filepath.Join(cacheDir, db+"_dump"))
+				require.NoError(t, err, db+" dump file must be created")
+				err = testutils.OpenAndDumpDb(dbPath, f)
+				f.Close()
+				got, err := testutils.ReadDump(filepath.Join(cacheDir, db+"_dump"))
+				require.NoError(t, err, db+" dump must be read")
+				gotDumps[db] = got
+			}
+
+			for _, db := range dbs {
+				want := testutils.SaveAndLoadFromDump(t, filepath.Join(cacheDir, db+".db"), gotDumps[db])
+				require.Equal(t, want, gotDumps[db], db+" dumps must be equal")
+			}
 		})
 	}
 }
 
 func TestMain(m *testing.M) {
+	testutils.InstallUpdateFlag()
+	flag.Parse()
 	// Build the pam module in a temporary directory and allow linking to it.
 	libDir, cleanup, err := createTempDir()
 	if err != nil {
