@@ -1,34 +1,39 @@
-//go:build integrationtests
-
-// This tag is only used for integration tests. It allows to safeguard the cache
-// dump, which can contain sensitive information.
-
-package cache
+package testutils
 
 import (
-	"context"
+	"database/sql"
 	"fmt"
 	"io"
 	"strings"
+	"testing"
+
+	// Used as driver for the db
+	_ "github.com/mattn/go-sqlite3"
 )
 
-// DumpData dumps the data of all tables from Cache into the specified output.
+// DbDataToCsv dumps the data of all tables from the db file into the specified output.
 // If w is nil, an error is returned.
-func (c *Cache) DumpData(ctx context.Context, w io.Writer) (err error) {
+func DbDataToCsv(t *testing.T, dbPath string, w io.Writer) (err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("could not dump data from cache: %w", err)
+			err = fmt.Errorf("could not dump data from db: %w", err)
 		}
 	}()
 
 	if w == nil {
-		return fmt.Errorf("nil writer")
+		return fmt.Errorf("no writer available")
 	}
 
-	// Selects the table names from the database.
-	query, err := c.db.Query("SELECT name FROM sqlite_schema WHERE type = 'table'")
+	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
-		return fmt.Errorf("could not query tables names from cache: %w", err)
+		return fmt.Errorf("could not open db: %w", err)
+	}
+	defer db.Close()
+
+	// Selects the table names from the database.
+	query, err := db.Query("SELECT name FROM sqlite_schema WHERE type = 'table'")
+	if err != nil {
+		return fmt.Errorf("could not query tables names from db: %w", err)
 	}
 
 	// Iterates through each table and dumps their data.
@@ -42,7 +47,7 @@ func (c *Cache) DumpData(ctx context.Context, w io.Writer) (err error) {
 			return fmt.Errorf("something went wrong when writing to writer: %w", err)
 		}
 
-		if err = c.DumpDataFromTable(ctx, tableName, w); err != nil {
+		if err = dumpDataFromTable(t, db, tableName, w); err != nil {
 			return err
 		}
 	}
@@ -50,9 +55,9 @@ func (c *Cache) DumpData(ctx context.Context, w io.Writer) (err error) {
 	return nil
 }
 
-// DumpDataFromTable prints all the data contained in the specified table.
+// dumpDataFromTable prints all the data contained in the specified table.
 // If w is nil, an error is returned.
-func (c *Cache) DumpDataFromTable(ctx context.Context, tableName string, w io.Writer) (err error) {
+func dumpDataFromTable(t *testing.T, db *sql.DB, tableName string, w io.Writer) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("could not dump data from table %s: %w", tableName, err)
@@ -60,11 +65,11 @@ func (c *Cache) DumpDataFromTable(ctx context.Context, tableName string, w io.Wr
 	}()
 
 	if w == nil {
-		return fmt.Errorf("nil writer")
+		return fmt.Errorf("no writer available")
 	}
 
 	// Queries for all rows in the table.
-	rows, err := c.db.Query(fmt.Sprintf("select * from %s", tableName))
+	rows, err := db.Query("SELECT * FROM ?", tableName)
 	if err != nil {
 		return fmt.Errorf("could not query from %s: %w", tableName, err)
 	}
@@ -76,7 +81,7 @@ func (c *Cache) DumpDataFromTable(ctx context.Context, tableName string, w io.Wr
 
 	// Prints the names of the columns as the first line of the table dump
 	if _, err = w.Write([]byte(strings.Join(cols, ",") + "\n")); err != nil {
-		return fmt.Errorf("could not write columns names to file: %w", err)
+		return fmt.Errorf("could not write columns names: %w", err)
 	}
 
 	// Initializes the structures that will be used for reading the rows values
@@ -92,9 +97,9 @@ func (c *Cache) DumpDataFromTable(ctx context.Context, tableName string, w io.Wr
 			return fmt.Errorf("could not scan row: %w", err)
 		}
 
-		// Joins the strings in data into a single string with a newline and writes it to w
+		// Write the entire row with its fields in CSV format
 		if _, err = w.Write([]byte(strings.Join(data, ",") + "\n")); err != nil {
-			return fmt.Errorf("could not write to file: %w", err)
+			return fmt.Errorf("could not write row: %w", err)
 		}
 	}
 
