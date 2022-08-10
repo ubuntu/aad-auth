@@ -4,16 +4,106 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
-	// Used as driver for the db
+	// Used as driver for the db.
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/stretchr/testify/require"
 )
 
-// DbDataToCsv dumps the data of all tables from the db file into the specified output.
+type dbOption struct {
+	dumpName string
+	dumpPath string
+}
+
+// DbOption is a supported option to override some behaviors of some db functions.
+type DbOption func(*dbOption)
+
+// WithDumpPath overrides the default path used to save the dump files.
+func WithDumpPath(path string) DbOption {
+	return func(o *dbOption) {
+		o.dumpPath = path
+	}
+}
+
+// WithDumpName overrides the default name used to save the dump files.
+func WithDumpName(name string) DbOption {
+	return func(o *dbOption) {
+		o.dumpName = name
+	}
+}
+
+// SaveAndLoadFromDump ...
+func SaveAndLoadFromDump(t *testing.T, dbPath, dump string, opts ...DbOption) string {
+	t.Helper()
+
+	dbName := dbPath[strings.LastIndex(dbPath, "/")+1:]
+
+	o := dbOption{
+		dumpName: dbName + "_dump",
+		dumpPath: filepath.Join("testdata", t.Name()),
+	}
+
+	for _, opt := range opts {
+		opt(&o)
+	}
+
+	if update {
+		t.Logf("Updating dump file for %s", dbPath)
+		err := os.MkdirAll(o.dumpPath, 0755)
+		require.NoError(t, err, "could not create directory for dump files")
+
+		f, err := os.Create(filepath.Join(o.dumpPath, o.dumpName))
+		require.NoError(t, err, "could not create file to dump the db")
+		defer f.Close()
+
+		_, err = f.Write([]byte(dump))
+		require.NoError(t, err, "Cannot update the dump file for %s", dbName)
+	}
+
+	dump, err := ReadDump(filepath.Join(o.dumpPath, o.dumpName))
+	require.NoError(t, err, "Failed to read the dump file")
+
+	return dump
+}
+
+// ReadDump reads the specified dump file and returns a string with its contents.
+func ReadDump(dumpPath string) (string, error) {
+	f, err := os.ReadFile(dumpPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read dump file: %w", err)
+	}
+	return string(f), err
+}
+
+// OpenAndDumpDb opens the specified database and dumps its content into w.
+func OpenAndDumpDb(dbPath string, w io.Writer) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("failed to open and dump the dbs: %w", err)
+		}
+	}()
+
+	// Connects to the database
+	db, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return fmt.Errorf("failed to open the requested database: %w", err)
+	}
+	defer db.Close()
+
+	if err = dbDataToCsv(db, w); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// dbDataToCsv dumps the data of all tables from the db file into the specified output.
 // If w is nil, an error is returned.
-func DbDataToCsv(t *testing.T, dbPath string, w io.Writer) (err error) {
+func dbDataToCsv(db *sql.DB, w io.Writer) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("could not dump data from db: %w", err)
@@ -24,11 +114,9 @@ func DbDataToCsv(t *testing.T, dbPath string, w io.Writer) (err error) {
 		return fmt.Errorf("no writer available")
 	}
 
-	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
-		return fmt.Errorf("could not open db: %w", err)
+	if db == nil {
+		return fmt.Errorf("no database available")
 	}
-	defer db.Close()
 
 	// Selects the table names from the database.
 	query, err := db.Query("SELECT name FROM sqlite_schema WHERE type = 'table'")
@@ -47,7 +135,7 @@ func DbDataToCsv(t *testing.T, dbPath string, w io.Writer) (err error) {
 			return fmt.Errorf("something went wrong when writing to writer: %w", err)
 		}
 
-		if err = dumpDataFromTable(t, db, tableName, w); err != nil {
+		if err = dumpDataFromTable(db, tableName, w); err != nil {
 			return err
 		}
 	}
@@ -57,7 +145,7 @@ func DbDataToCsv(t *testing.T, dbPath string, w io.Writer) (err error) {
 
 // dumpDataFromTable prints all the data contained in the specified table.
 // If w is nil, an error is returned.
-func dumpDataFromTable(t *testing.T, db *sql.DB, tableName string, w io.Writer) (err error) {
+func dumpDataFromTable(db *sql.DB, tableName string, w io.Writer) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("could not dump data from table %s: %w", tableName, err)
@@ -69,7 +157,7 @@ func dumpDataFromTable(t *testing.T, db *sql.DB, tableName string, w io.Writer) 
 	}
 
 	// Queries for all rows in the table.
-	rows, err := db.Query("SELECT * FROM ?", tableName)
+	rows, err := db.Query(fmt.Sprintf("SELECT * FROM %s", tableName))
 	if err != nil {
 		return fmt.Errorf("could not query from %s: %w", tableName, err)
 	}
