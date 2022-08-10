@@ -85,7 +85,7 @@ func TestGetGroupByGID(t *testing.T) {
 
 			wantGroup := cache.GroupRecord{
 				Name:     usersForTestsByUid[tc.gid].name, // Name match user with same name UID/GID.
-				GID:      int(tc.gid),
+				GID:      int64(tc.gid),
 				Password: "x",
 				Members:  []string{usersForTestsByUid[tc.gid].name}, // there is one member, which is the user with the same UID/GID..
 			}

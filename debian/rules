@@ -1,0 +1,43 @@
+#!/usr/bin/make -f
+#export DH_VERBOSE = 1
+
+export GOCACHE=$(shell mktemp -d /tmp/gocache-XXXX)
+export GOFLAGS := -buildmode=pie
+
+export DEB_BUILD_MAINT_OPTIONS = optimize=-lto
+# strict symbols checking
+export DPKG_GENSYMBOLS_CHECK_LEVEL=4
+
+%:
+	dh $@ --buildsystem=golang --with=golang,apport
+
+override_dh_auto_clean:
+	dh_auto_clean
+	# Create the vendor directory when building the source package
+	[ -d vendor/ ] || go mod vendor
+
+override_dh_auto_build:
+	# Build PAM library
+	go build -ldflags='-extldflags -Wl,-soname,pam_aad.so' -buildmode=c-shared -o pam_aad.so ./pam
+
+	# Build NSS library
+	go build -ldflags='-extldflags -Wl,-soname,libnss_aad.so.2' -buildmode=c-shared -o libnss_aad.so.2 ./nss
+
+	# Build the CLI
+	# DH_GOLANG_BUILDPKG=github.com/ubuntu/aad-auth/cmd/aad-auth dh_auto_build
+
+override_dh_auto_install:
+	dh_auto_install -- --no-source
+
+	# Install PAM module configuration
+	mkdir -p debian/tmp/usr/share/pam-configs
+	cp debian/libpam-aad.pam-auth-update debian/tmp/usr/share/pam-configs/aad
+
+	# Comment configuration and install it to /etc
+	mkdir -p debian/tmp/etc
+	sed -e 's/^\(\)/# \1/' conf/aad.conf.template > debian/tmp/etc/aad.conf
+
+	# Install PAM and NSS libraries
+	mkdir -p debian/tmp/usr/lib/$(DEB_HOST_GNU_TYPE)/security
+	cp pam_aad.so debian/tmp/usr/lib/$(DEB_HOST_GNU_TYPE)/security
+	cp libnss_aad.so.2 debian/tmp/usr/lib

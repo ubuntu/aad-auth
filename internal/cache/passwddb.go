@@ -14,8 +14,8 @@ import (
 type UserRecord struct {
 	Name           string
 	Passwd         string
-	UID            int
-	GID            int
+	UID            int64
+	GID            int64
 	Gecos          string
 	Home           string
 	Shell          string
@@ -161,7 +161,7 @@ func newUserFromScanner(r rowScanner) (u UserRecord, err error) {
 
 //  uidOrGidExists check if uid in passwd or gid in groups does exists.
 func uidOrGidExists(db *sql.DB, id uint32, username string) (bool, error) {
-	row := db.QueryRow("SELECT login,'',-1, -1,-1,-1,-1,-1,-1 from passwd where uid = ? UNION SELECT name,'',-1, -1,-1,-1,-1,-1,-1 from groups where gid = ?", id, id)
+	row := db.QueryRow("SELECT login,'',-1,-1,-1,-1,-1,-1,-1 from passwd where uid = ? UNION SELECT name,'',-1,-1,-1,-1,-1,-1,-1 from groups where gid = ?", id, id)
 
 	u, err := newUserFromScanner(row)
 	if errors.Is(err, ErrNoEnt) {

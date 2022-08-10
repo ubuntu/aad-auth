@@ -204,7 +204,7 @@ func (c *Cache) insertUser(ctx context.Context, newUser UserRecord) (err error) 
 }
 
 // updateOnlineAuthAndPassword updates password and last_online_auth.
-func (c *Cache) updateOnlineAuthAndPassword(ctx context.Context, uid int, username, shadowPasswd string) (err error) {
+func (c *Cache) updateOnlineAuthAndPassword(ctx context.Context, uid int64, username, shadowPasswd string) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("failed to update user %q in local cache: %v", username, err)

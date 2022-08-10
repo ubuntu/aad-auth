@@ -13,7 +13,8 @@ import (
 
 func TestCtxWithSyslogLogger(t *testing.T) {
 	t.Parallel()
-	ctx := nss.CtxWithSyslogLogger(context.Background())
+	l := &dummyLogger{}
+	ctx := nss.CtxWithSyslogLogger(context.Background(), nss.WithLogWriter(l))
 	err := logger.CloseLoggerFromContext(ctx)
 	require.NoError(t, err, "CloseLoggerFromContext should not error as attached to context and closing logger works")
 }

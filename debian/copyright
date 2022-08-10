@@ -1,0 +1,196 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: aad-auth
+Source: https://github.com/ubuntu/aad-auth
+
+Files: *
+Copyright: 2022 Canonical Ltd.
+License: LGPL-3
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 3 of the License, or (at your option) any later version.
+ .
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ Lesser General Public License for more details.
+ .
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, see <http://www.gnu.org/licenses/>.
+ .
+ On Debian systems, the complete text of the GNU Lesser General
+ Public License version 3 can be found in "/usr/share/common-licenses/LGPL-3".
+
+Files: vendor/github.com/AzureAD/*
+Copyright: Microsoft Corporation
+License: MIT
+
+Files: vendor/github.com/davecgh/*
+Copyright: 2012-2016 Dave Collins <dave@davec.name>
+License: ISC
+
+Files: vendor/github.com/go-ini/*
+Copyright: 2019 Unknwon
+License: Apache-2.0
+
+Files: vendor/github.com/golang-jwt/*
+Copyright: 2021 golang-jwt maintainers / 2012 Dave Grijalva
+License: MIT
+
+Files: vendor/github.com/google/uuid/*
+Copyright: 2009, 2014-2017 Google Inc.
+License: BSD-3
+
+Files: vendor/github.com/kylelemons/godebug/*
+Copyright: Copyright: 2013 Google Inc.
+License: Apache-2.0
+
+Files: vendor/github.com/mattn/*
+Copyright: 2014-2019 Yasuhiro MATSUMOTO <mattn.jp@gmail.com> // TODO check the other copyrights from mattn
+License: MIT
+
+Files: vendor/github.com/mattn/go-sqlite3/convert.go
+Copyright: 2011 The Go Authors.
+License: MIT
+
+Files: vendor/github.com/mattn/go-sqlite3/sqlite3.go
+       vendor/github.com/mattn/go-sqlite3/sqlite3_opt_allow_uri_authority.go
+       vendor/github.com/mattn/go-sqlite3/sqlite3_opt_app_armor.go
+       vendor/github.com/mattn/go-sqlite3/sqlite3_opt_foreign_keys.go
+       vendor/github.com/mattn/go-sqlite3/sqlite3_opt_introspect.go
+       vendor/github.com/mattn/go-sqlite3/sqlite3_opt_secure_delete_fast.go
+       vendor/github.com/mattn/go-sqlite3/sqlite3_opt_secure_delete.go
+       vendor/github.com/mattn/go-sqlite3/sqlite3_opt_stat4.go
+       vendor/github.com/mattn/go-sqlite3/sqlite3_opt_vacuum_full.go
+       vendor/github.com/mattn/go-sqlite3/sqlite3_opt_vacuum_incr.go
+Copyright: 2019 Yasuhiro Matsumoto <mattn.jp@gmail.com>. / 2018 G.J.R. Timmer <gjr.timmer@gmail.com>.
+License: MIT
+
+Files: vendor/github.com/mattn/go-sqlite3/sqlite3_func_crypt.go
+       vendor/github.com/mattn/go-sqlite3/sqlite3_opt_userauth.go
+       vendor/github.com/mattn/go-sqlite3/sqlite3_opt_userauth_omit.go
+       vendor/github.com/mattn/go-sqlite3/sqlite3_usleep_windows.go
+Copyright: 2018 G.J.R. Timmer <gjr.timmer@gmail.com>.
+License: MIT
+
+Files: vendor/github.com/mattn/go-sqlite3/sqlite3_opt_preupdate.go
+       vendor/github.com/mattn/go-sqlite3/sqlite3_opt_preupdate_hook.go
+       vendor/github.com/mattn/go-sqlite3/sqlite3_opt_preupdate_omit.go
+Copyright: 2019 G.J.R. Timmer <gjr.timmer@gmail.com>. / 2018 segment.com <friends@segment.com>
+License: MIT
+
+Files: vendor/github.com/msteinert/*
+Copyright: 2015 Michael Steinert <mike.steinert@gmail.com> / 2011 krockot
+License: BSD-2
+
+Files: vendor/github.com/pkg/browser/*
+Copyright: 2014 Dave Cheney <dave@cheney.net>
+License: BSD-2
+
+Files: vendor/github.com/pmezard/*
+Copyright: 2013 Patrick Mezard
+License: BSD-3
+
+Files: vendor/github.com/stretchr/*
+Copyright: 2012-2020 Mat Ryer
+           Tyler Bunnell and contributors.
+License: MIT
+
+Files: vendor/github.com/termie/*
+Copyright: Andy Smith
+License: MIT
+
+Files: vendor/*golang.org/*
+Copyright: 2009-2020 The Go Authors.
+License: BSD-3
+
+Files: vendor/gopkg.in/yaml.v3/*
+Copyright: 2011-2019 Canonical Ltd.
+License: Apache-2.0
+
+Files: vendor/gopkg.in/yaml.v3/apic.go
+       vendor/gopkg.in/yaml.v3/emitterc.go
+       vendor/gopkg.in/yaml.v3/parserc.go
+       vendor/gopkg.in/yaml.v3/readerc.go
+       vendor/gopkg.in/yaml.v3/scannerc.go
+       vendor/gopkg.in/yaml.v3/writerc.go
+       vendor/gopkg.in/yaml.v3/yamlh.go
+       vendor/gopkg.in/yaml.v3/yamlprivateh.go
+Copyright: 2011-2019 Canonical Ltd.
+           2006-2011 Kirill Simonov
+License: MIT
+
+License: Apache-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+
+License: BSD-2
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+ .
+  1. Redistributions of source code must retain the above copyright notice,
+     this list of conditions and the following disclaimer.
+  2. Redistributions in binary form must reproduce the above copyright
+     notice, this list of conditions and the following disclaimer in the
+     documentation and/or other materials provided with the distribution.
+
+License: BSD-3
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are
+ met:
+   * Redistributions of source code must retain the above copyright
+     notice, this list of conditions and the following disclaimer.
+   * Redistributions in binary form must reproduce the above
+     copyright notice, this list of conditions and the following disclaimer
+     in the documentation and/or other materials provided with the
+     distribution.
+   * Neither the name of Google Inc., Jonas Obrist nor the names of its
+     contributors may be used to endorse or promote products derived from
+     this software without specific prior written permission.
+
+License: LGPL-3+
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 3 of the License, or (at your option) any later version.
+ .
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ Lesser General Public License for more details.
+
+License: ISC
+ Permission to use, copy, modify, and/or distribute this software for any
+ purpose with or without fee is hereby granted, provided that the above
+ copyright notice and this permission notice appear in all copies.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+License: MIT
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+ .
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.

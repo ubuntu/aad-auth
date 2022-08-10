@@ -1,0 +1,7 @@
+Name: Azure AD authentication
+Default: yes
+Priority: 120
+
+Auth-Type: Primary
+Auth:
+	[success=end default=ignore]	pam_aad.so

@@ -1,6 +1,7 @@
 package shadow_test
 
 import (
+	"math"
 	"testing"
 	"unsafe"
 
@@ -40,6 +41,10 @@ func TestToCshadow(t *testing.T) {
 			require.NoError(t, err, "ToCshadow should have not returned an error but hasn’t")
 
 			shadowGot := got.ToPublicCShadow()
+			require.EqualValues(t, uint(math.MaxUint), shadowGot.SpFlag, "sp_flag should be equal to math.MaxUint depending on architecture")
+			// Golden file stores the 64-bit representation.
+			shadowGot.SpFlag = math.MaxUint64
+
 			want := testutils.SaveAndLoadFromGolden(t, shadowGot)
 
 			require.Equal(t, want, shadowGot, "Should have C shadow with expected fields content")

@@ -207,7 +207,7 @@ func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 	logger.Debug(ctx, "Shadow db mode: %v", shadowMode)
 
 	if shadowMode == shadowRWMode {
-		offlineCredentialsExpirationDuration := time.Duration(2 * uint(o.offlineCredentialsExpiration) * 24 * uint(time.Hour))
+		offlineCredentialsExpirationDuration := time.Duration(2 * uint64(o.offlineCredentialsExpiration) * 24 * uint64(time.Hour))
 		if err := cleanUpDB(ctx, db, offlineCredentialsExpirationDuration); err != nil {
 			return nil, err
 		}
@@ -306,7 +306,7 @@ func (c *Cache) CanAuthenticate(ctx context.Context, username, password string) 
 
 	// ensure that we checked credential online recently.
 	logger.Debug(ctx, "Last online login was: %s. Current time: %s. Revalidation needed every %d days", user.LastOnlineAuth, time.Now(), c.offlineCredentialsExpiration)
-	if time.Now().After(user.LastOnlineAuth.Add(time.Duration(uint(c.offlineCredentialsExpiration) * 24 * uint(time.Hour)))) {
+	if time.Now().After(user.LastOnlineAuth.Add(time.Duration(uint64(c.offlineCredentialsExpiration) * 24 * uint64(time.Hour)))) {
 		return ErrOfflineCredentialsExpired
 	}
 
@@ -340,8 +340,8 @@ func (c *Cache) Update(ctx context.Context, username, password, homeDirPattern, 
 
 		user = UserRecord{
 			Name:  username,
-			UID:   int(id),
-			GID:   int(id),
+			UID:   int64(id),
+			GID:   int64(id),
 			Home:  home,
 			Shell: shell,
 		}

@@ -1,0 +1,8 @@
+aad-auth (0.1) kinetic; urgency=medium
+
+  [ Didier Roche ]
+  [ Denison Barbosa ]
+  [ Gabriel Nagy ]
+  * Initial release
+
+ -- Gabriel Nagy <gabriel.nagy@canonical.com>  Thu, 04 Aug 2022 18:34:29 +0300

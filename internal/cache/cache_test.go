@@ -284,7 +284,7 @@ func TestUpdate(t *testing.T) {
 				c.SetShadowMode(*tc.shadowMode)
 			}
 
-			var lastUID int
+			var lastUID int64
 			for _, n := range tc.userNames {
 				err := c.Update(context.Background(), n, "my password", "/home/%f", "/bin/bash")
 				if tc.wantErr {

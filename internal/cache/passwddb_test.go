@@ -129,8 +129,8 @@ func TestGetUserByUID(t *testing.T) {
 			wantUser := cache.UserRecord{
 				Name:           usersForTestsByUid[tc.uid].name,
 				Passwd:         "x",
-				UID:            int(tc.uid),
-				GID:            int(tc.uid),                                             // GID match UID
+				UID:            int64(tc.uid),
+				GID:            int64(tc.uid),                                           // GID match UID
 				Home:           filepath.Join("/home", usersForTestsByUid[tc.uid].name), // Default (fallback) home
 				Shell:          "/bin/bash",                                             // Default (fallback) home
 				ShadowPasswd:   "",                                                      // already hanlded
