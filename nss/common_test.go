@@ -21,7 +21,7 @@ var libPath string
 func outNSSCommandForLib(t *testing.T, rootUID, rootGID, shadowMode int, cacheDir string, originOut []byte, cmds ...string) (got string, err error) {
 	t.Helper()
 
-	//! G204: Subprocess launched with a potential tainted input or cmd arguments (gosec)
+	// #nosec:G204 - we control the command arguments in tests
 	cmd := exec.Command(cmds[0], cmds[1:]...)
 	cmd.Env = append(cmd.Env,
 		"NSS_AAD_DEBUG=stderr",
