@@ -35,8 +35,8 @@ func CopyDBAndFixPermissions(t *testing.T, refDir, cacheDir string) {
 	err := shutil.CopyTree(refDir, cacheDir, nil)
 	require.NoError(t, err, "Setup: could not copy initial database files in cache")
 	// apply expected permission as git will change them
-	//! G302: Expect file permissions to be 0600 or less (gosec)
+	// #nosec: G302 - this permission level is required for pam to work.
 	require.NoError(t, os.Chmod(filepath.Join(cacheDir, "passwd.db"), 0644), "Setup: failed to set expected permission on passwd db file")
-	//! G302: Expect file permissions to be 0600 or less (gosec)
+	// #nosec: G302 - this permission level is required for pam to work.
 	require.NoError(t, os.Chmod(filepath.Join(cacheDir, "shadow.db"), 0640), "Setup: failed to set expected permission on shadow db file")
 }
