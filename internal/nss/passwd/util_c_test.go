@@ -30,7 +30,7 @@ func TestToCpasswd(t *testing.T) {
 
 			got := testutils.NewCPasswd()
 			buf := (*passwd.CChar)(testutils.AllocCBuffer(t, testutils.CSizeT(tc.bufsize)))
-			//! G103: Use of unsafe calls should be audited (gosec)
+			//#nosec:G103 - We need to use unsafe.Pointer because Go thinks that testutils._Ctype_struct_passwd is different than passwd._Ctype_struct_passwd
 			err := p.ToCpasswd(passwd.CPasswd(unsafe.Pointer(got)), buf, passwd.CSizeT(tc.bufsize))
 			if tc.wantErr {
 				require.Error(t, err, "ToCpasswd should have returned an error but hasn't")

@@ -35,7 +35,7 @@ func TestToCgroup(t *testing.T) {
 
 			got := testutils.NewCGroup()
 			buf := (*group.CChar)(testutils.AllocCBuffer(t, testutils.CSizeT(tc.bufsize)))
-			//! G103: Use of unsafe calls should be audited (gosec)
+			//#nosec:G103 - We need to use unsafe.Pointer because Go thinks that testutils._Ctype_struct_group is different than group._Ctype_struct_group
 			err := g.ToCgroup(group.CGroup(unsafe.Pointer(got)), buf, group.CSizeT(tc.bufsize))
 			if tc.wantErr {
 				require.Error(t, err, "ToCgroup should have returned an error but hasn't")
