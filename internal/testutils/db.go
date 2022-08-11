@@ -102,7 +102,7 @@ func OpenAndDumpDb(dbPath string, w io.Writer) (err error) {
 }
 
 // dbDataToCsv dumps the data of all tables from the db file into the specified output.
-// If w is nil, an error is returned.
+// If db or w is nil, an error is returned.
 func dbDataToCsv(db *sql.DB, w io.Writer) (err error) {
 	defer func() {
 		if err != nil {
@@ -123,6 +123,7 @@ func dbDataToCsv(db *sql.DB, w io.Writer) (err error) {
 	if err != nil {
 		return fmt.Errorf("could not query tables names from db: %w", err)
 	}
+	defer query.Close()
 
 	// Iterates through each table and dumps their data.
 	var tableName string
@@ -138,13 +139,17 @@ func dbDataToCsv(db *sql.DB, w io.Writer) (err error) {
 		if err = dumpDataFromTable(db, tableName, w); err != nil {
 			return err
 		}
+
+		if _, err = w.Write([]byte("\n")); err != nil {
+			return fmt.Errorf("something went wrong when writing a line break to writer: %w", err)
+		}
 	}
 
 	return nil
 }
 
 // dumpDataFromTable prints all the data contained in the specified table.
-// If w is nil, an error is returned.
+// If db or w is nil, an error is returned.
 func dumpDataFromTable(db *sql.DB, tableName string, w io.Writer) (err error) {
 	defer func() {
 		if err != nil {
@@ -161,20 +166,34 @@ func dumpDataFromTable(db *sql.DB, tableName string, w io.Writer) (err error) {
 	if err != nil {
 		return fmt.Errorf("could not query from %s: %w", tableName, err)
 	}
+	defer rows.Close()
 
-	cols, err := rows.Columns()
+	ct, err := rows.ColumnTypes()
 	if err != nil {
 		return fmt.Errorf("could not get the db rows: %w", err)
 	}
+	var (
+		colNames []string
+		colTypes []string
+	)
+	for _, c := range ct {
+		colNames = append(colNames, c.Name())
+		colTypes = append(colTypes, c.DatabaseTypeName())
+	}
 
-	// Prints the names of the columns as the first line of the table dump
-	if _, err = w.Write([]byte(strings.Join(cols, ",") + "\n")); err != nil {
+	// Prints the names of the columns as the first line of the table dump.
+	if _, err = w.Write([]byte(strings.Join(colNames, ",") + "\n")); err != nil {
 		return fmt.Errorf("could not write columns names: %w", err)
 	}
 
-	// Initializes the structures that will be used for reading the rows values
-	data := make([]string, len(cols))
-	ptr := make([]any, len(cols))
+	// Prints the types of the columns as the second line of the table dump.
+	if _, err = w.Write([]byte(strings.Join(colTypes, ",") + "\n")); err != nil {
+		return fmt.Errorf("could not write columns types: %w", err)
+	}
+
+	// Initializes the structures that will be used for reading the rows values.
+	data := make([]string, len(colNames))
+	ptr := make([]any, len(colNames))
 	for i := range data {
 		ptr[i] = &data[i]
 	}
@@ -185,7 +204,7 @@ func dumpDataFromTable(db *sql.DB, tableName string, w io.Writer) (err error) {
 			return fmt.Errorf("could not scan row: %w", err)
 		}
 
-		// Write the entire row with its fields in CSV format
+		// Write the entire row with its fields in CSV format.
 		if _, err = w.Write([]byte(strings.Join(data, ",") + "\n")); err != nil {
 			return fmt.Errorf("could not write row: %w", err)
 		}
