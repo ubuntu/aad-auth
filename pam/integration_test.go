@@ -162,6 +162,8 @@ func createTempDir() (tmp string, cleanup func(), err error) {
 }
 
 func compareDumps(t *testing.T, wantPath, gotPath string) {
+	t.Helper()
+
 	want, err := testutils.ReadDumpAsTables(wantPath)
 	require.NoError(t, err, "Could not read dump file %s", wantPath)
 

@@ -3,6 +3,7 @@ package testutils
 import (
 	"bufio"
 	"database/sql"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -40,6 +41,7 @@ func WithDumpName(name string) OptionDB {
 // SaveAndUpdateDump opens the specified database and saves the dump in a file.
 // If the update flag is set, it also updates the dump on testdata.
 func SaveAndUpdateDump(t *testing.T, dbPath string, opts ...OptionDB) {
+	t.Helper()
 
 	sep := strings.LastIndex(dbPath, "/")
 	dbName := dbPath[sep+1:]
@@ -55,7 +57,7 @@ func SaveAndUpdateDump(t *testing.T, dbPath string, opts ...OptionDB) {
 
 	if update {
 		t.Logf("Updating dump file for %s", dbName)
-		err := os.MkdirAll(o.dumpPath, 0755)
+		err := os.MkdirAll(o.dumpPath, 0750)
 		require.NoError(t, err, "could not create directory for dump files")
 
 		f, err := os.Create(filepath.Join(o.dumpPath, o.dumpName))
@@ -104,7 +106,7 @@ func ReadDumpAsTables(dumpPath string) (map[string]Table, error) {
 	tables := make(map[string]Table)
 
 	buf := bufio.NewReader(f)
-	for true {
+	for {
 		if buf.Size() == 1 {
 			break
 		}
@@ -115,6 +117,9 @@ func ReadDumpAsTables(dumpPath string) (map[string]Table, error) {
 
 		name = name[:len(name)-1]
 		tables[name], err = readTableFromBuffer(buf)
+		if !errors.Is(err, io.EOF) {
+			return nil, err
+		}
 	}
 
 	return tables, nil
@@ -143,7 +148,7 @@ func readTableFromBuffer(b *bufio.Reader) (Table, error) {
 	}
 
 	// Reads table data
-	for true {
+	for {
 		line, _ = b.ReadString('\n')
 
 		// Reads until an empty line
