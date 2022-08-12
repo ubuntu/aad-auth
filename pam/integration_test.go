@@ -7,7 +7,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"testing"
+	"time"
 
 	pamCom "github.com/msteinert/pam"
 	"github.com/stretchr/testify/require"
@@ -112,23 +114,15 @@ func TestPamSmAuthenticate(t *testing.T) {
 			}
 			require.NoError(t, err, "Authenticate should succeed")
 
-			gotDumps := make(map[string]string)
 			dbs := []string{"passwd", "shadow"}
-
+			// Store the dumps after the authentication
 			for _, db := range dbs {
-				dbPath := filepath.Join(cacheDir, db+".db")
-				f, err := os.Create(filepath.Join(cacheDir, db+"_dump"))
-				require.NoError(t, err, db+" dump file must be created")
-				err = testutils.OpenAndDumpDb(dbPath, f)
-				f.Close()
-				got, err := testutils.ReadDump(filepath.Join(cacheDir, db+"_dump"))
-				require.NoError(t, err, db+" dump must be read")
-				gotDumps[db] = got
+				testutils.SaveAndUpdateDump(t, filepath.Join(cacheDir, db+".db"))
 			}
 
+			// Compare the dumps
 			for _, db := range dbs {
-				want := testutils.SaveAndLoadFromDump(t, filepath.Join(cacheDir, db+".db"), gotDumps[db])
-				require.Equal(t, want, gotDumps[db], db+" dumps must be equal")
+				compareDumps(t, filepath.Join("testdata", t.Name(), db+".db_dump"), filepath.Join(cacheDir, db+".db_dump"))
 			}
 		})
 	}
@@ -165,4 +159,45 @@ func createTempDir() (tmp string, cleanup func(), err error) {
 			fmt.Fprintf(os.Stderr, "Can not clean up temporary directory %q", tmp)
 		}
 	}, nil
+}
+
+func compareDumps(t *testing.T, wantPath, gotPath string) {
+	want, err := testutils.ReadDumpAsTables(wantPath)
+	require.NoError(t, err, "Could not read dump file %s", wantPath)
+
+	got, err := testutils.ReadDumpAsTables(gotPath)
+	require.NoError(t, err, "Could not read dump file %s", gotPath)
+
+	for tableName, wantTable := range want {
+		gotTable := got[tableName]
+		require.NotNil(t, gotTable, "There should be a table")
+		require.Equal(t, len(wantTable.Rows), len(gotTable.Rows), "Tables should have the same number of rows")
+
+		for i, wantRow := range wantTable.Rows {
+			gotRow := gotTable.Rows[i]
+			require.NotNil(t, gotRow, "Got must have the wanted amount of rows")
+
+			for colName, wantData := range wantRow {
+				gotData := gotRow[colName]
+				require.NotNil(t, gotData, "Got must have the wanted row content")
+
+				// Handles comparison of special columns
+				switch colName {
+				// last_online_auth is updated everytime a user logs in, so comparison should be done with the current time
+				case "last_online_auth":
+					n, _ := strconv.ParseInt(gotData, 10, 64)
+					timeElapsed := time.Now().Unix() - n
+					require.LessOrEqual(t, timeElapsed, int64(60), "Difference must be less than or equal to 60 (sec)")
+
+				// Passwords in shadow.db are rehashed when a user logins in. How to compare them?
+				case "password":
+					continue
+
+				// Handles comparison for most columns
+				default:
+					require.Equal(t, wantData, gotData, "Contents of col %s from %s should be the same", colName, tableName)
+				}
+			}
+		}
+	}
 }
