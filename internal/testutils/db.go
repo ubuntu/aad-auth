@@ -1,6 +1,7 @@
 package testutils
 
 import (
+	"bufio"
 	"database/sql"
 	"fmt"
 	"io"
@@ -14,35 +15,36 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type dbOption struct {
+type optionDB struct {
 	dumpName string
 	dumpPath string
 }
 
-// DbOption is a supported option to override some behaviors of some db functions.
-type DbOption func(*dbOption)
+// OptionDB is a supported option to override some behaviors of some db functions.
+type OptionDB func(*optionDB)
 
 // WithDumpPath overrides the default path used to save the dump files.
-func WithDumpPath(path string) DbOption {
-	return func(o *dbOption) {
+func WithDumpPath(path string) OptionDB {
+	return func(o *optionDB) {
 		o.dumpPath = path
 	}
 }
 
 // WithDumpName overrides the default name used to save the dump files.
-func WithDumpName(name string) DbOption {
-	return func(o *dbOption) {
+func WithDumpName(name string) OptionDB {
+	return func(o *optionDB) {
 		o.dumpName = name
 	}
 }
 
-// SaveAndLoadFromDump ...
-func SaveAndLoadFromDump(t *testing.T, dbPath, dump string, opts ...DbOption) string {
-	t.Helper()
+// SaveAndUpdateDump opens the specified database and saves the dump in a file.
+// If the update flag is set, it also updates the dump on testdata.
+func SaveAndUpdateDump(t *testing.T, dbPath string, opts ...OptionDB) {
 
-	dbName := dbPath[strings.LastIndex(dbPath, "/")+1:]
+	sep := strings.LastIndex(dbPath, "/")
+	dbName := dbPath[sep+1:]
 
-	o := dbOption{
+	o := optionDB{
 		dumpName: dbName + "_dump",
 		dumpPath: filepath.Join("testdata", t.Name()),
 	}
@@ -52,7 +54,7 @@ func SaveAndLoadFromDump(t *testing.T, dbPath, dump string, opts ...DbOption) st
 	}
 
 	if update {
-		t.Logf("Updating dump file for %s", dbPath)
+		t.Logf("Updating dump file for %s", dbName)
 		err := os.MkdirAll(o.dumpPath, 0755)
 		require.NoError(t, err, "could not create directory for dump files")
 
@@ -60,18 +62,20 @@ func SaveAndLoadFromDump(t *testing.T, dbPath, dump string, opts ...DbOption) st
 		require.NoError(t, err, "could not create file to dump the db")
 		defer f.Close()
 
-		_, err = f.Write([]byte(dump))
-		require.NoError(t, err, "Cannot update the dump file for %s", dbName)
+		err = openAndDumpDb(dbPath, f)
+		require.NoError(t, err, "could not dump the db")
 	}
 
-	dump, err := ReadDump(filepath.Join(o.dumpPath, o.dumpName))
-	require.NoError(t, err, "Failed to read the dump file")
+	f, err := os.Create(dbPath + "_dump")
+	require.NoError(t, err, "could not dump the db")
+	defer f.Close()
 
-	return dump
+	err = openAndDumpDb(dbPath, f)
+	require.NoError(t, err, "could not dump the db")
 }
 
-// ReadDump reads the specified dump file and returns a string with its contents.
-func ReadDump(dumpPath string) (string, error) {
+// ReadDumpAsString opens the file specified and reads its contents into a string.
+func ReadDumpAsString(dumpPath string) (string, error) {
 	f, err := os.ReadFile(dumpPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read dump file: %w", err)
@@ -79,8 +83,86 @@ func ReadDump(dumpPath string) (string, error) {
 	return string(f), err
 }
 
-// OpenAndDumpDb opens the specified database and dumps its content into w.
-func OpenAndDumpDb(dbPath string, w io.Writer) (err error) {
+// Table is a struct that represents a table of a db.
+type Table struct {
+	// Contains the column names
+	Cols []string
+	// Contains the column types as Types[colName]: colType
+	Types map[string]string
+	// Each map represents a row as row[colName]: colData
+	Rows []map[string]string
+}
+
+// ReadDumpAsTables opens the file specified and reads its contents into a []Table.
+func ReadDumpAsTables(dumpPath string) (map[string]Table, error) {
+	f, err := os.Open(dumpPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open dum file: %w", err)
+	}
+	defer f.Close()
+
+	tables := make(map[string]Table)
+
+	buf := bufio.NewReader(f)
+	for true {
+		if buf.Size() == 1 {
+			break
+		}
+		name, _ := buf.ReadString('\n')
+		if name == "" {
+			break
+		}
+
+		name = name[:len(name)-1]
+		tables[name], err = readTableFromBuffer(buf)
+	}
+
+	return tables, nil
+}
+
+func readTableFromBuffer(b *bufio.Reader) (Table, error) {
+	table := Table{}
+
+	// Reads column names
+	line, err := b.ReadString('\n')
+	if err != nil {
+		return Table{}, err
+	}
+	table.Cols = strings.Split(line[:len(line)-1], ",")
+
+	// Reads column types
+	line, err = b.ReadString('\n')
+	if err != nil {
+		return Table{}, err
+	}
+	line = line[:len(line)-1]
+
+	table.Types = make(map[string]string)
+	for i, t := range strings.Split(line, ",") {
+		table.Types[table.Cols[i]] = t
+	}
+
+	// Reads table data
+	for true {
+		line, _ = b.ReadString('\n')
+
+		// Reads until an empty line
+		if line == "\n" {
+			break
+		}
+		line = line[:len(line)-1]
+
+		row := make(map[string]string)
+		for i, v := range strings.Split(line, ",") {
+			row[table.Cols[i]] = v
+		}
+		table.Rows = append(table.Rows, row)
+	}
+	return table, nil
+}
+
+// openAndDumpDb opens the specified database and dumps its content into w.
+func openAndDumpDb(dbPath string, w io.Writer) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("failed to open and dump the dbs: %w", err)
