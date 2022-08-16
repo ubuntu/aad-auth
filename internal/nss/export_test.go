@@ -1,7 +1,7 @@
 package nss
 
 const (
-	// NssLogEnv is the env variable name to force debug
+	// NssLogEnv is the env variable name to force debug.
 	NssLogEnv = nssLogEnv
 )
 

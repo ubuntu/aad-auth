@@ -11,8 +11,8 @@ import (
 	"github.com/termie/go-shutil"
 )
 
-// GetCurrentUidGid return current uid/gid for the user running the tests.
-func GetCurrentUidGid(t *testing.T) (int, int) {
+// GetCurrentUIDGID return current uid/gid for the user running the tests.
+func GetCurrentUIDGID(t *testing.T) (int, int) {
 	t.Helper()
 
 	u, err := user.Current()
@@ -35,6 +35,8 @@ func CopyDBAndFixPermissions(t *testing.T, refDir, cacheDir string) {
 	err := shutil.CopyTree(refDir, cacheDir, nil)
 	require.NoError(t, err, "Setup: could not copy initial database files in cache")
 	// apply expected permission as git will change them
+	// #nosec: G302 - this permission level is required for pam to work.
 	require.NoError(t, os.Chmod(filepath.Join(cacheDir, "passwd.db"), 0644), "Setup: failed to set expected permission on passwd db file")
+	// #nosec: G302 - this permission level is required for pam to work.
 	require.NoError(t, os.Chmod(filepath.Join(cacheDir, "shadow.db"), 0640), "Setup: failed to set expected permission on shadow db file")
 }

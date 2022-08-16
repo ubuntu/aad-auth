@@ -148,7 +148,6 @@ func TestLoadConfig(t *testing.T) {
 			require.Equal(t, want, got, "Got config and expected config are different")
 		})
 	}
-
 }
 
 func TestMain(m *testing.M) {

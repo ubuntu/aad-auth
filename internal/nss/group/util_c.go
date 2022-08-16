@@ -13,7 +13,7 @@ import (
 )
 
 type (
-	// CPasswd is the struct passwd
+	// CGroup is the struct group
 	CGroup = *C.struct_group
 	// CChar allows to cast to a char
 	CChar = C.char
@@ -21,11 +21,12 @@ type (
 	CSizeT = C.size_t
 )
 
-// ToCpasswd transforms the Go passwd struct to a C struct passwd, filling buffer, result and nss_status.
+// ToCgroup transforms the Go Group struct to a C struct group.
 // The function will check first for errors to transform them to corresponding nss status.
 //
 // We are casting an array of char* (addresses) in a char* buffer. Forces the checker to say we know
 // what we do and don’t error on it.
+//
 //go:nocheckptr
 func (g Group) ToCgroup(grp CGroup, buf *CChar, buflen CSizeT) error {
 	// Ensure the buffer is big enough for all fields of group, with an offset.

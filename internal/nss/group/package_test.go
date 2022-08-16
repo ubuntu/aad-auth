@@ -2,5 +2,5 @@
 
 package group
 
-// Expose setCacheOption for package tests
+// Expose setCacheOption for package tests.
 var SetCacheOption = setCacheOption

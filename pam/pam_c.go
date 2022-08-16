@@ -12,6 +12,7 @@ char *string_from_argv(int i, char **argv);
 import "C"
 import (
 	"context"
+	"errors"
 	"log"
 	"strings"
 
@@ -35,7 +36,7 @@ var (
 func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char) C.int {
 	// Attach logger and info handler.
 	ctx := pam.CtxWithPamh(context.Background(), pam.Handle(pamh))
-	pamLogger := pam.NewLogger(pam.Handle(pamh), pam.LOG_INFO)
+	pamLogger := pam.NewLogger(pam.Handle(pamh), pam.LogInfo)
 
 	// Get options.
 	conf := defaultConfigPath
@@ -45,7 +46,7 @@ func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 		case "conf":
 			conf = optarg
 		case "debug":
-			pamLogger = pam.NewLogger(pam.Handle(pamh), pam.LOG_DEBUG)
+			pamLogger = pam.NewLogger(pam.Handle(pamh), pam.LogDebug)
 			pamLogger.Debug("PAM AAD DEBUG enabled")
 		default:
 			// we have additional supported option when built for integration tests
@@ -72,16 +73,16 @@ func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 	}
 
 	if err := pam.Authenticate(ctx, username, password, conf, opts...); err != nil {
-		switch err {
-		case pam.ErrPamSystem:
+		if errors.Is(err, pam.ErrPamSystem) {
 			return C.PAM_SYSTEM_ERR
-		case pam.ErrPamAuth:
+		}
+		if errors.Is(err, pam.ErrPamAuth) {
 			return C.PAM_AUTH_ERR
-		case pam.ErrPamIgnore:
+		}
+		if errors.Is(err, pam.ErrPamIgnore) {
 			return C.PAM_IGNORE
 		}
 	}
-
 	return C.PAM_SUCCESS
 }
 

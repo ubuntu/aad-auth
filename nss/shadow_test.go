@@ -13,7 +13,7 @@ import (
 func TestNssGetShadowByName(t *testing.T) {
 	t.Parallel()
 
-	uid, gid := testutils.GetCurrentUidGid(t)
+	uid, gid := testutils.GetCurrentUIDGID(t)
 
 	noShadow := 0
 
@@ -21,7 +21,7 @@ func TestNssGetShadowByName(t *testing.T) {
 		name string
 
 		cacheDB    string
-		rootUid    int
+		rootUID    int
 		shadowMode *int
 
 		wantErr bool
@@ -35,7 +35,7 @@ func TestNssGetShadowByName(t *testing.T) {
 		"error on no access to shadow":                {shadowMode: &noShadow, wantErr: true},
 		"shadow user does not exists":                 {name: "doesnotexist@domain.com", wantErr: true},
 		"no cache can't get shadow user":              {cacheDB: "-", wantErr: true},
-		"invalid permissions on cache can't get user": {rootUid: 4242, wantErr: true},
+		"invalid permissions on cache can't get user": {rootUID: 4242, wantErr: true},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -57,15 +57,15 @@ func TestNssGetShadowByName(t *testing.T) {
 				testutils.CopyDBAndFixPermissions(t, filepath.Join("testdata", tc.cacheDB), cacheDir)
 			}
 
-			if tc.rootUid == 0 {
-				tc.rootUid = uid
+			if tc.rootUID == 0 {
+				tc.rootUID = uid
 			}
 			shadowMode := -1
 			if tc.shadowMode != nil {
 				shadowMode = *tc.shadowMode
 			}
 
-			got, err := outNSSCommandForLib(t, tc.rootUid, gid, shadowMode, cacheDir, nil, "getent", "shadow", tc.name)
+			got, err := outNSSCommandForLib(t, tc.rootUID, gid, shadowMode, cacheDir, nil, "getent", "shadow", tc.name)
 			if tc.wantErr {
 				require.Error(t, err, "getent should have errored out but didn't")
 				return
@@ -84,14 +84,14 @@ func TestNssGetShadow(t *testing.T) {
 	// No need to check for err on originOut as we don’t necessarily have the right to access them.
 	originOut, _ := exec.Command("getent", "shadow").CombinedOutput()
 
-	uid, gid := testutils.GetCurrentUidGid(t)
+	uid, gid := testutils.GetCurrentUIDGID(t)
 
 	noShadow := 0
 
 	tests := map[string]struct {
 		cacheDB string
 
-		rootUid    int
+		rootUID    int
 		shadowMode *int
 	}{
 		"list all shadow users": {},
@@ -99,7 +99,7 @@ func TestNssGetShadow(t *testing.T) {
 		// special cases
 		"no access to shadow list no users":                  {shadowMode: &noShadow},
 		"no cache lists no shadow user":                      {cacheDB: "-"},
-		"invalid permissions on cache lists no shadow users": {rootUid: 4242},
+		"invalid permissions on cache lists no shadow users": {rootUID: 4242},
 		"old shadow users are cleaned up":                    {cacheDB: "db_with_old_users"},
 	}
 	for name, tc := range tests {
@@ -115,15 +115,15 @@ func TestNssGetShadow(t *testing.T) {
 				testutils.CopyDBAndFixPermissions(t, filepath.Join("testdata", tc.cacheDB), cacheDir)
 			}
 
-			if tc.rootUid == 0 {
-				tc.rootUid = uid
+			if tc.rootUID == 0 {
+				tc.rootUID = uid
 			}
 			shadowMode := -1
 			if tc.shadowMode != nil {
 				shadowMode = *tc.shadowMode
 			}
 
-			got, err := outNSSCommandForLib(t, tc.rootUid, gid, shadowMode, cacheDir, originOut, "getent", "shadow")
+			got, err := outNSSCommandForLib(t, tc.rootUID, gid, shadowMode, cacheDir, originOut, "getent", "shadow")
 			require.NoError(t, err, "getent should succeed")
 
 			want := testutils.SaveAndLoadFromGolden(t, got)

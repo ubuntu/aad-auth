@@ -21,6 +21,7 @@ var libPath string
 func outNSSCommandForLib(t *testing.T, rootUID, rootGID, shadowMode int, cacheDir string, originOut []byte, cmds ...string) (got string, err error) {
 	t.Helper()
 
+	// #nosec:G204 - we control the command arguments in tests
 	cmd := exec.Command(cmds[0], cmds[1:]...)
 	cmd.Env = append(cmd.Env,
 		"NSS_AAD_DEBUG=stderr",
@@ -67,7 +68,7 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-// createTempDir to create a temporary directory with a cleanup teardown not having a testing.T
+// createTempDir creates a temporary directory with a cleanup teardown not having a testing.T.
 func createTempDir() (tmp string, cleanup func(), err error) {
 	if tmp, err = os.MkdirTemp("", "aad-auth-integration-tests-nss"); err != nil {
 		fmt.Fprintf(os.Stderr, "Can not create temporary directory %q", tmp)

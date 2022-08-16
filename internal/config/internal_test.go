@@ -68,5 +68,4 @@ func TestLoadDefaultHomeAndShell(t *testing.T) {
 			require.Equal(t, tc.wantShell, shell, "Got expected shell")
 		})
 	}
-
 }

@@ -15,7 +15,7 @@ import (
 func TestAuthenticate(t *testing.T) {
 	t.Parallel()
 
-	uid, gid := testutils.GetCurrentUidGid(t)
+	uid, gid := testutils.GetCurrentUIDGID(t)
 
 	tests := map[string]struct {
 		username            string

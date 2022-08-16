@@ -144,7 +144,7 @@ var (
 func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("can't open/create cache: %v", err)
+			err = fmt.Errorf("can't open/create cache: %w", err)
 		}
 	}()
 
@@ -191,11 +191,11 @@ func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 	if o.shadowGID < 0 {
 		shadowGrp, err := user.LookupGroup("shadow")
 		if err != nil {
-			return nil, fmt.Errorf("failed to find group id for group shadow: %v", err)
+			return nil, fmt.Errorf("failed to find group id for group shadow: %w", err)
 		}
 		o.shadowGID, err = strconv.Atoi(shadowGrp.Gid)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read shadow group id: %v", err)
+			return nil, fmt.Errorf("failed to read shadow group id: %w", err)
 		}
 	}
 
@@ -311,7 +311,7 @@ func (c *Cache) CanAuthenticate(ctx context.Context, username, password string) 
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.ShadowPasswd), []byte(password)); err != nil {
-		return fmt.Errorf("password does not match: %v", err)
+		return fmt.Errorf("password does not match: %w", err)
 	}
 
 	return nil
@@ -321,7 +321,7 @@ func (c *Cache) CanAuthenticate(ctx context.Context, username, password string) 
 func (c *Cache) Update(ctx context.Context, username, password, homeDirPattern, shell string) (err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("can not create/open cache for nss database: %v", err)
+			err = fmt.Errorf("can not create/open cache for nss database: %w", err)
 		}
 	}()
 
@@ -364,7 +364,7 @@ func (c *Cache) Update(ctx context.Context, username, password, homeDirPattern, 
 func checkFilePermission(ctx context.Context, p string, owner, gOwner int, permission fs.FileMode) (err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("failed checking file permission for %v: %v", p, err)
+			err = fmt.Errorf("failed checking file permission for %s: %w", p, err)
 		}
 	}()
 	logger.Debug(ctx, "check file permissions on %v", p)
@@ -394,7 +394,7 @@ func encryptPassword(ctx context.Context, username, password string) (string, er
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return "", fmt.Errorf("failed to encrypt password: %v", err)
+		return "", fmt.Errorf("failed to encrypt password: %w", err)
 	}
 	return string(hash), nil
 }
@@ -403,7 +403,7 @@ func encryptPassword(ctx context.Context, username, password string) (string, er
 func (c *Cache) generateUIDForUser(ctx context.Context, username string) (uid uint32, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("failed to generate uid for user %q: %v", username, err)
+			err = fmt.Errorf("failed to generate uid for user %q: %w", username, err)
 		}
 	}()
 
@@ -439,7 +439,7 @@ func (c *Cache) generateUIDForUser(ctx context.Context, username string) (uid ui
 func parseHomeDir(ctx context.Context, homeDirPattern, username, uid string) (home string, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("can not parse home directory: %v", err)
+			err = fmt.Errorf("can not parse home directory: %w", err)
 		}
 	}()
 
@@ -459,7 +459,7 @@ func parseHomeDir(ctx context.Context, homeDirPattern, username, uid string) (ho
 
 		// treat special modifiers.
 		if afterModifier {
-			s, err = parseHomeDirPattern(ctx, s, username, uid)
+			s, err = parseHomeDirPattern(s, username, uid)
 			if err != nil {
 				return "", err
 			}
@@ -474,7 +474,7 @@ func parseHomeDir(ctx context.Context, homeDirPattern, username, uid string) (ho
 
 // parseHomeDirPattern returns the string that matches the given pattern.
 // If the pattern is not recognized, an error is returned.
-func parseHomeDirPattern(ctx context.Context, pattern, username, uid string) (string, error) {
+func parseHomeDirPattern(pattern, username, uid string) (string, error) {
 	switch pattern {
 	case "f":
 		return username, nil
@@ -485,9 +485,9 @@ func parseHomeDirPattern(ctx context.Context, pattern, username, uid string) (st
 	case "u", "d":
 		user, domain, _ := strings.Cut(username, "@")
 		if pattern == "u" {
-			return string(user), nil
+			return user, nil
 		}
-		return string(domain), nil
+		return domain, nil
 	}
-	return "", fmt.Errorf("%%%v is not a valid pattern", pattern)
+	return "", fmt.Errorf("%%%s is not a valid pattern", pattern)
 }

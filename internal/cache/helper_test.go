@@ -11,19 +11,14 @@ import (
 )
 
 // newCacheForTests returns a cache that is closed automatically, with permissions set to current user.
-func newCacheForTests(t *testing.T, cacheDir string, closeWithoutDelay, withoutCleanup bool) (c *cache.Cache) {
+func newCacheForTests(t *testing.T, cacheDir string, options ...cache.Option) (c *cache.Cache) {
 	t.Helper()
 
-	uid, gid := testutils.GetCurrentUidGid(t)
+	uid, gid := testutils.GetCurrentUIDGID(t)
 	opts := append([]cache.Option{}, cache.WithCacheDir(cacheDir),
 		cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid))
 
-	if closeWithoutDelay {
-		opts = append(opts, cache.WithTeardownDuration(0))
-	}
-	if withoutCleanup {
-		opts = append(opts, cache.WithOfflineCredentialsExpiration(0))
-	}
+	opts = append(opts, options...)
 
 	c, err := cache.New(context.Background(), opts...)
 	require.NoError(t, err, "Setup: should be able to create a cache")
@@ -44,13 +39,13 @@ var (
 		"otheruser@domain.com": {"otheruser@domain.com", 165119648, "other password"},
 		"user@otherdomain.com": {"user@otherdomain.com", 165119649, "other user domain password"},
 	}
-	usersForTestsByUid = make(map[uint]userInfos)
+	usersForTestsByUID = make(map[uint]userInfos)
 )
 
 func init() {
 	// populate usersForTestByUid
 	for _, info := range usersForTests {
-		usersForTestsByUid[uint(info.uid)] = info
+		usersForTestsByUID[uint(info.uid)] = info
 	}
 }
 
@@ -58,7 +53,7 @@ func init() {
 func insertUsersInDb(t *testing.T, cacheDir string) {
 	t.Helper()
 
-	c := newCacheForTests(t, cacheDir, true, false)
+	c := newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0))
 	defer c.Close(context.Background())
 
 	// The randomness in map iterating was causing problems with the tests.

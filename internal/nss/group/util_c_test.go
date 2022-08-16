@@ -26,16 +26,16 @@ func TestToCgroup(t *testing.T) {
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			if tc.nMembers == 0 {
 				tc.nMembers = 1
 			}
 			g := group.NewTestGroup(tc.nMembers)
 
-			t.Parallel()
-
 			got := testutils.NewCGroup()
 			buf := (*group.CChar)(testutils.AllocCBuffer(t, testutils.CSizeT(tc.bufsize)))
-
+			//#nosec:G103 - We need to use unsafe.Pointer because Go thinks that testutils._Ctype_struct_group is different than group._Ctype_struct_group
 			err := g.ToCgroup(group.CGroup(unsafe.Pointer(got)), buf, group.CSizeT(tc.bufsize))
 			if tc.wantErr {
 				require.Error(t, err, "ToCgroup should have returned an error but hasn't")

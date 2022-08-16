@@ -32,8 +32,7 @@ func (s Shadow) MarshalYAML() (interface{}, error) {
 // UnmarshalYAML use a public object to Unmarhsal to.
 func (s *Shadow) UnmarshalYAML(value *yaml.Node) error {
 	o := publicShadow{}
-	err := value.Decode(&o)
-	if err != nil {
+	if err := value.Decode(&o); err != nil {
 		return err
 	}
 

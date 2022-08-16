@@ -69,7 +69,7 @@ type rowScanner interface {
 func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGID, forceShadowMode int, passwdPermission, shadowPermission fs.FileMode) (db *sql.DB, shadowMode int, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("can't initiate database: %v", err)
+			err = fmt.Errorf("can't initiate database: %w", err)
 		}
 	}()
 	logger.Debug(ctx, "Opening cache in %s", cacheDir)
@@ -103,6 +103,7 @@ func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGID, f
 		if err := os.RemoveAll(cacheDir); err != nil {
 			return nil, 0, err
 		}
+		// #nosec: G301 - passwd file should be readable. Shadow permissions are handled separately.
 		if err := os.MkdirAll(cacheDir, 0755); err != nil {
 			return nil, 0, err
 		}
@@ -114,14 +115,14 @@ func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGID, f
 			}
 			_, err = db.Exec(prop.sqlCreate)
 			if err != nil {
-				return nil, 0, fmt.Errorf("failed to create table: %v", err)
+				return nil, 0, fmt.Errorf("failed to create table: %w", err)
 			}
 			db.Close()
 			if err := os.Chown(p, prop.fileOwner, prop.fileGOwner); err != nil {
-				return nil, 0, fmt.Errorf("fixing ownership failed: %v", err)
+				return nil, 0, fmt.Errorf("fixing ownership failed: %w", err)
 			}
 			if err := os.Chmod(p, prop.filePermission); err != nil {
-				return nil, 0, fmt.Errorf("fixing permission failed: %v", err)
+				return nil, 0, fmt.Errorf("fixing permission failed: %w", err)
 			}
 		}
 	}
@@ -163,7 +164,7 @@ func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGID, f
 func (c *Cache) insertUser(ctx context.Context, newUser UserRecord) (err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("failed to insert user %q in local cache: %v", newUser.Name, err)
+			err = fmt.Errorf("failed to insert user %q in local cache: %w", newUser.Name, err)
 		}
 	}()
 	logger.Debug(ctx, "inserting in cache user %q", newUser.Name)
@@ -207,7 +208,7 @@ func (c *Cache) insertUser(ctx context.Context, newUser UserRecord) (err error) 
 func (c *Cache) updateOnlineAuthAndPassword(ctx context.Context, uid int64, username, shadowPasswd string) (err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("failed to update user %q in local cache: %v", username, err)
+			err = fmt.Errorf("failed to update user %q in local cache: %w", username, err)
 		}
 	}()
 	logger.Debug(ctx, "updating from last online login information for user %q", username)
@@ -271,5 +272,5 @@ func cleanUpDB(ctx context.Context, db *sql.DB, offlineCredentialsExpiration tim
 /*func updateUid()   {}
 func updateGid()   {}*/
 // TODO: add user to local groups.
-func updateShell() {}
-func updateHome()  {}
+// func updateShell() {}
+// func updateHome()  {}

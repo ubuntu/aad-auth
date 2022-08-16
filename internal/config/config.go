@@ -40,7 +40,7 @@ func Load(ctx context.Context, p, domain string, opts ...Option) (config AAD, er
 	// adding more info to the error message
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("could not load valid configuration from %s: %v", p, err)
+			err = fmt.Errorf("could not load valid configuration from %s: %w", p, err)
 		}
 	}()
 	logger.Debug(ctx, "Loading configuration from %s", p)
@@ -69,7 +69,7 @@ func Load(ctx context.Context, p, domain string, opts ...Option) (config AAD, er
 
 	cfg, err := ini.Load(p)
 	if err != nil {
-		return AAD{}, fmt.Errorf("could not open file %s: %v", p, err)
+		return AAD{}, fmt.Errorf("could not open file %s: %w", p, err)
 	}
 
 	// Load default section first, and then override with domain specified keys.

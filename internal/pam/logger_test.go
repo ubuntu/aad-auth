@@ -17,8 +17,8 @@ func TestNewLogger(t *testing.T) {
 
 		want string
 	}{
-		"new logger, debug enabled":        {priority: pam.LOG_DEBUG, want: "7: " + pam.DebugWelcome},
-		"new logger, no debug, no message": {priority: pam.LOG_INFO, want: ""},
+		"new logger, debug enabled":        {priority: pam.LogDebug, want: "7: " + pam.DebugWelcome},
+		"new logger, no debug, no message": {priority: pam.LogInfo, want: ""},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -66,9 +66,9 @@ func TestLogging(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			priority := pam.LOG_INFO
+			priority := pam.LogInfo
 			if tc.withDebug {
-				priority = pam.LOG_DEBUG
+				priority = pam.LogDebug
 			}
 
 			tx, err := pamCom.Start("", "", nil)

@@ -30,8 +30,7 @@ func (p Passwd) MarshalYAML() (interface{}, error) {
 // UnmarshalYAML use a public object to Unmarhsal to.
 func (p *Passwd) UnmarshalYAML(value *yaml.Node) error {
 	o := publicPasswd{}
-	err := value.Decode(&o)
-	if err != nil {
+	if err := value.Decode(&o); err != nil {
 		return err
 	}
 

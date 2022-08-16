@@ -22,6 +22,7 @@ var (
 	ErrPamIgnore = errors.New("PAM IGNORE")
 )
 
+// Authenticator is a interface that wraps the Authenticate method.
 type Authenticator interface {
 	Authenticate(ctx context.Context, cfg config.AAD, username, password string) error
 }
@@ -34,7 +35,7 @@ type option struct {
 // Option allows to change Authenticate for mocking in tests.
 type Option func(*option)
 
-// WithAuthenticater overrides the default authenticator.
+// WithAuthenticator overrides the default authenticator.
 func WithAuthenticator(auth Authenticator) Option {
 	return func(o *option) {
 		o.auth = auth

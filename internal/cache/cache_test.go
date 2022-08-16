@@ -58,7 +58,7 @@ func TestNew(t *testing.T) {
 			uid, gid := 4243, 4243
 			// mock current user as having permission to UID/GID
 			if !tc.isNotRootUIDGID {
-				uid, gid = testutils.GetCurrentUidGid(t)
+				uid, gid = testutils.GetCurrentUIDGID(t)
 			}
 
 			shadowGid := 424242
@@ -127,7 +127,7 @@ func TestCloseCacheRetention(t *testing.T) {
 	t.Parallel()
 	cacheDir := t.TempDir()
 
-	uid, gid := testutils.GetCurrentUidGid(t)
+	uid, gid := testutils.GetCurrentUIDGID(t)
 
 	opts := append([]cache.Option{}, cache.WithCacheDir(cacheDir),
 		cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid),
@@ -172,7 +172,7 @@ func TestCloseCacheDifferentOptions(t *testing.T) {
 	t.Parallel()
 	cacheDir1, cacheDir2 := t.TempDir(), t.TempDir()
 
-	uid, gid := testutils.GetCurrentUidGid(t)
+	uid, gid := testutils.GetCurrentUIDGID(t)
 
 	opts := append([]cache.Option{},
 		cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid),
@@ -213,7 +213,7 @@ func TestCleanupDB(t *testing.T) {
 			testutils.CopyDBAndFixPermissions(t, "testdata/db_with_old_users", cacheDir)
 
 			// This triggers a database cleanup if offlineCredentialsExpirationTime is not 0
-			uid, gid := testutils.GetCurrentUidGid(t)
+			uid, gid := testutils.GetCurrentUIDGID(t)
 			opts := append([]cache.Option{}, cache.WithCacheDir(cacheDir),
 				cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid))
 
@@ -278,7 +278,7 @@ func TestUpdate(t *testing.T) {
 
 			// First, try to get  user
 			cacheDir := t.TempDir()
-			c := newCacheForTests(t, cacheDir, true, false)
+			c := newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0))
 
 			if tc.shadowMode != nil {
 				c.SetShadowMode(*tc.shadowMode)
@@ -312,7 +312,7 @@ func TestUpdate(t *testing.T) {
 				// Close and reload a new cache object to ensure we do reload everything from files
 				c.Close(context.Background())
 				c.WaitForCacheClosed()
-				c = newCacheForTests(t, cacheDir, true, false)
+				c = newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0))
 				c.SetShadowMode(*tc.doRefreshWithShadowMode)
 
 				// we need one second as we are storing an unix timestamp for last online auth
@@ -366,7 +366,7 @@ func TestCanAuthenticate(t *testing.T) {
 			var c *cache.Cache
 			if !tc.useoldaccounts {
 				// create cache and users
-				c = newCacheForTests(t, cacheDir, true, false)
+				c = newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0))
 				err := c.Update(context.Background(), "first user", "my password", "/home/%f", "/bin/bash")
 				require.NoError(t, err, "Setup: should be able to create first user")
 				err = c.Update(context.Background(), "second user", "other password", "/home/%f", "/bin/bash")
@@ -374,7 +374,7 @@ func TestCanAuthenticate(t *testing.T) {
 			} else {
 				// copy old database and reopen the cache without cleaning up old account
 				testutils.CopyDBAndFixPermissions(t, "testdata/db_with_old_users", cacheDir)
-				c = newCacheForTests(t, cacheDir, true, true)
+				c = newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
 			}
 
 			if tc.shadowMode != nil {
