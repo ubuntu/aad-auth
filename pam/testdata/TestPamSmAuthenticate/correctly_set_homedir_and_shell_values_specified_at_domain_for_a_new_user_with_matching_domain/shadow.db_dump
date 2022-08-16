@@ -1,0 +1,5 @@
+shadow
+uid,password,last_pwd_change,min_pwd_age,max_pwd_age,pwd_warn_period,pwd_inactivity,expiration_date
+INTEGER,TEXT,INTEGER,INTEGER,INTEGER,INTEGER,INTEGER,INTEGER
+9448096,$2a$10$/YXI.ConQaWkQpBwCnMhgOeNzJ6Zf9g2G3Au4dUtErfmlH34gMk6S,-1,-1,-1,-1,-1,-1
+
