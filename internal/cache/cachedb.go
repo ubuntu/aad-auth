@@ -103,6 +103,7 @@ func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGID, f
 		if err := os.RemoveAll(cacheDir); err != nil {
 			return nil, 0, err
 		}
+		// #nosec: G301 - passwd file should be readable. Shadow permissions are handled separately.
 		if err := os.MkdirAll(cacheDir, 0755); err != nil {
 			return nil, 0, err
 		}
