@@ -36,7 +36,7 @@ type publicClient interface {
 	AcquireTokenByUsernamePassword(ctx context.Context, scopes []string, username string, password string) (public.AuthResult, error)
 }
 
-// AAD holds the authentication mecanism (real or mock).
+// AAD holds the authentication mechanism (real or mock).
 type AAD struct {
 	newPublicClient func(clientID string, options ...public.Option) (publicClient, error)
 }
