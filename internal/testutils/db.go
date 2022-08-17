@@ -89,8 +89,6 @@ func ReadDumpAsString(dumpPath string) (string, error) {
 type Table struct {
 	// Contains the column names
 	Cols []string
-	// Contains the column types as Types[colName]: colType
-	Types map[string]string
 	// Each map represents a row as row[colName]: colData
 	Rows []map[string]string
 }
@@ -135,19 +133,6 @@ func readTableFromBuffer(b *bufio.Reader) (Table, error) {
 	}
 	table.Cols = strings.Split(line[:len(line)-1], ",")
 
-	// Reads column types
-	line, err = b.ReadString('\n')
-	if err != nil {
-		return Table{}, err
-	}
-	line = line[:len(line)-1]
-
-	table.Types = make(map[string]string)
-	for i, t := range strings.Split(line, ",") {
-		table.Types[table.Cols[i]] = t
-	}
-
-	// Reads table data
 	for {
 		line, _ = b.ReadString('\n')
 
@@ -255,32 +240,19 @@ func dumpDataFromTable(db *sql.DB, tableName string, w io.Writer) (err error) {
 	}
 	defer rows.Close()
 
-	ct, err := rows.ColumnTypes()
+	cols, err := rows.Columns()
 	if err != nil {
 		return fmt.Errorf("could not get the db rows: %w", err)
 	}
-	var (
-		colNames []string
-		colTypes []string
-	)
-	for _, c := range ct {
-		colNames = append(colNames, c.Name())
-		colTypes = append(colTypes, c.DatabaseTypeName())
-	}
 
 	// Prints the names of the columns as the first line of the table dump.
-	if _, err = w.Write([]byte(strings.Join(colNames, ",") + "\n")); err != nil {
+	if _, err = w.Write([]byte(strings.Join(cols, ",") + "\n")); err != nil {
 		return fmt.Errorf("could not write columns names: %w", err)
 	}
 
-	// Prints the types of the columns as the second line of the table dump.
-	if _, err = w.Write([]byte(strings.Join(colTypes, ",") + "\n")); err != nil {
-		return fmt.Errorf("could not write columns types: %w", err)
-	}
-
 	// Initializes the structures that will be used for reading the rows values.
-	data := make([]string, len(colNames))
-	ptr := make([]any, len(colNames))
+	data := make([]string, len(cols))
+	ptr := make([]any, len(cols))
 	for i := range data {
 		ptr[i] = &data[i]
 	}

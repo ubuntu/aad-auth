@@ -1,5 +1,4 @@
 shadow
 uid,password,last_pwd_change,min_pwd_age,max_pwd_age,pwd_warn_period,pwd_inactivity,expiration_date
-INTEGER,TEXT,INTEGER,INTEGER,INTEGER,INTEGER,INTEGER,INTEGER
-9448096,$2a$10$MmF9K4C7WG2GdmLXw.tN9e60gezBCVnsSdqYmHNqd7AIhkpiYguvi,-1,-1,-1,-1,-1,-1
+9448096,$2a$10$wC3YdTv3B1nD7ROyf1ySeOuXPtYbGm6UgPUJUx4LN75x7N1b4lgKu,-1,-1,-1,-1,-1,-1
 
