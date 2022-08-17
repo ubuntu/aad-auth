@@ -1,0 +1,4 @@
+shadow
+uid,password,last_pwd_change,min_pwd_age,max_pwd_age,pwd_warn_period,pwd_inactivity,expiration_date
+9448096,$2a$10$wC3YdTv3B1nD7ROyf1ySeOuXPtYbGm6UgPUJUx4LN75x7N1b4lgKu,-1,-1,-1,-1,-1,-1
+
