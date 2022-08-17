@@ -1,15 +1,12 @@
 passwd
 login,password,uid,gid,gecos,home,shell,last_online_auth
-TEXT,TEXT,INTEGER,INTEGER,TEXT,TEXT,TEXT,INTEGER
-success@domain.com,x,9448096,9448096,,/home/domain.com/success,/bin/fish,1660678627
+success@domain.com,x,9448096,9448096,,/home/domain.com/success,/bin/fish,1660747896
 
 groups
 name,password,gid
-TEXT,TEXT,INT
 success@domain.com,x,9448096
 
 uid_gid
 uid,gid
-INT,INT
 9448096,9448096
 
