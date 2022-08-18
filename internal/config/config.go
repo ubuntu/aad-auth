@@ -20,11 +20,21 @@ const (
 
 // AAD represents the configuration values that are used for AAD.
 type AAD struct {
-	TenantID                     string
-	AppID                        string
-	OfflineCredentialsExpiration *int
-	HomeDirPattern               string
-	Shell                        string
+	TenantID                     string `ini:"tenant_id"`
+	AppID                        string `ini:"app_id"`
+	OfflineCredentialsExpiration *int   `ini:"offline_credentials_expiration"`
+	HomeDirPattern               string `ini:"homedir"`
+	Shell                        string `ini:"shell"`
+}
+
+// ToIni reflects the configuration values to an ini.File representation.
+func (a AAD) ToIni() (*ini.File, error) {
+	cfg := ini.Empty()
+	if err := ini.ReflectFrom(cfg, &a); err != nil {
+		return nil, fmt.Errorf("could not reflect configuration to ini.File: %w", err)
+	}
+
+	return cfg, nil
 }
 
 type options struct {
@@ -74,6 +84,7 @@ func Load(ctx context.Context, p, domain string, opts ...Option) (config AAD, er
 	}
 
 	// Load default section first, and then override with domain specified keys.
+	// TODO we could refactor this to use ini map/reflection
 	for _, section := range []string{"", domain} {
 		cfgSection := cfg.Section(section)
 		if tmp := cfgSection.Key("tenant_id").String(); tmp != "" {
@@ -107,6 +118,27 @@ func Load(ctx context.Context, p, domain string, opts ...Option) (config AAD, er
 	}
 
 	return config, nil
+}
+
+// Validate validates a given configuration file.
+func Validate(ctx context.Context, p string) error {
+	cfg, err := ini.Load(p)
+	if err != nil {
+		return err
+	}
+
+	// Config sections are domains, so check them all if present
+	domainsToCheck := []string{""}
+	if len(cfg.Sections()) > 1 {
+		domainsToCheck = cfg.SectionStrings()[1:]
+	}
+
+	for _, domain := range domainsToCheck {
+		if _, err = Load(ctx, p, domain); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // loadDefaultHomeAndShell returns default home and shell patterns for all users.

@@ -26,6 +26,28 @@ type UserRecord struct {
 	ShadowPasswd string
 }
 
+// PasswdQueryAttributes returns a list of attributes that can be queried in the
+// passwd table.
+var PasswdQueryAttributes = []string{
+	"", // all attributes
+	"login",
+	"password",
+	"uid",
+	"gid",
+	"gecos",
+	"home",
+	"shell",
+	"last_online_auth",
+}
+
+// PasswdUpdateAttributes returns a list of attributes that can be modified in
+// the passwd table.
+var PasswdUpdateAttributes = []string{
+	"gecos",
+	"home",
+	"shell",
+}
+
 // GetUserByName returns given user struct by its name.
 // It returns an error if we couldn’t fetch the user (does not exist or not connected).
 // shadowPasswd is populated only if the shadow database is accessible.
@@ -60,6 +82,29 @@ WHERE login = ?
 	}
 
 	return u, nil
+}
+
+// GetAllUserNames returns a list of all user names in the cache.
+// It returns an error if we couldn’t fetch the users.
+func (c *Cache) GetAllUserNames(ctx context.Context) (users []string, err error) {
+	logger.Debug(ctx, "getting all users information from cache")
+
+	rows, err := c.db.Query("SELECT login FROM passwd")
+	if err != nil {
+		return nil, fmt.Errorf("error when getting all users from cache: %w", err)
+	}
+
+	var names []string
+	defer rows.Close()
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, fmt.Errorf("error when getting all users from cache: %w", err)
+		}
+		names = append(names, name)
+	}
+
+	return names, nil
 }
 
 // GetUserByUID returns given user struct by its UID.
@@ -177,4 +222,16 @@ func uidOrGidExists(db *sql.DB, id uint32, username string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+// loginExists checks if username exists in passwd.
+func loginExists(db *sql.DB, login string) (bool, error) {
+	var userExists bool
+
+	row := db.QueryRow("SELECT EXISTS(SELECT 1 FROM passwd where login = ?)", login)
+	if err := row.Scan(&userExists); err != nil {
+		return userExists, fmt.Errorf("failed to check if %q exists: %w", login, err)
+	}
+
+	return userExists, nil
 }

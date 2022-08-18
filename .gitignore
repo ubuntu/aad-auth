@@ -1,3 +1,6 @@
+# Our CLI binary
+/aad-cli
+
 # Binaries for programs and plugins
 *.exe
 *.exe~

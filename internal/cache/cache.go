@@ -72,7 +72,12 @@ type Option func(*options) error
 // WithCacheDir specifies a personalized cache directory.
 func WithCacheDir(p string) func(o *options) error {
 	return func(o *options) error {
-		o.cacheDir = p
+		cacheDir := p
+		// Use default if an empty value is provided.
+		if p == "" {
+			cacheDir = defaultCachePath
+		}
+		o.cacheDir = cacheDir
 		return nil
 	}
 }
