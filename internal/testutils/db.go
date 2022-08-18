@@ -81,7 +81,6 @@ func ReadDumpAsTables(t *testing.T, r io.Reader) (map[string]Table, error) {
 			}
 			table.Rows = append(table.Rows, row)
 		}
-
 		tables[name] = table
 	}
 
@@ -198,4 +197,86 @@ func predicatableFieldValues(name string, data, cols []string) {
 			}
 		}
 	}
+}
+
+// CreateTempTestDBs executes the sql commands specified in sqlPath/dbName.sql and creates dbName.db in a temp dir.
+// If successful, returns the temp dir in which the db files are contained along with a clean up function or an error
+// if anything failed.
+func CreateTempTestDBs(sqlPath string, dbNames []string) (dbDir string, clean func(), err error) {
+
+	dbDir, err = os.MkdirTemp(sqlPath, "test_dbs")
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to create temp dir for storing the db files: %w", err)
+	}
+
+	// Assures that the temp dir will be cleaned if something goes wrong within the function.
+	defer func(dbDir string) {
+		if err != nil {
+			os.RemoveAll(dbDir)
+		}
+	}(dbDir)
+
+	for _, dbName := range dbNames {
+		b, err := os.ReadFile(filepath.Join(sqlPath, dbName+".sql"))
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to read sql file to initialize the database: %w", err)
+		}
+
+		dbPath := filepath.Join(dbDir, dbName+".db")
+		db, err := sql.Open("sqlite3", dbPath)
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to establish connection with database: %w", err)
+		}
+
+		if _, err = db.Exec(string(b)); err != nil {
+			return "", nil, fmt.Errorf("error during execution of sql commands: %w", err)
+		}
+
+		if err = db.Close(); err != nil {
+			return "", nil, fmt.Errorf("failed to close database connection: %w", err)
+		}
+	}
+
+	clean = func() {
+		os.RemoveAll(dbDir)
+	}
+	return dbDir, clean, nil
+}
+
+// LoadDumpIntoDB reads the specified dump file and inserts its contents into the database.
+func LoadDumpIntoDB(t *testing.T, dumpPath, dbPath string) (err error) {
+	t.Helper()
+	dump, err := ReadDumpAsTables(t, dumpPath)
+	if err != nil {
+		return fmt.Errorf("failed to read the dump file: %w", err)
+	}
+
+	db, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return fmt.Errorf("failed to create a connection with the db: %w", err)
+	}
+	defer db.Close()
+
+	for name, table := range dump {
+		st := fmt.Sprintf("INSERT INTO %s VALUES (%s)", name, "%s")
+
+		for _, row := range table.Rows {
+			values := make([]any, len(row))
+			var s string
+			// Looping through the columns to ensure that the values will be ordered as supposed to.
+			for i, col := range table.Cols {
+				values[i] = row[col]
+				s += "?,"
+			}
+
+			// Formats the statement removing the last trailing comma from the values string.
+			rowSt := fmt.Sprintf(st, s[:len(s)-1])
+			_, err = db.Exec(rowSt, values...)
+			if err != nil {
+				return fmt.Errorf("failed to execute statement %s: %w", rowSt, err)
+			}
+		}
+	}
+
+	return nil
 }
