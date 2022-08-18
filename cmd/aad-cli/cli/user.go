@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/ubuntu/aad-auth/internal/cache"
@@ -43,9 +44,9 @@ func (a *App) installUserSet() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := cache.New(
 				a.ctx,
-				cache.WithCacheDir("./nss/testdata/users_in_db"),
-				cache.WithRootUID(1000), cache.WithRootGID(1000), cache.WithShadowGID(1000),
-				cache.WithShadowMode(0644))
+				cache.WithCacheDir(a.options.cacheDir),
+				cache.WithRootUID(a.options.rootUID), cache.WithRootGID(a.options.rootGID), cache.WithShadowGID(a.options.shadowGID),
+				cache.WithShadowMode(a.options.forceShadowMode))
 			if err != nil {
 				return err
 			}
@@ -62,9 +63,9 @@ func (a *App) installUserSet() *cobra.Command {
 
 func (a *App) installUserGet() *cobra.Command {
 	return &cobra.Command{
-		Use:   "get <username> [key]",
+		Use:   "get [username] [key]",
 		Short: "Query local Azure AD user settings",
-		Args:  cobra.RangeArgs(1, 2), // allow querying everything or a specific setting
+		Args:  cobra.MaximumNArgs(2), // allow querying everything or a specific setting
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			switch len(args) {
 			case 0:
@@ -93,19 +94,25 @@ func (a *App) installUserGet() *cobra.Command {
 				return err
 			}
 
-			login = args[0]
-			if len(args) > 1 {
-				key = args[1]
-			}
-
-			// Query entire row if no key is specified
-			if key == "" {
+			switch len(args) {
+			case 0:
+				// Return all user names if no user was specified
+				var users []string
+				users, err = c.GetAllUserNames(a.ctx)
+				value = strings.Join(users, "\n")
+			case 1:
+				// Return all keys for the given user
+				login = args[0]
 				var user cache.UserRecord
 				user, err = c.GetUserByName(a.ctx, login)
 				value = fmt.Sprintf("%+v", user)
-			} else {
+			case 2:
+				// Return the value for the given key
+				login = args[0]
+				key = args[1]
 				value, err = c.QueryUserAttribute(a.ctx, login, key)
 			}
+
 			if err != nil {
 				return err
 			}
