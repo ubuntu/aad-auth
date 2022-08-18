@@ -3,8 +3,11 @@ package cli
 import (
 	"context"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/ubuntu/aad-auth/internal/cache"
 	"github.com/ubuntu/aad-auth/internal/consts"
+	"github.com/ubuntu/aad-auth/internal/logger"
 )
 
 // App encapsulates commands and options of the application.
@@ -12,6 +15,7 @@ type App struct {
 	rootCmd cobra.Command
 	ctx     context.Context
 	domain  string
+	cache   *cache.Cache
 
 	options options
 }
@@ -104,10 +108,18 @@ func New(opts ...option) *App {
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 
+			// Set logger parameters and attach to the context
+			verbosity, _ := cmd.Flags().GetCount("verbose")
+			logger.SetVerboseMode(verbosity)
+			logrus.SetFormatter(&logger.LogrusFormatter{})
+			a.ctx = logger.CtxWithLogger(a.ctx, logger.LogrusLogger{FieldLogger: logrus.StandardLogger()})
+
 			return nil
 		},
 		SilenceErrors: true,
 	}
+
+	a.rootCmd.PersistentFlags().CountP("verbose", "v", "issue INFO (-v), DEBUG (-vv) or DEBUG with caller (-vvv) output")
 
 	a.installUser()
 	a.installConfig()

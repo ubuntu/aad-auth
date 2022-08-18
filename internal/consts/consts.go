@@ -1,6 +1,8 @@
 // Package consts includes important constants used in the project.
 package consts
 
+import log "github.com/sirupsen/logrus"
+
 var (
 	// Version is the version of the executable.
 	Version = "dev"
@@ -12,4 +14,7 @@ const (
 
 	// TEXTDOMAIN is the gettext domain for l10n.
 	TEXTDOMAIN = "aad-auth"
+
+	// DefaultLogLevel is the default logging level when no option is passed.
+	DefaultLogLevel = log.WarnLevel
 )

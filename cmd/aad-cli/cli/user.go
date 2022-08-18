@@ -14,6 +14,19 @@ func (a *App) installUser() {
 		Use:   "user",
 		Short: "Manage local Azure AD user information",
 		Args:  cobra.NoArgs,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			var err error
+			a.cache, err = cache.New(
+				a.ctx,
+				cache.WithCacheDir(a.options.cacheDir),
+				cache.WithRootUID(a.options.rootUID), cache.WithRootGID(a.options.rootGID), cache.WithShadowGID(a.options.shadowGID),
+				cache.WithShadowMode(a.options.forceShadowMode))
+			if err != nil {
+				return err
+			}
+
+			return nil
+		},
 	}
 	cmd.AddCommand(a.installUserSet())
 	cmd.AddCommand(a.installUserGet())
@@ -41,18 +54,12 @@ func (a *App) installUserSet() *cobra.Command {
 			// We already have our 2 args: no more arg completion
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		},
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			return cmd.Parent().PreRunE(cmd, args)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := cache.New(
-				a.ctx,
-				cache.WithCacheDir(a.options.cacheDir),
-				cache.WithRootUID(a.options.rootUID), cache.WithRootGID(a.options.rootGID), cache.WithShadowGID(a.options.shadowGID),
-				cache.WithShadowMode(a.options.forceShadowMode))
-			if err != nil {
-				return err
-			}
-
 			login, key, value := args[0], args[1], args[2]
-			if err = c.UpdateUserAttribute(a.ctx, login, key, value); err != nil {
+			if err := a.cache.UpdateUserAttribute(a.ctx, login, key, value); err != nil {
 				return err
 			}
 
@@ -79,6 +86,9 @@ func (a *App) installUserGet() *cobra.Command {
 			// We already have our 2 args: no more arg completion
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		},
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			return cmd.Parent().PreRunE(cmd, args)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			os.Chmod("./nss/testdata/users_in_db/shadow.db", 0640)
 			os.Chmod("./nss/testdata/users_in_db/passwd.db", 0644)
@@ -86,31 +96,23 @@ func (a *App) installUserGet() *cobra.Command {
 			var err error
 			var login, key, value string
 
-			c, err := cache.New(a.ctx,
-				cache.WithCacheDir(a.options.cacheDir),
-				cache.WithRootUID(a.options.rootUID), cache.WithRootGID(a.options.rootGID), cache.WithShadowGID(a.options.shadowGID),
-				cache.WithShadowMode(a.options.forceShadowMode))
-			if err != nil {
-				return err
-			}
-
 			switch len(args) {
 			case 0:
 				// Return all user names if no user was specified
 				var users []string
-				users, err = c.GetAllUserNames(a.ctx)
+				users, err = a.cache.GetAllUserNames(a.ctx)
 				value = strings.Join(users, "\n")
 			case 1:
 				// Return all keys for the given user
 				login = args[0]
 				var user cache.UserRecord
-				user, err = c.GetUserByName(a.ctx, login)
+				user, err = a.cache.GetUserByName(a.ctx, login)
 				value = fmt.Sprintf("%+v", user)
 			case 2:
 				// Return the value for the given key
 				login = args[0]
 				key = args[1]
-				value, err = c.QueryUserAttribute(a.ctx, login, key)
+				value, err = a.cache.QueryUserAttribute(a.ctx, login, key)
 			}
 
 			if err != nil {
