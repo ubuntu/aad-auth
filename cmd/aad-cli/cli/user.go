@@ -37,7 +37,10 @@ func (a *App) installUserSet() *cobra.Command {
 	return &cobra.Command{
 		Use:   "set <username> <key> <value>",
 		Short: "Configure local Azure AD user settings",
-		Args:  cobra.ExactArgs(3),
+		Long: fmt.Sprintf(`Set a specific key for a user.
+
+Configurable keys are: %s.`, strings.Join(cache.PasswdUpdateAttributes, ", ")),
+		Args: cobra.ExactArgs(3),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			switch len(args) {
 			case 0:
@@ -72,7 +75,13 @@ func (a *App) installUserGet() *cobra.Command {
 	return &cobra.Command{
 		Use:   "get [username] [key]",
 		Short: "Query local Azure AD user settings",
-		Args:  cobra.MaximumNArgs(2), // allow querying everything or a specific setting
+		Long: fmt.Sprintf(`Get user information from the local cache.
+
+If no username is provided, all users are listed.
+If no key is provided, all keys are listed for the given user.
+
+Key must be one of: %s.`, strings.Join(cache.PasswdQueryAttributes, ", ")),
+		Args: cobra.MaximumNArgs(2), // allow querying everything or a specific setting
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			switch len(args) {
 			case 0:
@@ -107,19 +116,30 @@ func (a *App) installUserGet() *cobra.Command {
 				login = args[0]
 				var user cache.UserRecord
 				user, err = a.cache.GetUserByName(a.ctx, login)
-				value = fmt.Sprintf("%+v", user)
+				value, _ = user.IniString()
 			case 2:
 				// Return the value for the given key
 				login = args[0]
 				key = args[1]
-				value, err = a.cache.QueryUserAttribute(a.ctx, login, key)
+
+				if key == "shadow_password" {
+					if !a.cache.ShadowReadable() {
+						return fmt.Errorf("You do not have permission to read the shadow database")
+					}
+					var user cache.UserRecord
+					user, err = a.cache.GetUserByName(a.ctx, login)
+					value = user.ShadowPasswd
+					break
+				}
+
+				value, err = a.cache.QueryPasswdAttribute(a.ctx, login, key)
 			}
 
 			if err != nil {
 				return err
 			}
 
-			fmt.Println(value)
+			fmt.Println(strings.TrimSpace(value))
 			return nil
 		},
 	}

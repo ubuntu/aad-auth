@@ -280,9 +280,9 @@ func (c *Cache) UpdateUserAttribute(ctx context.Context, login, attr string, val
 	return tx.Commit()
 }
 
-// QueryUserAttribute searches the passwd table for the given attribute for a user.
+// QueryPasswdAttribute searches the passwd table for the given attribute for a user.
 // If no attribute is provided, the entire row is returned.
-func (c *Cache) QueryUserAttribute(ctx context.Context, login, attr string) (value string, err error) {
+func (c *Cache) QueryPasswdAttribute(ctx context.Context, login, attr string) (value string, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("could not query %s for %s: %w", attr, login, err)

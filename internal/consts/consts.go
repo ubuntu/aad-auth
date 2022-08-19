@@ -17,4 +17,7 @@ const (
 
 	// DefaultLogLevel is the default logging level when no option is passed.
 	DefaultLogLevel = log.WarnLevel
+
+	// DefaultEditor is the default editor to use when no option is passed.
+	DefaultEditor = "nano"
 )

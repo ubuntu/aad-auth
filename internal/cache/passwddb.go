@@ -1,35 +1,50 @@
 package cache
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"time"
 
+	"github.com/go-ini/ini"
 	"github.com/ubuntu/aad-auth/internal/i18n"
 	"github.com/ubuntu/aad-auth/internal/logger"
 )
 
 // UserRecord returns a user record from the cache.
 type UserRecord struct {
-	Name           string
-	Passwd         string
-	UID            int64
-	GID            int64
-	Gecos          string
-	Home           string
-	Shell          string
-	LastOnlineAuth time.Time
+	Name           string    `ini:"login"`
+	Passwd         string    `ini:"password"`
+	UID            int64     `ini:"uid"`
+	GID            int64     `ini:"gid"`
+	Gecos          string    `ini:"gecos"`
+	Home           string    `ini:"home"`
+	Shell          string    `ini:"shell"`
+	LastOnlineAuth time.Time `ini:"last_online_auth"`
 
 	// if shadow is opened
-	ShadowPasswd string
+	ShadowPasswd string `ini:"shadow_password"`
+}
+
+// IniString returns an ini representation of the user record as a string.
+func (u UserRecord) IniString() (string, error) {
+	buf := new(bytes.Buffer)
+	out := ini.Empty(ini.LoadOptions{})
+	if err := ini.ReflectFrom(out, &u); err != nil {
+		return "", err
+	}
+	if _, err := out.WriteTo(buf); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
 
 // PasswdQueryAttributes returns a list of attributes that can be queried in the
 // passwd table.
 var PasswdQueryAttributes = []string{
-	"", // all attributes
 	"login",
 	"password",
 	"uid",
@@ -38,6 +53,7 @@ var PasswdQueryAttributes = []string{
 	"home",
 	"shell",
 	"last_online_auth",
+	"shadow_password",
 }
 
 // PasswdUpdateAttributes returns a list of attributes that can be modified in

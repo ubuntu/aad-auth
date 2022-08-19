@@ -13,6 +13,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/ubuntu/aad-auth/internal/config"
+	"github.com/ubuntu/aad-auth/internal/consts"
 )
 
 func (a *App) installConfig() {
@@ -98,7 +99,7 @@ func tempFileWithPreviousConfig(configFile string) (string, error) {
 		if errors.Is(err, fs.ErrNotExist) {
 			return tempfile.Name(), nil
 		}
-		return "", fmt.Errorf("failed to open previous config file: %w", err)
+		return "", fmt.Errorf("could not open previous config file for writing: %w", err)
 	}
 	defer config.Close()
 
@@ -108,6 +109,9 @@ func tempFileWithPreviousConfig(configFile string) (string, error) {
 	return tempfile.Name(), nil
 }
 
+// getDefaultDomain returns the default domain to use when parsing the config
+// file, inferred from the current username.
+// If no domain is found, an empty string is returned.
 func getDefaultDomain() string {
 	u, err := user.Current()
 	if err != nil {
@@ -118,11 +122,13 @@ func getDefaultDomain() string {
 	return domain
 }
 
+// getDefaultEditor returns the default editor to use when editing the config file.
+// It can be overridden by the user via the EDITOR env var.
 func getDefaultEditor() string {
 	if editor := os.Getenv("EDITOR"); editor != "" {
 		return editor
 	}
-	return "nano"
+	return consts.DefaultEditor
 }
 
 func printConfig(ctx context.Context, path, domain string) error {
@@ -146,7 +152,7 @@ func printConfig(ctx context.Context, path, domain string) error {
 		return fmt.Errorf("could not write config to buffer: %w", err)
 	}
 	fmt.Println("[" + domainSection + "]")
-	fmt.Println(buf.String())
+	fmt.Print(buf.String())
 
 	return nil
 }

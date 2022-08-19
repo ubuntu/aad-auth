@@ -64,7 +64,8 @@ func (f *LogrusFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 
 	if logrus.StandardLogger().ReportCaller {
 		// We have to go up the stack to get the actual function name.
-		pc, _, line, ok := runtime.Caller(8)
+		// Maybe not the best way, but this gets us out of logrus land.
+		pc, _, line, ok := runtime.Caller(9)
 		caller := runtime.FuncForPC(pc)
 
 		if ok {
