@@ -22,9 +22,10 @@ type App struct {
 
 // options are the configurable functional options of the application.
 type options struct {
-	editor     string
-	cacheDir   string
-	configFile string
+	editor       string
+	cacheDir     string
+	configFile   string
+	dpkgQueryCmd string
 
 	rootUID         int
 	rootGID         int
@@ -32,6 +33,14 @@ type options struct {
 	forceShadowMode int
 }
 type option func(*options)
+
+// WithDpkgQueryCmd specifies a custom dpkg-query command to use for the user command.
+// This is only used in tests.
+func WithDpkgQueryCmd(p string) func(o *options) {
+	return func(o *options) {
+		o.dpkgQueryCmd = p
+	}
+}
 
 // WithCacheDir specifies a personalized cache directory where databases are located.
 // Useful in tests for overriding the default location.
@@ -88,8 +97,9 @@ func WithShadowMode(p int) func(o *options) {
 func New(opts ...option) *App {
 	// Apply given options.
 	args := options{
-		editor:     getDefaultEditor(),
-		configFile: consts.DefaultConfigPath,
+		editor:       getDefaultEditor(),
+		configFile:   consts.DefaultConfigPath,
+		dpkgQueryCmd: "dpkg-query",
 
 		shadowGID:       -1,
 		forceShadowMode: -1,
@@ -144,7 +154,7 @@ func (a App) UsageError() bool {
 }
 
 // SetArgs changes the root command args. Shouldn't be in general necessary apart for integration tests.
-func (a *App) SetArgs(args []string, conf string) {
+func (a *App) SetArgs(args []string) {
 	a.rootCmd.SetArgs(args)
 }
 
