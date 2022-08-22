@@ -1,0 +1,9 @@
+name: myuser@domain.com
+passwd: x
+uid: 1929326240
+gid: 1929326240
+gecos: ""
+home: /home/myuser@domain.com
+shell: newvalue
+lastonlineauth: 2022-07-29T13:15:21+03:00
+shadowpasswd: $2a$10$R4ieqs.yZJuN1MSp2xhevemo5XnGK5oZ/RnMgWM67cpC3I10no97q

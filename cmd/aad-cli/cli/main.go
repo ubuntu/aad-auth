@@ -23,14 +23,9 @@ type App struct {
 // options are the configurable functional options of the application.
 type options struct {
 	editor       string
-	cacheDir     string
 	configFile   string
 	dpkgQueryCmd string
-
-	rootUID         int
-	rootGID         int
-	shadowGID       int
-	forceShadowMode int
+	cache        *cache.Cache
 }
 type option func(*options)
 
@@ -42,11 +37,11 @@ func WithDpkgQueryCmd(p string) func(o *options) {
 	}
 }
 
-// WithCacheDir specifies a personalized cache directory where databases are located.
-// Useful in tests for overriding the default location.
-func WithCacheDir(p string) func(o *options) {
+// WithCache specifies a personalized cache object to use for the app.
+// Useful in tests for overriding the default cache.
+func WithCache(c *cache.Cache) func(o *options) {
 	return func(o *options) {
-		o.cacheDir = p
+		o.cache = c
 	}
 }
 
@@ -65,34 +60,6 @@ func WithConfigFile(p string) func(o *options) {
 	}
 }
 
-// WithRootUID specifies a custom root UID to use for the user command.
-func WithRootUID(p int) func(o *options) {
-	return func(o *options) {
-		o.rootUID = p
-	}
-}
-
-// WithRootGID specifies a custom root GID to use for the user command.
-func WithRootGID(p int) func(o *options) {
-	return func(o *options) {
-		o.rootGID = p
-	}
-}
-
-// WithShadowGID specifies a custom shadow GID to use for the user command.
-func WithShadowGID(p int) func(o *options) {
-	return func(o *options) {
-		o.shadowGID = p
-	}
-}
-
-// WithShadowMode specifies a custom shadow mode to use for the user command.
-func WithShadowMode(p int) func(o *options) {
-	return func(o *options) {
-		o.forceShadowMode = p
-	}
-}
-
 // New registers commands and returns a new App.
 func New(opts ...option) *App {
 	// Apply given options.
@@ -100,9 +67,6 @@ func New(opts ...option) *App {
 		editor:       getDefaultEditor(),
 		configFile:   consts.DefaultConfigPath,
 		dpkgQueryCmd: "dpkg-query",
-
-		shadowGID:       -1,
-		forceShadowMode: -1,
 	}
 
 	for _, o := range opts {

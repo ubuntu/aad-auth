@@ -16,11 +16,7 @@ func (a *App) installUser() {
 		Args:  cobra.NoArgs,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			var err error
-			a.cache, err = cache.New(
-				a.ctx,
-				cache.WithCacheDir(a.options.cacheDir),
-				cache.WithRootUID(a.options.rootUID), cache.WithRootGID(a.options.rootGID), cache.WithShadowGID(a.options.shadowGID),
-				cache.WithShadowMode(a.options.forceShadowMode))
+			a.cache, err = a.fetchCache()
 			if err != nil {
 				return err
 			}
@@ -146,11 +142,7 @@ Key must be one of: %s.`, strings.Join(cache.PasswdQueryAttributes, ", ")),
 }
 
 func (a App) completeWithAvailableUsers() ([]string, cobra.ShellCompDirective) {
-	c, err := cache.New(
-		a.ctx,
-		cache.WithCacheDir(a.options.cacheDir),
-		cache.WithRootUID(a.options.rootUID), cache.WithRootGID(a.options.rootGID), cache.WithShadowGID(a.options.shadowGID),
-		cache.WithShadowMode(a.options.forceShadowMode))
+	c, err := a.fetchCache()
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
@@ -162,4 +154,12 @@ func (a App) completeWithAvailableUsers() ([]string, cobra.ShellCompDirective) {
 	}
 
 	return users, cobra.ShellCompDirectiveNoFileComp
+}
+
+func (a *App) fetchCache() (*cache.Cache, error) {
+	if a.options.cache != nil {
+		return a.options.cache, nil
+	}
+
+	return cache.New(a.ctx)
 }
