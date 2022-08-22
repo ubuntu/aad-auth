@@ -131,6 +131,8 @@ func getDefaultEditor() string {
 	return consts.DefaultEditor
 }
 
+// printConfig prints the current configuration from the passed domain in the
+// ini format.
 func printConfig(ctx context.Context, path, domain string) error {
 	config, err := config.Load(ctx, path, domain)
 	if err != nil {

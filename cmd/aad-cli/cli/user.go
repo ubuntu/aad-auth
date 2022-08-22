@@ -141,6 +141,7 @@ Key must be one of: %s.`, strings.Join(cache.PasswdQueryAttributes, ", ")),
 	}
 }
 
+// completeWithAvailableUsers returns a list of users available in the local cache.
 func (a App) completeWithAvailableUsers() ([]string, cobra.ShellCompDirective) {
 	c, err := a.fetchCache()
 	if err != nil {
@@ -156,6 +157,8 @@ func (a App) completeWithAvailableUsers() ([]string, cobra.ShellCompDirective) {
 	return users, cobra.ShellCompDirectiveNoFileComp
 }
 
+// fetchCache returns the cache, either from the options field if overridden or
+// a newly created one.
 func (a *App) fetchCache() (*cache.Cache, error) {
 	if a.options.cache != nil {
 		return a.options.cache, nil
