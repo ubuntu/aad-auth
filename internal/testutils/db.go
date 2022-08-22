@@ -199,48 +199,36 @@ func predicatableFieldValues(name string, data, cols []string) {
 	}
 }
 
-// CreateTempTestDBs executes the sql commands specified in sqlPath/dbName.sql and creates dbName.db in a temp dir.
+// DbStruct represents the values required for the creation of a database.
+type DbStruct struct {
+	Name string
+	SQL  string
+}
+
+// CreateTempTestDBs iterates through the slice of DbCreation and creates the specified databases in a temporary directory.
 // If successful, returns the temp dir in which the db files are contained along with a clean up function or an error
 // if anything failed.
-func CreateTempTestDBs(sqlPath string, dbNames []string) (dbDir string, clean func(), err error) {
+func CreateTempTestDBs(t *testing.T, dbs []DbStruct) (dbDir string, err error) {
+	t.Helper()
 
-	dbDir, err = os.MkdirTemp(sqlPath, "test_dbs")
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to create temp dir for storing the db files: %w", err)
-	}
-
-	// Assures that the temp dir will be cleaned if something goes wrong within the function.
-	defer func(dbDir string) {
+	dbDir = t.TempDir()
+	for _, dbStruct := range dbs {
+		p := filepath.Join(dbDir, dbStruct.Name)
+		db, err := sql.Open("sqlite3", p)
 		if err != nil {
-			os.RemoveAll(dbDir)
-		}
-	}(dbDir)
-
-	for _, dbName := range dbNames {
-		b, err := os.ReadFile(filepath.Join(sqlPath, dbName+".sql"))
-		if err != nil {
-			return "", nil, fmt.Errorf("failed to read sql file to initialize the database: %w", err)
+			return "", fmt.Errorf("failed to establish connection with database: %w", err)
 		}
 
-		dbPath := filepath.Join(dbDir, dbName+".db")
-		db, err := sql.Open("sqlite3", dbPath)
-		if err != nil {
-			return "", nil, fmt.Errorf("failed to establish connection with database: %w", err)
-		}
-
-		if _, err = db.Exec(string(b)); err != nil {
-			return "", nil, fmt.Errorf("error during execution of sql commands: %w", err)
+		if _, err = db.Exec(dbStruct.SQL); err != nil {
+			return "", fmt.Errorf("error during execution of sql commands: %w", err)
 		}
 
 		if err = db.Close(); err != nil {
-			return "", nil, fmt.Errorf("failed to close database connection: %w", err)
+			return "", fmt.Errorf("failed to close database connection: %w", err)
 		}
 	}
 
-	clean = func() {
-		os.RemoveAll(dbDir)
-	}
-	return dbDir, clean, nil
+	return dbDir, nil
 }
 
 // LoadDumpIntoDB reads the specified dump file and inserts its contents into the database.

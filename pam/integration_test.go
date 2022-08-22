@@ -88,8 +88,28 @@ func TestPamSmAuthenticate(t *testing.T) {
 
 			cacheDir := filepath.Join(tmp, "cache")
 
+			dbs := []string{"passwd.db", "shadow.db"}
+
 			if tc.initialCache != "" {
-				testutils.CopyDBAndFixPermissions(t, filepath.Join("testdata", tc.initialCache), cacheDir)
+
+				dbsSQL := make([]testutils.DbStruct, 0, len(dbs))
+				for _, db := range dbs {
+					b, err := os.ReadFile(filepath.Join("testdata", "dbs", db[:len(db)-3]+".sql"))
+					require.NoError(t, err, "SQL file for %s must be read successfuly", db)
+
+					dbsSQL = append(dbsSQL, testutils.DbStruct{
+						Name: db,
+						SQL:  string(b),
+					})
+				}
+
+				dir, err := testutils.CreateTempTestDBs(t, dbsSQL)
+				require.NoError(t, err, "failed to init test dbs")
+
+				for _, db := range dbs {
+					testutils.LoadDumpIntoDB(t, filepath.Join("testdata", tc.initialCache, db+"_dump"), filepath.Join(dir, db))
+				}
+				testutils.CopyDBAndFixPermissions(t, dir, cacheDir)
 			}
 
 			// pam service configuration
