@@ -43,7 +43,7 @@ func TestUserShellCompletion(t *testing.T) {
 			require.NoError(t, err, "failed to create cache")
 
 			c := cli.New(cli.WithCache(cache))
-			got, err := runApp(t, c, args...)
+			got, err := testutils.RunApp(t, c, args...)
 			require.NoError(t, err, "failed to run completion")
 
 			want := testutils.SaveAndLoadFromGolden(t, got)
@@ -102,7 +102,7 @@ func TestUserGet(t *testing.T) {
 			require.NoError(t, err, "failed to create cache")
 			c := cli.New(cli.WithCache(cache))
 
-			got, err := runApp(t, c, args...)
+			got, err := testutils.RunApp(t, c, args...)
 			if tc.wantErr {
 				require.Error(t, err, "expected command to return an error")
 				return
@@ -149,7 +149,7 @@ func TestUserSet(t *testing.T) {
 
 			c := cli.New(cli.WithCache(cache))
 
-			_, err = runApp(t, c, args...)
+			_, err = testutils.RunApp(t, c, args...)
 			if tc.wantErr {
 				require.Error(t, err, "expected command to return an error")
 				return

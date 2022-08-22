@@ -46,7 +46,7 @@ func TestConfigPrint(t *testing.T) {
 			}
 
 			c := cli.New(cli.WithConfigFile(tc.configFile))
-			got, err := runApp(t, c, cmdArgs...)
+			got, err := testutils.RunApp(t, c, cmdArgs...)
 
 			if tc.wantErr {
 				require.Error(t, err, "expected command to return an error")
@@ -95,7 +95,7 @@ func TestConfigEdit(t *testing.T) {
 			editorMock := newEditorMock(t, tc.configFile, tc.newConfig, tc.wantEditorErr)
 
 			c := cli.New(cli.WithConfigFile(tc.configFile), cli.WithEditor(editorMock))
-			got, err := runApp(t, c, "config", "edit")
+			got, err := testutils.RunApp(t, c, "config", "edit")
 
 			tempConfigPath := tempConfigPathFromOutput(t, got)
 			if tc.wantErr {

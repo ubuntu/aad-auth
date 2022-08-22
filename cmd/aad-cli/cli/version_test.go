@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"testing"
 
@@ -28,7 +27,7 @@ func TestVersion(t *testing.T) {
 			mockCmd := newQueryMockCmd(t, tc.installedPkgs)
 
 			c := cli.New(cli.WithDpkgQueryCmd(mockCmd))
-			got, err := runApp(t, c, "version")
+			got, err := testutils.RunApp(t, c, "version")
 			require.NoError(t, err, "Version should not fail")
 
 			want := testutils.SaveAndLoadFromGolden(t, got)
@@ -65,48 +64,6 @@ for pkgname; do :; done
 	require.NoError(t, err, "failed to write temporary file")
 
 	return tmpfile.Name()
-}
-
-// runApp instantiates the CLI tool with the given args.
-// It returns the stdout content and error from client.
-func runApp(t *testing.T, c *cli.App, args ...string) (stdout string, err error) {
-	t.Helper()
-
-	changeAppArgs(t, c, args...)
-
-	// capture stdout
-	r, w, err := os.Pipe()
-	require.NoError(t, err, "Setup: pipe shouldn’t fail")
-	orig := os.Stdout
-	os.Stdout = w
-
-	err = c.Run()
-
-	// restore and collect
-	os.Stdout = orig
-	w.Close()
-	var out bytes.Buffer
-	_, errCopy := io.Copy(&out, r)
-	require.NoError(t, errCopy, "Couldn’t copy stdout to buffer")
-
-	return out.String(), err
-}
-
-type setterArgs interface {
-	SetArgs([]string)
-}
-
-// changeAppArgs modifies the application Args for cobra to parse them successfully.
-// Do not share the daemon or client passed to it, as cobra store it globally.
-func changeAppArgs(t *testing.T, s setterArgs, args ...string) {
-	t.Helper()
-
-	newArgs := []string{"-vv"}
-	if args != nil {
-		newArgs = append(newArgs, args...)
-	}
-
-	s.SetArgs(newArgs)
 }
 
 func TestMain(m *testing.M) {
