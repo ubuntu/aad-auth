@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/go-ini/ini"
@@ -35,6 +36,9 @@ func (u UserRecord) IniString() (string, error) {
 	if err := ini.ReflectFrom(out, &u); err != nil {
 		return "", err
 	}
+
+	// Store this as unix timestamp to avoid any timezone issues
+	out.Section(ini.DefaultSection).Key("last_online_auth").SetValue(strconv.FormatInt(u.LastOnlineAuth.Unix(), 10))
 	if _, err := out.WriteTo(buf); err != nil {
 		return "", err
 	}

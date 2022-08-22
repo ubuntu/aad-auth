@@ -159,8 +159,14 @@ func TestUserSet(t *testing.T) {
 			got, err := cache.GetUserByName(context.Background(), tc.username)
 			require.NoError(t, err, "failed to get user from cache")
 
-			want := testutils.SaveAndLoadYAMLFromGolden(t, got)
-			require.Equal(t, want, got, "should have updated user in cache")
+			switch tc.attribute {
+			case "gecos":
+				require.Equal(t, "newvalue", got.Gecos)
+			case "home":
+				require.Equal(t, "newvalue", got.Home)
+			case "shell":
+				require.Equal(t, "newvalue", got.Shell)
+			}
 		})
 	}
 }
