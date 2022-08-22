@@ -13,53 +13,23 @@ import (
 	// register sqlite3 as our database driver.
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/ubuntu/aad-auth/internal/logger"
+
+	// needed to embed the sql files for the creation of the cache db
+	_ "embed"
 )
 
 const (
 	defaultCachePath = "/var/lib/aad/cache"
 	passwdDB         = "passwd.db" // root:root 644
 	shadowDB         = "shadow.db" // root:shadow 640
+)
 
-	sqlCreatePasswdTables = `
-CREATE TABLE IF NOT EXISTS passwd (
-	login				TEXT NOT NULL UNIQUE,
-	password			TEXT DEFAULT 'x',
-	uid					INTEGER	NOT NULL UNIQUE,
-	gid					INTEGER NOT NULL,
-	gecos				TEXT DEFAULT "",
-	home				TEXT DEFAULT "",
-	shell				TEXT DEFAULT "/bin/bash",
-	last_online_auth 	INTEGER,	-- Last time user has been authenticated against a server
-	PRIMARY KEY("uid")
-);
-CREATE UNIQUE INDEX idx_login ON passwd ("login");
+var (
+	//go:embed db/passwd.sql
+	sqlCreatePasswdTables string
 
-CREATE TABLE IF NOT EXISTS groups (
-	name		TEXT NOT NULL UNIQUE,
-	password	TEXT DEFAULT 'x',
-	gid			INT NOT NULL UNIQUE,
-	PRIMARY KEY("gid")
-);
-CREATE UNIQUE INDEX "idx_group_name" ON groups ("name");
-
-CREATE TABLE IF NOT EXISTS uid_gid (
-	uid	INT NOT NULL,
-	gid INT NOT NULL,
-	PRIMARY KEY("uid", "gid")
-);
-`
-
-	sqlCreateShadowTables = `CREATE TABLE IF NOT EXISTS shadow (
-	uid             INTEGER NOT NULL UNIQUE,
-	password        TEXT    NOT NULL,
-	last_pwd_change	INTEGER NOT NULL DEFAULT -1,  -- -1 = Empty value: It disables the functionality, 0 change password on next login
-	min_pwd_age     INTEGER NOT NULL DEFAULT -1,  -- 0 no minimum age
-	max_pwd_age     INTEGER NOT NULL DEFAULT -1,  -- NULL disabled
-	pwd_warn_period	INTEGER NOT NULL DEFAULT -1,
-	pwd_inactivity	INTEGER NOT NULL DEFAULT -1,
-	expiration_date	INTEGER NOT NULL DEFAULT -1,
-	PRIMARY KEY("uid")
-);`
+	//go:embed db/shadow.sql
+	sqlCreateShadowTables string
 )
 
 type rowScanner interface {
