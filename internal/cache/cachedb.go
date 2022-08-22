@@ -3,6 +3,8 @@ package cache
 import (
 	"context"
 	"database/sql"
+	// needed to embed the sql files for the creation of the cache db.
+	_ "embed"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -13,9 +15,6 @@ import (
 	// register sqlite3 as our database driver.
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/ubuntu/aad-auth/internal/logger"
-
-	// needed to embed the sql files for the creation of the cache db
-	_ "embed"
 )
 
 const (

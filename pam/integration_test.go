@@ -91,11 +91,10 @@ func TestPamSmAuthenticate(t *testing.T) {
 			dbs := []string{"passwd.db", "shadow.db"}
 
 			if tc.initialCache != "" {
-
 				dbsSQL := make([]testutils.DbStruct, 0, len(dbs))
 				for _, db := range dbs {
 					b, err := os.ReadFile(filepath.Join("testdata", "dbs", db[:len(db)-3]+".sql"))
-					require.NoError(t, err, "SQL file for %s must be read successfuly", db)
+					require.NoError(t, err, "SQL file for %s must be read successfully", db)
 
 					dbsSQL = append(dbsSQL, testutils.DbStruct{
 						Name: db,
@@ -107,7 +106,8 @@ func TestPamSmAuthenticate(t *testing.T) {
 				require.NoError(t, err, "failed to init test dbs")
 
 				for _, db := range dbs {
-					testutils.LoadDumpIntoDB(t, filepath.Join("testdata", tc.initialCache, db+"_dump"), filepath.Join(dir, db))
+					err = testutils.LoadDumpIntoDB(t, filepath.Join("testdata", tc.initialCache, db+"_dump"), filepath.Join(dir, db))
+					require.NoError(t, err, "The content of the dump file must be read into the database.")
 				}
 				testutils.CopyDBAndFixPermissions(t, dir, cacheDir)
 			}
