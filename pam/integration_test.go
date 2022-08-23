@@ -28,6 +28,7 @@ func TestPamSmAuthenticate(t *testing.T) {
 		conf                string
 		initialCache        string
 		wrongCacheOwnership bool
+		offline             bool
 
 		wantErr bool
 	}{
@@ -39,25 +40,22 @@ func TestPamSmAuthenticate(t *testing.T) {
 		"correctly set homedir and shell values specified at domain for a new user with matching domain": {conf: "aad-with-homedir-and-shell-domain.conf"},
 
 		// offline cases
-		"offline, connect existing user from cache":                                     {conf: "forceoffline.conf", initialCache: "db_with_old_users", username: "futureuser@domain.com"},
-		"homedir and shell values should not change for user that was already on cache": {conf: "forceoffline-with-homedir-and-shell.conf", initialCache: "db_with_old_users", username: "futureuser@domain.com"},
+		"offline, connect existing user from cache":                                     {conf: "forceoffline.conf", offline: true, initialCache: "db_with_old_users", username: "futureuser@domain.com"},
+		"homedir and shell values should not change for user that was already on cache": {conf: "forceoffline-with-homedir-and-shell.conf", offline: true, initialCache: "db_with_old_users", username: "futureuser@domain.com"},
 
 		// special cases
-		"authenticate successfully with unmatched case (online)": {username: "Success@Domain.COM"},
-		// TODO: Remove matching-domain.conf and replace
-		// I think this should be one file (with-domain.conf) and the input of the test should select the matching and mismatching domains.
-		// -> I think we can change the mock if the need for @domain.com is annoying.
-		"authenticate successfully on config with values only in matching domain": {conf: "matching-domain.conf"},
+		"authenticate successfully with unmatched case (online)":                  {username: "Success@Domain.COM"},
+		"authenticate successfully on config with values only in matching domain": {conf: "with-domain.conf"},
 
 		// error cases
 		"error on invalid conf":                                 {conf: "invalid-aad.conf", wantErr: true},
 		"error on unexisting conf":                              {conf: "doesnotexist.conf", wantErr: true},
 		"error on unexisting users":                             {username: "no such user", wantErr: true},
 		"error on invalid password":                             {username: "invalid credentials", wantErr: true},
-		"error on config values only in mismatching domain":     {conf: "mismatching-domain.conf", wantErr: true},
-		"error on offline with user online user not in cache":   {conf: "forceoffline.conf", initialCache: "db_with_old_users", wantErr: true},
-		"error on offline with purged user accoauthenticateunt": {username: "veryolduser@domain.com", initialCache: "db_with_old_users", wantErr: true},
-		"error on offline with unpurged old user account":       {conf: "forceoffline-expire-right-away.conf", initialCache: "db_with_old_users", username: "veryolduser@domain.com", wantErr: true},
+		"error on config values only in mismatching domain":     {username: "success@otherdomain.com", conf: "with-domain.conf", wantErr: true},
+		"error on offline with user online user not in cache":   {conf: "forceoffline.conf", offline: true, initialCache: "db_with_old_users", wantErr: true},
+		"error on offline with purged user accoauthenticateunt": {username: "veryolduser@domain.com", offline: true, initialCache: "db_with_old_users", wantErr: true},
+		"error on offline with unpurged old user account":       {conf: "forceoffline-expire-right-away.conf", offline: true, initialCache: "db_with_old_users", username: "veryolduser@domain.com", wantErr: true},
 		"error on server error":                                 {username: "unreadable server response", wantErr: true},
 		"error on cache can't be created/opened":                {wrongCacheOwnership: true, wantErr: true},
 	}
@@ -103,6 +101,7 @@ func TestPamSmAuthenticate(t *testing.T) {
 			require.NoError(t, err, "Setup: could not create pam stack config file")
 
 			// pam communication
+			start := time.Now().Unix()
 			tx, err := pamCom.StartFunc("aadtest", "", func(s pamCom.Style, msg string) (string, error) {
 				switch s {
 				case pamCom.PromptEchoOn:
@@ -122,20 +121,41 @@ func TestPamSmAuthenticate(t *testing.T) {
 				return
 			}
 			require.NoError(t, err, "Authenticate should succeed")
+			end := time.Now().Unix()
 
-			dbs := []string{"passwd", "shadow"}
+			// Verifies the db permissions
+			f, err := os.Stat(filepath.Join(cacheDir, "passwd.db"))
+			require.NoError(t, err, "Passwd.db stats must be evaluated")
+			// Permission for passwd.db should be 644
+			require.Equal(t, "-rw-r--r--", f.Mode().String(), "Passwd does not have the expected permissions (644)")
+			f, err = os.Stat(filepath.Join(cacheDir, "shadow.db"))
+			require.NoError(t, err, "Shadow.db stats must be evaluated")
+			// Permission for shadow.db should be 640
+			require.Equal(t, "-rw-r-----", f.Mode().String(), "Shadow does not have the expected permissions (640)")
+
+			dbs := []string{"passwd.db", "shadow.db"}
 			// Store the dumps after the authentication
 			for _, db := range dbs {
-				testutils.SaveAndUpdateDump(t, filepath.Join(cacheDir, db+".db"))
+				testutils.SaveAndUpdateDump(t, filepath.Join(cacheDir, db))
 			}
 
-			// Compare the dumps
+			// Save and compare the dumps
 			for _, db := range dbs {
-				requireEqualDumps(t, filepath.Join("testdata", t.Name(), db+".db.dump"), filepath.Join(cacheDir, db+".db.dump"))
-			}
+				// Handles comparison for online test cases
+				if !tc.offline {
+					requireEqualDumps(t, filepath.Join("testdata", t.Name(), db+".dump"), filepath.Join(cacheDir, db+".dump"), start, end)
+					continue
+				}
 
-			// TODO: Ensure the dbs have the right permissions.
-			// The integration tests should check the permissions of the files passwd/shadow
+				// Handles comparison for offline test cases
+				want, err := os.ReadFile(filepath.Join("testdata", t.Name(), db+".dump"))
+				require.NoError(t, err, "want %s dump must be read", db)
+
+				got, err := os.ReadFile(filepath.Join(cacheDir, db+".dump"))
+				require.NoError(t, err, "got %s dump must be read", db)
+
+				require.Equal(t, want, got, "Dumps must match")
+			}
 		})
 	}
 }
@@ -173,7 +193,7 @@ func createTempDir() (tmp string, cleanup func(), err error) {
 	}, nil
 }
 
-func requireEqualDumps(t *testing.T, wantPath, gotPath string) {
+func requireEqualDumps(t *testing.T, wantPath, gotPath string, start, end int64) {
 	t.Helper()
 
 	want, err := testutils.ReadDumpAsTables(t, wantPath)
@@ -194,25 +214,19 @@ func requireEqualDumps(t *testing.T, wantPath, gotPath string) {
 				gotData := gotRow[colName]
 				require.NotNil(t, gotData, "Got must have the wanted row content")
 
-				// Handles comparison of special columns
+				// Handles comparison of the columns.
 				switch colName {
-				// last_online_auth is updated everytime a user logs in, so comparison should be done with the current time
-				// TODO: special case the last online auth when saving it to a well known time at write time.
-
-				// TODO: start, end, compare that the field is between start and end.
+				// last_online_auth is updated everytime a user logs in (online).
+				// Comparion must be done with the time of the test, rather than with the golden dump.
 				case "last_online_auth":
 					n, _ := strconv.ParseInt(gotData, 10, 64)
-					timeElapsed := time.Now().Unix() - n
-					require.LessOrEqual(t, timeElapsed, int64(60), "Difference must be less than or equal to 60 (sec)")
+					// True if the time of last authentication is between the start and the end of the test.
+					x := (start <= n) && (n <= end)
+					require.True(t, x, "Time %s (%d) must be between start (%d) and end (%d)", gotData, n, start, end)
 
-				// Passwords in shadow.db are rehashed when a user logins in. How to compare them?
-				// TODO: special case password at writing time, replace it with something like HASHED_PASSWORD
-				case "password":
-					continue
-
-				// Handles comparison for most columns
+				// Handles comparison for most columns.
 				default:
-					require.Equal(t, wantData, gotData, "Contents of col %s from %s should be the same", colName, tableName)
+					require.Equal(t, wantData, gotData, "Contents of col %s from %s must be the same", colName, tableName)
 				}
 			}
 		}
