@@ -47,7 +47,7 @@ func SaveAndUpdateDump(t *testing.T, dbPath string, opts ...OptionDB) {
 		require.NoError(t, err, "could not create file to dump the db")
 		defer f.Close()
 
-		err = dumpDb(dbPath, f)
+		err = dumpDb(t, dbPath, f)
 		require.NoError(t, err, "could not dump the db")
 	}
 
@@ -55,7 +55,7 @@ func SaveAndUpdateDump(t *testing.T, dbPath string, opts ...OptionDB) {
 	require.NoError(t, err, "could not dump the db")
 	defer f.Close()
 
-	err = dumpDb(dbPath, f)
+	err = dumpDb(t, dbPath, f)
 	require.NoError(t, err, "could not dump the db")
 }
 
@@ -79,14 +79,10 @@ func ReadDumpAsTables(t *testing.T, p string) (map[string]Table, error) {
 
 	data, err := io.ReadAll(f)
 	require.NoError(t, err, "failed to read dump file")
-	if err != nil {
-		return nil, err
-	}
+
 	for _, table := range strings.Split(string(data), "\n\n") {
 		lines := strings.Split(table, "\n")
-		if len(lines) < 3 {
-			return nil, fmt.Errorf("%q should contains 3 lines at least: name/row names/data", lines)
-		}
+		require.GreaterOrEqual(t, len(lines), 3, "%q should contain 3 lines at least: name/row names/data", lines)
 
 		// Each group of data is one table with its content.
 		table := Table{}
@@ -112,50 +108,30 @@ func ReadDumpAsTables(t *testing.T, p string) (map[string]Table, error) {
 }
 
 // dumpDb opens the specified database and dumps its content into w.
-// TODO: use testing.T and require.
-func dumpDb(p string, w io.Writer) (err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("failed to open and dump the dbs: %w", err)
-		}
-	}()
+func dumpDb(t *testing.T, p string, w io.Writer) (err error) {
+	t.Helper()
 
 	// Connects to the database
 	db, err := sql.Open("sqlite3", p)
-	if err != nil {
-		return fmt.Errorf("failed to open the requested database: %w", err)
-	}
+	require.NoError(t, err, "Failed to open the requested database")
 	defer db.Close()
 
-	if err = dbToCsv(db, w); err != nil {
-		return err
-	}
+	err = dbToCsv(t, db, w)
+	require.NoError(t, err, "Db should be dumped correctly")
 
 	return nil
 }
 
 // dbDataToCsv dumps the data of all tables from the db file into the specified output.
-// TODO: use testing.T and require.
-func dbToCsv(db *sql.DB, w io.Writer) (err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("could not dump data from db: %w", err)
-		}
-	}()
+func dbToCsv(t *testing.T, db *sql.DB, w io.Writer) (err error) {
+	t.Helper()
 
-	if w == nil {
-		return fmt.Errorf("no writer available")
-	}
-
-	if db == nil {
-		return fmt.Errorf("no database available")
-	}
+	require.NotNil(t, w, "Writer should not be nil")
+	require.NotNil(t, db, "Database should not be nil")
 
 	// Selects the table names from the database.
 	query, err := db.Query("SELECT name FROM sqlite_schema WHERE type = 'table'")
-	if err != nil {
-		return fmt.Errorf("could not query tables names from db: %w", err)
-	}
+	require.NoError(t, err, "Should be able to query the tables from the database")
 	defer query.Close()
 
 	// Iterates through each table and dumps their data.
@@ -163,22 +139,18 @@ func dbToCsv(db *sql.DB, w io.Writer) (err error) {
 	var separateTables bool
 	for query.Next() {
 		if separateTables {
-			if _, err = w.Write([]byte("\n")); err != nil {
-				return fmt.Errorf("something went wrong when writing a line break to writer: %w", err)
-			}
+			_, err = w.Write([]byte("\n"))
+			require.NoError(t, err, "There should be a line break between tables")
 		}
 
-		if err = query.Scan(&tableName); err != nil {
-			return fmt.Errorf("could not scan from query result: %w", err)
-		}
+		err = query.Scan(&tableName)
+		require.NoError(t, err, "Query result should be scanned")
 
-		if _, err = w.Write([]byte(tableName + "\n")); err != nil {
-			return fmt.Errorf("something went wrong when writing to writer: %w", err)
-		}
+		_, err = w.Write([]byte(tableName + "\n"))
+		require.NoError(t, err, "Failed to write table name")
 
-		if err = dumpTable(db, tableName, w); err != nil {
-			return err
-		}
+		err = dumpTable(t, db, tableName, w)
+		require.NoError(t, err, "Failed to dump table %s", tableName)
 
 		separateTables = true
 	}
@@ -187,36 +159,22 @@ func dbToCsv(db *sql.DB, w io.Writer) (err error) {
 }
 
 // dumpTable prints all the data contained in the specified table.
-// TODO: use testing.T and require.
-func dumpTable(db *sql.DB, name string, w io.Writer) (err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("could not dump data from table %s: %w", name, err)
-		}
-	}()
-
-	if w == nil {
-		return fmt.Errorf("no writer available")
-	}
+func dumpTable(t *testing.T, db *sql.DB, name string, w io.Writer) (err error) {
+	t.Helper()
 
 	// Queries for all rows in the table.
 	// We can't interpolate/sanitize table names and we are in control
 	// of the input in the tests.
 	rows, err := db.Query(fmt.Sprintf("SELECT * FROM %s", name))
-	if err != nil {
-		return fmt.Errorf("could not query from %s: %w", name, err)
-	}
+	require.NoError(t, err, "Failed to query data from %s", name)
 	defer rows.Close()
 
 	cols, err := rows.Columns()
-	if err != nil {
-		return fmt.Errorf("could not get the db rows: %w", err)
-	}
+	require.NoError(t, err, "Failed to get column names from table %s", name)
 
 	// Prints the names of the columns as the first line of the table dump.
-	if _, err = w.Write([]byte(strings.Join(cols, ",") + "\n")); err != nil {
-		return fmt.Errorf("could not write columns names: %w", err)
-	}
+	_, err = w.Write([]byte(strings.Join(cols, ",") + "\n"))
+	require.NoError(t, err, "Failed to write column names")
 
 	// Initializes the structures that will be used for reading the rows values.
 	data := make([]string, len(cols))
@@ -227,15 +185,27 @@ func dumpTable(db *sql.DB, name string, w io.Writer) (err error) {
 
 	// Iterates through every row of the table, printing the results to w.
 	for rows.Next() {
-		if err = rows.Scan(ptr...); err != nil {
-			return fmt.Errorf("could not scan row: %w", err)
-		}
+		err = rows.Scan(ptr...)
+		require.NoError(t, err, "Failed to scan row")
+
+		// Applies wildcards
+		applyWildcards(name, data, cols)
 
 		// Write the entire row with its fields in CSV format.
-		if _, err = w.Write([]byte(strings.Join(data, ",") + "\n")); err != nil {
-			return fmt.Errorf("could not write row: %w", err)
-		}
+		_, err = w.Write([]byte(strings.Join(data, ",") + "\n"))
+		require.NoError(t, err, "Failed to write row")
 	}
 
 	return nil
+}
+
+func applyWildcards(name string, data, cols []string) {
+	if name == "shadow" {
+		for i, col := range cols {
+			if col == "password" {
+				data[i] = "X"
+				break
+			}
+		}
+	}
 }
