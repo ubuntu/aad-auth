@@ -47,6 +47,10 @@ issues:
     # EXC0001 errcheck: most errors are in defer calls, which are safe to ignore and idiomatic Go (would be good to only ignore defer ones though)
     - 'Error return value of .((os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*print(f|ln)?|os\.(Un)?Setenv|w\.Stop|logger.Close.*|tx.Rollback*|l.w.*|(passwd|group|shadow).End.*). is not checked'
     # Ignoring duplicate errors in tests and some packages
+    # TODO:
+    # 1. does the linter has an option for this?
+    # 2. use go:nosec (if not too many)
+    # 3. or make the regexp only on tests.
     - '. lines are duplicate of (.*).'
     # EXC0008 gosec: duplicated of errcheck
     - (G104|G307)

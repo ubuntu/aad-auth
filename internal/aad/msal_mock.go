@@ -46,6 +46,7 @@ func (m publicClientMock) AcquireTokenByUsernamePassword(ctx context.Context, sc
 
 	switch username {
 	case "success@domain.com":
+	case "success@otherdomain.com":
 	case "requireMFA@domain.com":
 		callErr.Resp.Body = io.NopCloser(strings.NewReader(fmt.Sprintf("{\"error_codes\": [%d]}", requiresMFACode)))
 		return r, callErr

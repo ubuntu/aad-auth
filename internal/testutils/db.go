@@ -1,9 +1,7 @@
 package testutils
 
 import (
-	"bufio"
 	"database/sql"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -24,30 +22,15 @@ type optionDB struct {
 // OptionDB is a supported option to override some behaviors of some db functions.
 type OptionDB func(*optionDB)
 
-// WithDumpPath overrides the default path used to save the dump files.
-func WithDumpPath(path string) OptionDB {
-	return func(o *optionDB) {
-		o.dumpPath = path
-	}
-}
-
-// WithDumpName overrides the default name used to save the dump files.
-func WithDumpName(name string) OptionDB {
-	return func(o *optionDB) {
-		o.dumpName = name
-	}
-}
-
 // SaveAndUpdateDump opens the specified database and saves the dump in a file.
 // If the update flag is set, it also updates the dump on testdata.
 func SaveAndUpdateDump(t *testing.T, dbPath string, opts ...OptionDB) {
 	t.Helper()
 
-	sep := strings.LastIndex(dbPath, "/")
-	dbName := dbPath[sep+1:]
+	dbName := filepath.Base(dbPath)
 
 	o := optionDB{
-		dumpName: dbName + "_dump",
+		dumpName: dbName + ".dump",
 		dumpPath: filepath.Join("testdata", t.Name()),
 	}
 
@@ -64,95 +47,73 @@ func SaveAndUpdateDump(t *testing.T, dbPath string, opts ...OptionDB) {
 		require.NoError(t, err, "could not create file to dump the db")
 		defer f.Close()
 
-		err = openAndDumpDb(dbPath, f)
+		err = dumpDb(dbPath, f)
 		require.NoError(t, err, "could not dump the db")
 	}
 
-	f, err := os.Create(dbPath + "_dump")
+	f, err := os.Create(dbPath + ".dump")
 	require.NoError(t, err, "could not dump the db")
 	defer f.Close()
 
-	err = openAndDumpDb(dbPath, f)
+	err = dumpDb(dbPath, f)
 	require.NoError(t, err, "could not dump the db")
-}
-
-// ReadDumpAsString opens the file specified and reads its contents into a string.
-func ReadDumpAsString(dumpPath string) (string, error) {
-	f, err := os.ReadFile(dumpPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to read dump file: %w", err)
-	}
-	return string(f), err
 }
 
 // Table is a struct that represents a table of a db.
 type Table struct {
-	// Contains the column names
+	// Cols contains the column names
 	Cols []string
-	// Each map represents a row as row[colName]: colData
+	// Rows is a slice where each map represents a row as row[colName]: colData
 	Rows []map[string]string
 }
 
-// ReadDumpAsTables opens the file specified and reads its contents into a []Table.
-func ReadDumpAsTables(dumpPath string) (map[string]Table, error) {
-	f, err := os.Open(dumpPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open dum file: %w", err)
-	}
+// ReadDumpAsTables opens the file specified and reads its contents into a map[name]Table.
+func ReadDumpAsTables(t *testing.T, p string) (map[string]Table, error) {
+	t.Helper()
+
+	f, err := os.Open(p)
+	require.NoError(t, err, "failed to open dump file")
 	defer f.Close()
 
 	tables := make(map[string]Table)
 
-	buf := bufio.NewReader(f)
-	for {
-		if buf.Size() == 1 {
-			break
-		}
-		name, _ := buf.ReadString('\n')
-		if name == "" {
-			break
+	data, err := io.ReadAll(f)
+	require.NoError(t, err, "failed to read dump file")
+	if err != nil {
+		return nil, err
+	}
+	for _, table := range strings.Split(string(data), "\n\n") {
+		lines := strings.Split(table, "\n")
+		if len(lines) < 3 {
+			return nil, fmt.Errorf("%q should contains 3 lines at least: name/row names/data", lines)
 		}
 
-		name = name[:len(name)-1]
-		tables[name], err = readTableFromBuffer(buf)
-		if !errors.Is(err, io.EOF) {
-			return nil, err
+		// Each group of data is one table with its content.
+		table := Table{}
+
+		// Headers.
+		name := lines[0]
+		cols := lines[1]
+		table.Cols = strings.Split(cols, ",")
+
+		// Content.
+		for _, data := range lines[2:] {
+			row := make(map[string]string)
+			for i, v := range strings.Split(data, ",") {
+				row[table.Cols[i]] = v
+			}
+			table.Rows = append(table.Rows, row)
 		}
+
+		tables[name] = table
 	}
 
 	return tables, nil
 }
 
-func readTableFromBuffer(b *bufio.Reader) (Table, error) {
-	table := Table{}
-
-	// Reads column names
-	line, err := b.ReadString('\n')
-	if err != nil {
-		return Table{}, err
-	}
-	table.Cols = strings.Split(line[:len(line)-1], ",")
-
-	for {
-		line, _ = b.ReadString('\n')
-
-		// Reads until an empty line
-		if line == "\n" {
-			break
-		}
-		line = line[:len(line)-1]
-
-		row := make(map[string]string)
-		for i, v := range strings.Split(line, ",") {
-			row[table.Cols[i]] = v
-		}
-		table.Rows = append(table.Rows, row)
-	}
-	return table, nil
-}
-
-// openAndDumpDb opens the specified database and dumps its content into w.
-func openAndDumpDb(dbPath string, w io.Writer) (err error) {
+// dumpDb opens the specified database and dumps its content into w.
+// TODO: use testing.T and require.
+func dumpDb(p string, w io.Writer) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("failed to open and dump the dbs: %w", err)
@@ -160,13 +121,13 @@ func openAndDumpDb(dbPath string, w io.Writer) (err error) {
 	}()
 
 	// Connects to the database
-	db, err := sql.Open("sqlite3", dbPath)
+	db, err := sql.Open("sqlite3", p)
 	if err != nil {
 		return fmt.Errorf("failed to open the requested database: %w", err)
 	}
 	defer db.Close()
 
-	if err = dbDataToCsv(db, w); err != nil {
+	if err = dbToCsv(db, w); err != nil {
 		return err
 	}
 
@@ -174,8 +135,8 @@ func openAndDumpDb(dbPath string, w io.Writer) (err error) {
 }
 
 // dbDataToCsv dumps the data of all tables from the db file into the specified output.
-// If db or w is nil, an error is returned.
-func dbDataToCsv(db *sql.DB, w io.Writer) (err error) {
+// TODO: use testing.T and require.
+func dbToCsv(db *sql.DB, w io.Writer) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("could not dump data from db: %w", err)
@@ -199,7 +160,14 @@ func dbDataToCsv(db *sql.DB, w io.Writer) (err error) {
 
 	// Iterates through each table and dumps their data.
 	var tableName string
+	var separateTables bool
 	for query.Next() {
+		if separateTables {
+			if _, err = w.Write([]byte("\n")); err != nil {
+				return fmt.Errorf("something went wrong when writing a line break to writer: %w", err)
+			}
+		}
+
 		if err = query.Scan(&tableName); err != nil {
 			return fmt.Errorf("could not scan from query result: %w", err)
 		}
@@ -208,24 +176,22 @@ func dbDataToCsv(db *sql.DB, w io.Writer) (err error) {
 			return fmt.Errorf("something went wrong when writing to writer: %w", err)
 		}
 
-		if err = dumpDataFromTable(db, tableName, w); err != nil {
+		if err = dumpTable(db, tableName, w); err != nil {
 			return err
 		}
 
-		if _, err = w.Write([]byte("\n")); err != nil {
-			return fmt.Errorf("something went wrong when writing a line break to writer: %w", err)
-		}
+		separateTables = true
 	}
 
 	return nil
 }
 
-// dumpDataFromTable prints all the data contained in the specified table.
-// If db or w is nil, an error is returned.
-func dumpDataFromTable(db *sql.DB, tableName string, w io.Writer) (err error) {
+// dumpTable prints all the data contained in the specified table.
+// TODO: use testing.T and require.
+func dumpTable(db *sql.DB, name string, w io.Writer) (err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("could not dump data from table %s: %w", tableName, err)
+			err = fmt.Errorf("could not dump data from table %s: %w", name, err)
 		}
 	}()
 
@@ -234,9 +200,11 @@ func dumpDataFromTable(db *sql.DB, tableName string, w io.Writer) (err error) {
 	}
 
 	// Queries for all rows in the table.
-	rows, err := db.Query(fmt.Sprintf("SELECT * FROM %s", tableName))
+	// We can't interpolate/sanitize table names and we are in control
+	// of the input in the tests.
+	rows, err := db.Query(fmt.Sprintf("SELECT * FROM %s", name))
 	if err != nil {
-		return fmt.Errorf("could not query from %s: %w", tableName, err)
+		return fmt.Errorf("could not query from %s: %w", name, err)
 	}
 	defer rows.Close()
 
