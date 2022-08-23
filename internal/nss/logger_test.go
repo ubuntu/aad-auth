@@ -21,19 +21,18 @@ func TestCtxWithSyslogLogger(t *testing.T) {
 
 func TestCtxWithSyslogLoggerDebugWithEnVariable(t *testing.T) {
 	tests := map[string]struct {
-		debug     bool
 		nssLogEnv string
 
 		want string
 	}{
-		"log debug message when in debug mode": {debug: true, nssLogEnv: "1", want: "DEBUG: nss_aad: NSS AAD DEBUG enabled\n"},
-		"log to stderr when set to":            {debug: true, nssLogEnv: "stderr"},
-		"don't log anything when not in debug": {debug: false},
+		"log debug message when in debug mode": {nssLogEnv: "1", want: "DEBUG: nss_aad: NSS AAD DEBUG enabled\n"},
+		"log to stderr when set to":            {nssLogEnv: "stderr", want: ""},
+		"don't log anything when not in debug": {want: ""},
 	}
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			if tc.debug {
+			if tc.nssLogEnv != "" {
 				err := os.Setenv(nss.NssLogEnv, tc.nssLogEnv)
 				require.NoError(t, err, "Setup: can’t set environment variable for debug log")
 				defer func() {
@@ -51,7 +50,7 @@ func TestCtxWithSyslogLoggerDebugWithEnVariable(t *testing.T) {
 				require.Empty(t, v, "Context should not have a logger attached")
 			}
 
-			require.Equal(t, tc.want, l.content, "Should log expected debug message or nothing if not debug")
+			require.Equal(t, tc.want, l.content, "Should log expected debug message or nothing if nssLogEnv is not set")
 		})
 	}
 }
