@@ -210,7 +210,11 @@ func TestCleanupDB(t *testing.T) {
 			t.Parallel()
 
 			cacheDir := t.TempDir()
-			testutils.CopyDBAndFixPermissions(t, "testdata/db_with_old_users", cacheDir)
+			c := cache.NewCacheForTests(t, cacheDir, cache.WithTeardownDuration(0))
+			c.Close(context.Background())
+			for _, db := range []string{"passwd.db", "shadow.db"} {
+				testutils.LoadDumpIntoDB(t, filepath.Join("testdata", "db_with_old_users", db+".dump"), filepath.Join(cacheDir, db))
+			}
 
 			// This triggers a database cleanup if offlineCredentialsExpirationTime is not 0
 			uid, gid := testutils.GetCurrentUIDGID(t)
@@ -278,7 +282,7 @@ func TestUpdate(t *testing.T) {
 
 			// First, try to get  user
 			cacheDir := t.TempDir()
-			c := newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0))
+			c := cache.NewCacheForTests(t, cacheDir, cache.WithTeardownDuration(0))
 
 			if tc.shadowMode != nil {
 				c.SetShadowMode(*tc.shadowMode)
@@ -312,7 +316,7 @@ func TestUpdate(t *testing.T) {
 				// Close and reload a new cache object to ensure we do reload everything from files
 				c.Close(context.Background())
 				c.WaitForCacheClosed()
-				c = newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0))
+				c = cache.NewCacheForTests(t, cacheDir, cache.WithTeardownDuration(0))
 				c.SetShadowMode(*tc.doRefreshWithShadowMode)
 
 				// we need one second as we are storing an unix timestamp for last online auth
@@ -366,15 +370,21 @@ func TestCanAuthenticate(t *testing.T) {
 			var c *cache.Cache
 			if !tc.useoldaccounts {
 				// create cache and users
-				c = newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0))
+				c = cache.NewCacheForTests(t, cacheDir, cache.WithTeardownDuration(0))
 				err := c.Update(context.Background(), "first user", "my password", "/home/%f", "/bin/bash")
 				require.NoError(t, err, "Setup: should be able to create first user")
 				err = c.Update(context.Background(), "second user", "other password", "/home/%f", "/bin/bash")
 				require.NoError(t, err, "Setup: should be able to create second user")
 			} else {
-				// copy old database and reopen the cache without cleaning up old account
-				testutils.CopyDBAndFixPermissions(t, "testdata/db_with_old_users", cacheDir)
-				c = newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
+				// create a database and populate it with old users from dump files
+				c = cache.NewCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
+				c.Close(context.Background())
+
+				for _, db := range []string{"passwd.db", "shadow.db"} {
+					testutils.LoadDumpIntoDB(t, filepath.Join("testdata", "db_with_old_users", db+".dump"), filepath.Join(cacheDir, db))
+				}
+
+				c = cache.NewCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
 			}
 
 			if tc.shadowMode != nil {

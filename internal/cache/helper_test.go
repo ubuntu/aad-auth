@@ -7,25 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/aad-auth/internal/cache"
-	"github.com/ubuntu/aad-auth/internal/testutils"
 )
-
-// newCacheForTests returns a cache that is closed automatically, with permissions set to current user.
-func newCacheForTests(t *testing.T, cacheDir string, options ...cache.Option) (c *cache.Cache) {
-	t.Helper()
-
-	uid, gid := testutils.GetCurrentUIDGID(t)
-	opts := append([]cache.Option{}, cache.WithCacheDir(cacheDir),
-		cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid))
-
-	opts = append(opts, options...)
-
-	c, err := cache.New(context.Background(), opts...)
-	require.NoError(t, err, "Setup: should be able to create a cache")
-	t.Cleanup(func() { c.Close(context.Background()) })
-
-	return c
-}
 
 type userInfos struct {
 	name     string
@@ -53,7 +35,7 @@ func init() {
 func insertUsersInDb(t *testing.T, cacheDir string) {
 	t.Helper()
 
-	c := newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0))
+	c := cache.NewCacheForTests(t, cacheDir, cache.WithTeardownDuration(0))
 	defer c.Close(context.Background())
 
 	// The randomness in map iterating was causing problems with the tests.
