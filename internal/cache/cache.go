@@ -1,3 +1,4 @@
+// Package cache is the package dealing with underlying database and offline/online policy.
 package cache
 
 import (

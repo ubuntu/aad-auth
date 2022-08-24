@@ -1,3 +1,4 @@
+// Package pam is the package which is pure Go code behaving as a pam module.
 package pam
 
 import (

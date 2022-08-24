@@ -1,3 +1,4 @@
+// Package nss is the package which is pure Go code dealing with getent interactions.
 package nss
 
 import (

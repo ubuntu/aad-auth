@@ -1,3 +1,4 @@
+// Package config is the package dealing with aad-auth configuration files.
 package config
 
 import (
