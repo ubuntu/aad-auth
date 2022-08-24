@@ -14,14 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type optionDB struct {
-	dumpName string
-	dumpPath string
-}
-
-// OptionDB is a supported option to override some behaviors of some db functions.
-type OptionDB func(*optionDB)
-
 // LoadAndUpdateFromGoldenDump loads the specified database from golden file in testdata/.
 // It will update the file if the update flag is used prior to loading it.
 func LoadAndUpdateFromGoldenDump(t *testing.T, ref string) map[string]Table {
