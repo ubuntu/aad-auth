@@ -1,3 +1,4 @@
+// Package testutils is the package which has helpers for our integration and package tests.
 package testutils
 
 import (
@@ -6,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/termie/go-shutil"
@@ -39,4 +41,17 @@ func CopyDBAndFixPermissions(t *testing.T, refDir, cacheDir string) {
 	require.NoError(t, os.Chmod(filepath.Join(cacheDir, "passwd.db"), 0644), "Setup: failed to set expected permission on passwd db file")
 	// #nosec: G302 - this permission level is required for pam to work.
 	require.NoError(t, os.Chmod(filepath.Join(cacheDir, "shadow.db"), 0640), "Setup: failed to set expected permission on shadow db file")
+}
+
+// TimeBetweenOrEquals returns if tt is between start and end.
+func TimeBetweenOrEquals(tt, start, end time.Time) bool {
+	// tt is floor to current second, compare then to the second before start.
+	if tt.Before(start.Add(-time.Second)) {
+		return false
+	}
+	if tt.After(end) {
+		return false
+	}
+
+	return true
 }

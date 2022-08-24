@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/aad-auth/internal/cache"
+	"github.com/ubuntu/aad-auth/internal/testutils"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -51,7 +52,7 @@ func TestGetUserByName(t *testing.T) {
 
 			// Handle dynamic fields
 			// LastOnlineAuth should be recent
-			assert.True(t, timeBetweenOrEquals(u.LastOnlineAuth, startTime, endTime), "Last Online auth should match insertion time. Last Online auth: %v. Start: %v, End: %v", u.LastOnlineAuth, startTime, endTime)
+			assert.True(t, testutils.TimeBetweenOrEquals(u.LastOnlineAuth, startTime, endTime), "Last Online auth should match insertion time. Last Online auth: %v. Start: %v, End: %v", u.LastOnlineAuth, startTime, endTime)
 			u.LastOnlineAuth = time.Unix(0, 0)
 
 			// Validate password
@@ -116,7 +117,7 @@ func TestGetUserByUID(t *testing.T) {
 
 			// Handle dynamic fields
 			// LastOnlineAuth should be recent
-			assert.True(t, timeBetweenOrEquals(u.LastOnlineAuth, startTime, endTime), "Last Online auth should match insertion time. Last Online auth: %v. Start: %v, End: %v", u.LastOnlineAuth, startTime, endTime)
+			assert.True(t, testutils.TimeBetweenOrEquals(u.LastOnlineAuth, startTime, endTime), "Last Online auth should match insertion time. Last Online auth: %v. Start: %v, End: %v", u.LastOnlineAuth, startTime, endTime)
 			u.LastOnlineAuth = time.Unix(0, 0)
 
 			// Validate password
@@ -175,7 +176,7 @@ func TestNextPasswdEntry(t *testing.T) {
 		require.NoError(t, err, "NextPasswdEntry should initiate and returns values without any error")
 
 		// LastOnlineAuth should be recent
-		assert.True(t, timeBetweenOrEquals(u.LastOnlineAuth, startTime, endTime), "Last Online auth should match insertion time. Last Online auth: %v. Start: %v, End: %v", u.LastOnlineAuth, startTime, endTime)
+		assert.True(t, testutils.TimeBetweenOrEquals(u.LastOnlineAuth, startTime, endTime), "Last Online auth should match insertion time. Last Online auth: %v. Start: %v, End: %v", u.LastOnlineAuth, startTime, endTime)
 		u.LastOnlineAuth = time.Unix(0, 0)
 
 		wantUser, found := wanted[u.Name]
@@ -224,17 +225,4 @@ func TestNextPasswdCloseBeforeIterationEnds(t *testing.T) {
 
 	c.Close(context.Background())
 	c.WaitForCacheClosed()
-}
-
-// timeBetweenOrEquals returns if tt is between start and end.
-func timeBetweenOrEquals(tt, start, end time.Time) bool {
-	// tt is floor to current second, compare then to the second before start.
-	if tt.Before(start.Add(-time.Second)) {
-		return false
-	}
-	if tt.After(end) {
-		return false
-	}
-
-	return true
 }

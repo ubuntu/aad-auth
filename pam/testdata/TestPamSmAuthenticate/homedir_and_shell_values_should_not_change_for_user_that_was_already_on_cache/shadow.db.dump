@@ -1,4 +1,3 @@
 shadow
 uid,password,last_pwd_change,min_pwd_age,max_pwd_age,pwd_warn_period,pwd_inactivity,expiration_date
-9448096,$2a$10$GWEPe9kuAmrgXykKr8nXZ.FCAzKk66SJjY4vrhIh.PLJWcGMRC/q2,-1,-1,-1,-1,-1,-1
-
+80938656,HASHED_PASSWORD,-1,-1,-1,-1,-1,-1

@@ -1,3 +1,4 @@
+// Package logger is the package which is able to plug multiple sublogger (pam, nss, stderr…) .
 package logger
 
 import (

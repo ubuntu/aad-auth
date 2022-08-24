@@ -1,3 +1,4 @@
+// Package aad is the package dealing with aad authentication.
 package aad
 
 import (

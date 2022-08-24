@@ -144,7 +144,7 @@ func TestLoadConfig(t *testing.T) {
 			}
 
 			goldenPath := filepath.Join(testFilesPath, "golden", def)
-			want := testutils.SaveAndLoadFromGolden(t, got, testutils.WithGoldPath(goldenPath))
+			want := testutils.LoadAndUpdateFromGolden(t, got, testutils.WithGoldPath(goldenPath))
 			require.Equal(t, want, got, "Got config and expected config are different")
 		})
 	}

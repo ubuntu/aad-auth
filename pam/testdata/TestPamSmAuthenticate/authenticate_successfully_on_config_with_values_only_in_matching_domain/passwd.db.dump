@@ -1,6 +1,6 @@
 passwd
 login,password,uid,gid,gecos,home,shell,last_online_auth
-success@domain.com,x,9448096,9448096,,/home/success@domain.com,/bin/bash,1660747896
+success@domain.com,x,9448096,9448096,,/home/success@domain.com,/bin/bash,4242
 
 groups
 name,password,gid
@@ -9,4 +9,3 @@ success@domain.com,x,9448096
 uid_gid
 uid,gid
 9448096,9448096
-

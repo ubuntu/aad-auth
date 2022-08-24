@@ -28,6 +28,7 @@ func TestPamSmAuthenticate(t *testing.T) {
 		conf                string
 		initialCache        string
 		wrongCacheOwnership bool
+		offline             bool
 
 		wantErr bool
 	}{
@@ -39,24 +40,24 @@ func TestPamSmAuthenticate(t *testing.T) {
 		"correctly set homedir and shell values specified at domain for a new user with matching domain": {conf: "aad-with-homedir-and-shell-domain.conf"},
 
 		// offline cases
-		"offline, connect existing user from cache":                                     {conf: "forceoffline.conf", initialCache: "db_with_old_users", username: "futureuser@domain.com"},
-		"homedir and shell values should not change for user that was already on cache": {conf: "forceoffline-with-homedir-and-shell.conf", initialCache: "db_with_old_users", username: "futureuser@domain.com"},
+		"offline, connect existing user from cache":                                     {conf: "forceoffline.conf", offline: true, initialCache: "db_with_old_users", username: "futureuser@domain.com"},
+		"homedir and shell values should not change for user that was already on cache": {conf: "forceoffline-with-homedir-and-shell.conf", offline: true, initialCache: "db_with_old_users", username: "futureuser@domain.com"},
 
 		// special cases
 		"authenticate successfully with unmatched case (online)":                  {username: "Success@Domain.COM"},
-		"authenticate successfully on config with values only in matching domain": {conf: "matching-domain.conf"},
+		"authenticate successfully on config with values only in matching domain": {conf: "with-domain.conf"},
 
 		// error cases
-		"error on invalid conf":                               {conf: "invalid-aad.conf", wantErr: true},
-		"error on unexisting conf":                            {conf: "doesnotexist.conf", wantErr: true},
-		"error on unexisting users":                           {username: "no such user", wantErr: true},
-		"error on invalid password":                           {username: "invalid credentials", wantErr: true},
-		"error on config values only in mismatching domain":   {conf: "mismatching-domain.conf", wantErr: true},
-		"error on offline with user online user not in cache": {conf: "forceoffline.conf", initialCache: "db_with_old_users", wantErr: true},
-		"error on offline with purged user account":           {username: "veryolduser@domain.com", initialCache: "db_with_old_users", wantErr: true},
-		"error on offline with unpurged old user account":     {conf: "forceoffline-expire-right-away.conf", initialCache: "db_with_old_users", username: "veryolduser@domain.com", wantErr: true},
-		"error on server error":                               {username: "unreadable server response", wantErr: true},
-		"error on cache can't be created/opened":              {wrongCacheOwnership: true, wantErr: true},
+		"error on invalid conf":                                 {conf: "invalid-aad.conf", wantErr: true},
+		"error on unexisting conf":                              {conf: "doesnotexist.conf", wantErr: true},
+		"error on unexisting users":                             {username: "no such user", wantErr: true},
+		"error on invalid password":                             {username: "invalid credentials", wantErr: true},
+		"error on config values only in mismatching domain":     {username: "success@otherdomain.com", conf: "with-domain.conf", wantErr: true},
+		"error on offline with user online user not in cache":   {conf: "forceoffline.conf", offline: true, initialCache: "db_with_old_users", wantErr: true},
+		"error on offline with purged user accoauthenticateunt": {username: "veryolduser@domain.com", offline: true, initialCache: "db_with_old_users", wantErr: true},
+		"error on offline with unpurged old user account":       {conf: "forceoffline-expire-right-away.conf", offline: true, initialCache: "db_with_old_users", username: "veryolduser@domain.com", wantErr: true},
+		"error on server error":                                 {username: "unreadable server response", wantErr: true},
+		"error on cache can't be created/opened":                {wrongCacheOwnership: true, wantErr: true},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -100,6 +101,7 @@ func TestPamSmAuthenticate(t *testing.T) {
 			require.NoError(t, err, "Setup: could not create pam stack config file")
 
 			// pam communication
+			start := time.Now()
 			tx, err := pamCom.StartFunc("aadtest", "", func(s pamCom.Style, msg string) (string, error) {
 				switch s {
 				case pamCom.PromptEchoOn:
@@ -119,39 +121,82 @@ func TestPamSmAuthenticate(t *testing.T) {
 				return
 			}
 			require.NoError(t, err, "Authenticate should succeed")
+			end := time.Now()
 
-			dbs := []string{"passwd", "shadow"}
-			// Store the dumps after the authentication
-			for _, db := range dbs {
-				testutils.SaveAndUpdateDump(t, filepath.Join(cacheDir, db+".db"))
+			// Verifies the db permissions
+			dbPermissions := map[string]string{"passwd.db": "-rw-r--r--", "shadow.db": "-rw-r-----"}
+			for n, p := range dbPermissions {
+				f, err := os.Stat(filepath.Join(cacheDir, n))
+				require.NoError(t, err, "%s stats must be evaluated", n)
+				require.Equal(t, p, f.Mode().String(), "%s does not have the expected permissions (%s)", n, p)
 			}
 
-			// Compare the dumps
-			for _, db := range dbs {
-				compareDumps(t, filepath.Join("testdata", t.Name(), db+".db_dump"), filepath.Join(cacheDir, db+".db_dump"))
+			gots := make(map[string]map[string]testutils.Table)
+			wants := make(map[string]map[string]testutils.Table)
+			// Store the dumps after the authentication
+			for db := range dbPermissions {
+				ref := filepath.Join(cacheDir, db)
+				wants[db] = testutils.LoadAndUpdateFromGoldenDump(t, ref)
+
+				// TODO: make this better, using a reader
+				// Load temporary got to memory
+				tmp := filepath.Join(t.TempDir(), db+".dump")
+				f, err := os.Create(tmp)
+				require.NoError(t, err, "Setup: can't create temporary dump")
+				err = testutils.DumpDb(t, ref, f, false)
+				require.NoError(t, err, "Setup: can't deserialize temporary dump")
+				f.Close()
+				gots[db], err = testutils.ReadDumpAsTables(t, tmp)
+				require.NoError(t, err, "Could not temporary read dump file %s", tmp)
+			}
+
+			// Compare the dumps, handling special fields
+			for db := range dbPermissions {
+				// Handles comparison for online test cases
+				requireEqualDumps(t, wants[db], gots[db], tc.offline, start, end)
 			}
 		})
 	}
 }
 
-func TestMain(m *testing.M) {
-	testutils.InstallUpdateFlag()
-	flag.Parse()
-	// Build the pam module in a temporary directory and allow linking to it.
-	libDir, cleanup, err := createTempDir()
-	if err != nil {
-		os.Exit(1)
-	}
+func requireEqualDumps(t *testing.T, want, got map[string]testutils.Table, offline bool, start, end time.Time) {
+	t.Helper()
 
-	libPath = filepath.Join(libDir, "pam_aad.so")
-	out, err := exec.Command("go", "build", "-buildmode=c-shared", "-tags", "integrationtests", "-o", libPath).CombinedOutput()
-	if err != nil {
-		cleanup()
-		fmt.Fprintf(os.Stderr, "Can not build pam module (%v) : %s", err, out)
-		os.Exit(1)
-	}
+	for tableName, wantTable := range want {
+		gotTable := got[tableName]
+		require.NotNil(t, gotTable, "There should be a table")
+		require.Equal(t, len(wantTable.Rows), len(gotTable.Rows), "Tables should have the same number of rows")
 
-	m.Run()
+		for i, wantRow := range wantTable.Rows {
+			gotRow := gotTable.Rows[i]
+
+			for colName, wantData := range wantRow {
+				gotData := gotRow[colName]
+				require.NotNil(t, gotData, "Got must have the wanted row content")
+
+				// Handles comparison of the columns.
+				switch colName {
+				case "password":
+					require.NotEmpty(t, gotData, "password should contain something")
+
+				case "last_online_auth":
+					// last_online_auth is updated everytime a user logs in (online).
+					// Comparison must be done with the time of the test, rather than with the golden dump.
+					n, err := strconv.Atoi(gotData)
+					require.NoError(t, err, "last_online_auth should be a valid timestamp")
+					if offline {
+						require.False(t, testutils.TimeBetweenOrEquals(time.Unix(int64(n), 0), start, end), "Expected time to not have been changed")
+						break
+					}
+					require.True(t, testutils.TimeBetweenOrEquals(time.Unix(int64(n), 0), start, end), "Expected time to be between start and end")
+
+				default:
+					// Handles comparison for most columns.
+					require.Equal(t, wantData, gotData, "Contents of col %s from %s must be the same", colName, tableName)
+				}
+			}
+		}
+	}
 }
 
 // createTempDir creates a temporary directory with a cleanup teardown not having a testing.T.
@@ -167,45 +212,23 @@ func createTempDir() (tmp string, cleanup func(), err error) {
 	}, nil
 }
 
-func compareDumps(t *testing.T, wantPath, gotPath string) {
-	t.Helper()
-
-	want, err := testutils.ReadDumpAsTables(wantPath)
-	require.NoError(t, err, "Could not read dump file %s", wantPath)
-
-	got, err := testutils.ReadDumpAsTables(gotPath)
-	require.NoError(t, err, "Could not read dump file %s", gotPath)
-
-	for tableName, wantTable := range want {
-		gotTable := got[tableName]
-		require.NotNil(t, gotTable, "There should be a table")
-		require.Equal(t, len(wantTable.Rows), len(gotTable.Rows), "Tables should have the same number of rows")
-
-		for i, wantRow := range wantTable.Rows {
-			gotRow := gotTable.Rows[i]
-			require.NotNil(t, gotRow, "Got must have the wanted amount of rows")
-
-			for colName, wantData := range wantRow {
-				gotData := gotRow[colName]
-				require.NotNil(t, gotData, "Got must have the wanted row content")
-
-				// Handles comparison of special columns
-				switch colName {
-				// last_online_auth is updated everytime a user logs in, so comparison should be done with the current time
-				case "last_online_auth":
-					n, _ := strconv.ParseInt(gotData, 10, 64)
-					timeElapsed := time.Now().Unix() - n
-					require.LessOrEqual(t, timeElapsed, int64(60), "Difference must be less than or equal to 60 (sec)")
-
-				// Passwords in shadow.db are rehashed when a user logins in. How to compare them?
-				case "password":
-					continue
-
-				// Handles comparison for most columns
-				default:
-					require.Equal(t, wantData, gotData, "Contents of col %s from %s should be the same", colName, tableName)
-				}
-			}
-		}
+func TestMain(m *testing.M) {
+	testutils.InstallUpdateFlag()
+	flag.Parse()
+	// Build the pam module in a temporary directory and allow linking to it.
+	libDir, cleanup, err := createTempDir()
+	if err != nil {
+		os.Exit(1)
 	}
+
+	libPath = filepath.Join(libDir, "pam_aad.so")
+	// #nosec:G204 - we control the command arguments in tests
+	out, err := exec.Command("go", "build", "-buildmode=c-shared", "-tags", "integrationtests", "-o", libPath).CombinedOutput()
+	if err != nil {
+		cleanup()
+		fmt.Fprintf(os.Stderr, "Can not build pam module (%v) : %s", err, out)
+		os.Exit(1)
+	}
+
+	m.Run()
 }
