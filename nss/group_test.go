@@ -67,7 +67,7 @@ func TestNssGetGroupByName(t *testing.T) {
 			}
 			require.NoError(t, err, "getent should succeed")
 
-			want := testutils.SaveAndLoadFromGolden(t, got)
+			want := testutils.LoadAndUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "Should get expected aad group")
 		})
 	}
@@ -130,7 +130,7 @@ func TestNssGetGroupByGID(t *testing.T) {
 			}
 			require.NoError(t, err, "getent should succeed")
 
-			want := testutils.SaveAndLoadFromGolden(t, got)
+			want := testutils.LoadAndUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "Should get expected aad group")
 		})
 	}
@@ -185,7 +185,7 @@ func TestNssGetGroup(t *testing.T) {
 			got, err := outNSSCommandForLib(t, tc.rootUID, gid, shadowMode, cacheDir, originOut, "getent", "group")
 			require.NoError(t, err, "getent should succeed")
 
-			want := testutils.SaveAndLoadFromGolden(t, got)
+			want := testutils.LoadAndUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "Should get expected aad groups listed")
 		})
 	}

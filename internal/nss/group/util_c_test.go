@@ -45,7 +45,7 @@ func TestToCgroup(t *testing.T) {
 			require.NoError(t, err, "ToCgroup should have not returned an error but hasn’t")
 
 			grpGot := got.ToPublicCGroup(tc.nMembers)
-			want := testutils.SaveAndLoadFromGolden(t, grpGot)
+			want := testutils.LoadAndUpdateFromGolden(t, grpGot)
 
 			require.Equal(t, want, grpGot, "Should have C group with expected fields content")
 		})

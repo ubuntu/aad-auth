@@ -22,41 +22,31 @@ type optionDB struct {
 // OptionDB is a supported option to override some behaviors of some db functions.
 type OptionDB func(*optionDB)
 
-// SaveAndUpdateDump opens the specified database and saves the dump in a file.
-// If the update flag is set, it also updates the dump on testdata.
-func SaveAndUpdateDump(t *testing.T, dbPath string, opts ...OptionDB) {
+// LoadAndUpdateFromGoldenDump loads the specified database from golden file in testdata/.
+// It will update the file if the update flag is used prior to loading it.
+func LoadAndUpdateFromGoldenDump(t *testing.T, ref string) map[string]Table {
 	t.Helper()
 
-	dbName := filepath.Base(dbPath)
-
-	o := optionDB{
-		dumpName: dbName + ".dump",
-		dumpPath: filepath.Join("testdata", t.Name()),
-	}
-
-	for _, opt := range opts {
-		opt(&o)
-	}
+	dbName := filepath.Base(ref)
+	wantPath := filepath.Join(filepath.Join("testdata", t.Name()), dbName+".dump")
 
 	if update {
 		t.Logf("Updating dump file for %s", dbName)
-		err := os.MkdirAll(o.dumpPath, 0750)
+		err := os.MkdirAll(filepath.Dir(wantPath), 0750)
 		require.NoError(t, err, "could not create directory for dump files")
 
-		f, err := os.Create(filepath.Join(o.dumpPath, o.dumpName))
+		f, err := os.Create(wantPath)
 		require.NoError(t, err, "could not create file to dump the db")
 		defer f.Close()
 
-		err = dumpDb(t, dbPath, f)
+		err = DumpDb(t, ref, f, true)
 		require.NoError(t, err, "could not dump the db")
 	}
 
-	f, err := os.Create(dbPath + ".dump")
-	require.NoError(t, err, "could not dump the db")
-	defer f.Close()
+	want, err := ReadDumpAsTables(t, wantPath)
+	require.NoError(t, err, "Could not read dump file %s", wantPath)
 
-	err = dumpDb(t, dbPath, f)
-	require.NoError(t, err, "could not dump the db")
+	return want
 }
 
 // Table is a struct that represents a table of a db.
@@ -107,8 +97,8 @@ func ReadDumpAsTables(t *testing.T, p string) (map[string]Table, error) {
 	return tables, nil
 }
 
-// dumpDb opens the specified database and dumps its content into w.
-func dumpDb(t *testing.T, p string, w io.Writer) (err error) {
+// DumpDb opens the specified database and dumps its content into w.
+func DumpDb(t *testing.T, p string, w io.Writer, usePredicatableFieldValues bool) (err error) {
 	t.Helper()
 
 	// Connects to the database
@@ -116,18 +106,15 @@ func dumpDb(t *testing.T, p string, w io.Writer) (err error) {
 	require.NoError(t, err, "Failed to open the requested database")
 	defer db.Close()
 
-	err = dbToCsv(t, db, w)
+	err = dbToCsv(t, db, w, usePredicatableFieldValues)
 	require.NoError(t, err, "Db should be dumped correctly")
 
 	return nil
 }
 
 // dbDataToCsv dumps the data of all tables from the db file into the specified output.
-func dbToCsv(t *testing.T, db *sql.DB, w io.Writer) (err error) {
+func dbToCsv(t *testing.T, db *sql.DB, w io.Writer, usePredicatableFieldValues bool) (err error) {
 	t.Helper()
-
-	require.NotNil(t, w, "Writer should not be nil")
-	require.NotNil(t, db, "Database should not be nil")
 
 	// Selects the table names from the database.
 	query, err := db.Query("SELECT name FROM sqlite_schema WHERE type = 'table'")
@@ -149,7 +136,7 @@ func dbToCsv(t *testing.T, db *sql.DB, w io.Writer) (err error) {
 		_, err = w.Write([]byte(tableName + "\n"))
 		require.NoError(t, err, "Failed to write table name")
 
-		err = dumpTable(t, db, tableName, w)
+		err = dumpTable(t, db, tableName, w, usePredicatableFieldValues)
 		require.NoError(t, err, "Failed to dump table %s", tableName)
 
 		separateTables = true
@@ -159,7 +146,7 @@ func dbToCsv(t *testing.T, db *sql.DB, w io.Writer) (err error) {
 }
 
 // dumpTable prints all the data contained in the specified table.
-func dumpTable(t *testing.T, db *sql.DB, name string, w io.Writer) (err error) {
+func dumpTable(t *testing.T, db *sql.DB, name string, w io.Writer, usePredicatableFieldValues bool) (err error) {
 	t.Helper()
 
 	// Queries for all rows in the table.
@@ -188,8 +175,9 @@ func dumpTable(t *testing.T, db *sql.DB, name string, w io.Writer) (err error) {
 		err = rows.Scan(ptr...)
 		require.NoError(t, err, "Failed to scan row")
 
-		// Applies wildcards
-		applyWildcards(name, data, cols)
+		if usePredicatableFieldValues {
+			predicatableFieldValues(name, data, cols)
+		}
 
 		// Write the entire row with its fields in CSV format.
 		_, err = w.Write([]byte(strings.Join(data, ",") + "\n"))
@@ -199,11 +187,22 @@ func dumpTable(t *testing.T, db *sql.DB, name string, w io.Writer) (err error) {
 	return nil
 }
 
-func applyWildcards(name string, data, cols []string) {
-	if name == "shadow" {
+// predicatableFieldValues makes changing fields, based on time, stable to compare them
+// in golden files.
+func predicatableFieldValues(name string, data, cols []string) {
+	switch name {
+	case "shadow":
 		for i, col := range cols {
 			if col == "password" {
-				data[i] = "X"
+				data[i] = "HASHED_PASSWORD"
+				break
+			}
+		}
+
+	case "passwd":
+		for i, col := range cols {
+			if col == "last_online_auth" {
+				data[i] = "4242"
 				break
 			}
 		}

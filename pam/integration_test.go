@@ -101,7 +101,7 @@ func TestPamSmAuthenticate(t *testing.T) {
 			require.NoError(t, err, "Setup: could not create pam stack config file")
 
 			// pam communication
-			start := time.Now().Unix()
+			start := time.Now()
 			tx, err := pamCom.StartFunc("aadtest", "", func(s pamCom.Style, msg string) (string, error) {
 				switch s {
 				case pamCom.PromptEchoOn:
@@ -121,43 +121,94 @@ func TestPamSmAuthenticate(t *testing.T) {
 				return
 			}
 			require.NoError(t, err, "Authenticate should succeed")
-			end := time.Now().Unix()
+			end := time.Now()
 
 			// Verifies the db permissions
-			f, err := os.Stat(filepath.Join(cacheDir, "passwd.db"))
-			require.NoError(t, err, "Passwd.db stats must be evaluated")
-			// Permission for passwd.db should be 644
-			require.Equal(t, "-rw-r--r--", f.Mode().String(), "Passwd does not have the expected permissions (644)")
-			f, err = os.Stat(filepath.Join(cacheDir, "shadow.db"))
-			require.NoError(t, err, "Shadow.db stats must be evaluated")
-			// Permission for shadow.db should be 640
-			require.Equal(t, "-rw-r-----", f.Mode().String(), "Shadow does not have the expected permissions (640)")
-
-			dbs := []string{"passwd.db", "shadow.db"}
-			// Store the dumps after the authentication
-			for _, db := range dbs {
-				testutils.SaveAndUpdateDump(t, filepath.Join(cacheDir, db))
+			dbPermissions := map[string]string{"passwd.db": "-rw-r--r--", "shadow.db": "-rw-r-----"}
+			for n, p := range dbPermissions {
+				f, err := os.Stat(filepath.Join(cacheDir, n))
+				require.NoError(t, err, "%s stats must be evaluated", n)
+				require.Equal(t, p, f.Mode().String(), "%s does not have the expected permissions (%s)", n, p)
 			}
 
-			// Save and compare the dumps
-			for _, db := range dbs {
+			gots := make(map[string]map[string]testutils.Table)
+			wants := make(map[string]map[string]testutils.Table)
+			// Store the dumps after the authentication
+			for db := range dbPermissions {
+				ref := filepath.Join(cacheDir, db)
+				wants[db] = testutils.LoadAndUpdateFromGoldenDump(t, ref)
+
+				// TODO: make this better, using a reader
+				// Load temporary got to memory
+				tmp := filepath.Join(t.TempDir(), db+".dump")
+				f, err := os.Create(tmp)
+				require.NoError(t, err, "Setup: can't create temporary dump")
+				testutils.DumpDb(t, ref, f, false)
+				f.Close()
+				gots[db], err = testutils.ReadDumpAsTables(t, tmp)
+				require.NoError(t, err, "Could not temporary read dump file %s", tmp)
+			}
+
+			// Compare the dumps, handling special fields
+			for db := range dbPermissions {
 				// Handles comparison for online test cases
-				if !tc.offline {
-					requireEqualDumps(t, filepath.Join("testdata", t.Name(), db+".dump"), filepath.Join(cacheDir, db+".dump"), start, end)
-					continue
-				}
-
-				// Handles comparison for offline test cases
-				want, err := os.ReadFile(filepath.Join("testdata", t.Name(), db+".dump"))
-				require.NoError(t, err, "want %s dump must be read", db)
-
-				got, err := os.ReadFile(filepath.Join(cacheDir, db+".dump"))
-				require.NoError(t, err, "got %s dump must be read", db)
-
-				require.Equal(t, want, got, "Dumps must match")
+				requireEqualDumps(t, wants[db], gots[db], tc.offline, start, end)
 			}
 		})
 	}
+}
+
+func requireEqualDumps(t *testing.T, want, got map[string]testutils.Table, offline bool, start, end time.Time) {
+	t.Helper()
+
+	for tableName, wantTable := range want {
+		gotTable := got[tableName]
+		require.NotNil(t, gotTable, "There should be a table")
+		require.Equal(t, len(wantTable.Rows), len(gotTable.Rows), "Tables should have the same number of rows")
+
+		for i, wantRow := range wantTable.Rows {
+			gotRow := gotTable.Rows[i]
+
+			for colName, wantData := range wantRow {
+				gotData := gotRow[colName]
+				require.NotNil(t, gotData, "Got must have the wanted row content")
+
+				// Handles comparison of the columns.
+				switch colName {
+				case "password":
+					require.NotEmpty(t, gotData, "password should contain something")
+
+				case "last_online_auth":
+					// last_online_auth is updated everytime a user logs in (online).
+					// Comparison must be done with the time of the test, rather than with the golden dump.
+					n, err := strconv.Atoi(gotData)
+					require.NoError(t, err, "last_online_auth should be a valid timestamp")
+					if offline {
+						require.False(t, testutils.TimeBetweenOrEquals(time.Unix(int64(n), 0), start, end), "Expected time to not have been changed")
+						break
+					}
+					require.True(t, testutils.TimeBetweenOrEquals(time.Unix(int64(n), 0), start, end), "Expected time to be between start and end")
+
+				default:
+					// Handles comparison for most columns.
+					require.Equal(t, wantData, gotData, "Contents of col %s from %s must be the same", colName, tableName)
+				}
+			}
+		}
+	}
+}
+
+// createTempDir creates a temporary directory with a cleanup teardown not having a testing.T.
+func createTempDir() (tmp string, cleanup func(), err error) {
+	if tmp, err = os.MkdirTemp("", "aad-auth-integration-tests-pam"); err != nil {
+		fmt.Fprintf(os.Stderr, "Can not create temporary directory %q", tmp)
+		return "", nil, err
+	}
+	return tmp, func() {
+		if err := os.RemoveAll(tmp); err != nil {
+			fmt.Fprintf(os.Stderr, "Can not clean up temporary directory %q", tmp)
+		}
+	}, nil
 }
 
 func TestMain(m *testing.M) {
@@ -178,57 +229,4 @@ func TestMain(m *testing.M) {
 	}
 
 	m.Run()
-}
-
-// createTempDir creates a temporary directory with a cleanup teardown not having a testing.T.
-func createTempDir() (tmp string, cleanup func(), err error) {
-	if tmp, err = os.MkdirTemp("", "aad-auth-integration-tests-pam"); err != nil {
-		fmt.Fprintf(os.Stderr, "Can not create temporary directory %q", tmp)
-		return "", nil, err
-	}
-	return tmp, func() {
-		if err := os.RemoveAll(tmp); err != nil {
-			fmt.Fprintf(os.Stderr, "Can not clean up temporary directory %q", tmp)
-		}
-	}, nil
-}
-
-func requireEqualDumps(t *testing.T, wantPath, gotPath string, start, end int64) {
-	t.Helper()
-
-	want, err := testutils.ReadDumpAsTables(t, wantPath)
-	require.NoError(t, err, "Could not read dump file %s", wantPath)
-
-	got, err := testutils.ReadDumpAsTables(t, gotPath)
-	require.NoError(t, err, "Could not read dump file %s", gotPath)
-
-	for tableName, wantTable := range want {
-		gotTable := got[tableName]
-		require.NotNil(t, gotTable, "There should be a table")
-		require.Equal(t, len(wantTable.Rows), len(gotTable.Rows), "Tables should have the same number of rows")
-
-		for i, wantRow := range wantTable.Rows {
-			gotRow := gotTable.Rows[i]
-
-			for colName, wantData := range wantRow {
-				gotData := gotRow[colName]
-				require.NotNil(t, gotData, "Got must have the wanted row content")
-
-				// Handles comparison of the columns.
-				switch colName {
-				// last_online_auth is updated everytime a user logs in (online).
-				// Comparion must be done with the time of the test, rather than with the golden dump.
-				case "last_online_auth":
-					n, _ := strconv.ParseInt(gotData, 10, 64)
-					// True if the time of last authentication is between the start and the end of the test.
-					x := (start <= n) && (n <= end)
-					require.True(t, x, "Time %s (%d) must be between start (%d) and end (%d)", gotData, n, start, end)
-
-				// Handles comparison for most columns.
-				default:
-					require.Equal(t, wantData, gotData, "Contents of col %s from %s must be the same", colName, tableName)
-				}
-			}
-		}
-	}
 }

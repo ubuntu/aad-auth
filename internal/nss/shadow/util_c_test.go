@@ -45,7 +45,7 @@ func TestToCshadow(t *testing.T) {
 			// Golden file stores the 64-bit representation.
 			shadowGot.SpFlag = math.MaxUint64
 
-			want := testutils.SaveAndLoadFromGolden(t, shadowGot)
+			want := testutils.LoadAndUpdateFromGolden(t, shadowGot)
 
 			require.Equal(t, want, shadowGot, "Should have C shadow with expected fields content")
 		})

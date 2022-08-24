@@ -28,9 +28,9 @@ func WithGoldPath(path string) OptionGolden {
 
 var update bool
 
-// SaveAndLoadFromGolden loads the element from an yaml golden file in testdata/golden.
+// LoadAndUpdateFromGolden loads the element from an yaml golden file in testdata/golden.
 // It will update the file if the update flag is used prior to deserializing it.
-func SaveAndLoadFromGolden[E any](t *testing.T, ref E, opts ...OptionGolden) E {
+func LoadAndUpdateFromGolden[E any](t *testing.T, ref E, opts ...OptionGolden) E {
 	t.Helper()
 
 	o := goldenOption{

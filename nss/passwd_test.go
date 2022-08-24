@@ -67,7 +67,7 @@ func TestNssGetPasswdByName(t *testing.T) {
 			}
 			require.NoError(t, err, "getent should succeed")
 
-			want := testutils.SaveAndLoadFromGolden(t, got)
+			want := testutils.LoadAndUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "Should get expected aad user")
 		})
 	}
@@ -129,7 +129,7 @@ func TestNssGetPasswdByUID(t *testing.T) {
 			}
 			require.NoError(t, err, "getent should succeed")
 
-			want := testutils.SaveAndLoadFromGolden(t, got)
+			want := testutils.LoadAndUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "Should get expected aad user")
 		})
 	}
@@ -182,7 +182,7 @@ func TestNssGetPasswd(t *testing.T) {
 			got, err := outNSSCommandForLib(t, tc.rootUID, gid, shadowMode, cacheDir, originOut, "getent", "passwd")
 			require.NoError(t, err, "getent should succeed")
 
-			want := testutils.SaveAndLoadFromGolden(t, got)
+			want := testutils.LoadAndUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "Should get expected aad users listed")
 		})
 	}
