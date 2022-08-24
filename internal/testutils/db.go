@@ -63,6 +63,11 @@ func ReadDumpAsTables(t *testing.T, r io.Reader) (map[string]Table, error) {
 
 	for _, table := range strings.Split(string(data), "\n\n") {
 		lines := strings.Split(table, "\n")
+		// Handles the last line of the dump file
+		if len(lines) == 1 {
+			break
+		}
+
 		require.GreaterOrEqual(t, len(lines), 3, "%q should contain 3 lines at least: name/row names/data", lines)
 
 		// Each group of data is one table with its content.
@@ -113,13 +118,7 @@ func dbToCsv(t *testing.T, db *sql.DB, w io.Writer, usePredicatableFieldValues b
 
 	// Iterates through each table and dumps their data.
 	var tableName string
-	var separateTables bool
 	for query.Next() {
-		if separateTables {
-			_, err = w.Write([]byte("\n"))
-			require.NoError(t, err, "There should be a line break between tables")
-		}
-
 		err = query.Scan(&tableName)
 		require.NoError(t, err, "Query result should be scanned")
 
@@ -129,7 +128,8 @@ func dbToCsv(t *testing.T, db *sql.DB, w io.Writer, usePredicatableFieldValues b
 		err = dumpTable(t, db, tableName, w, usePredicatableFieldValues)
 		require.NoError(t, err, "Failed to dump table %s", tableName)
 
-		separateTables = true
+		_, err = w.Write([]byte("\n"))
+		require.NoError(t, err, "There should be a line break after the table")
 	}
 
 	return nil
@@ -205,44 +205,15 @@ type DbStruct struct {
 	SQL  string
 }
 
-// CreateTempTestDBs iterates through the slice of DbCreation and creates the specified databases in a temporary directory.
-// If successful, returns the temp dir in which the db files are contained along with a clean up function or an error
-// if anything failed.
-func CreateTempTestDBs(t *testing.T, dbs []DbStruct) (dbDir string, err error) {
-	t.Helper()
-
-	dbDir = t.TempDir()
-	for _, dbStruct := range dbs {
-		p := filepath.Join(dbDir, dbStruct.Name)
-		db, err := sql.Open("sqlite3", p)
-		if err != nil {
-			return "", fmt.Errorf("failed to establish connection with database: %w", err)
-		}
-
-		if _, err = db.Exec(dbStruct.SQL); err != nil {
-			return "", fmt.Errorf("error during execution of sql commands: %w", err)
-		}
-
-		if err = db.Close(); err != nil {
-			return "", fmt.Errorf("failed to close database connection: %w", err)
-		}
-	}
-
-	return dbDir, nil
-}
-
 // LoadDumpIntoDB reads the specified dump file and inserts its contents into the database.
-func LoadDumpIntoDB(t *testing.T, dumpPath, dbPath string) (err error) {
+func LoadDumpIntoDB(t *testing.T, dumpPath, dbPath string) {
 	t.Helper()
+
 	dump, err := ReadDumpAsTables(t, dumpPath)
-	if err != nil {
-		return fmt.Errorf("failed to read the dump file: %w", err)
-	}
+	require.NoError(t, err, "Expected to read dump file %s.", dumpPath)
 
 	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
-		return fmt.Errorf("failed to create a connection with the db: %w", err)
-	}
+	require.NoError(t, err, "Expected to open database %s.", dbPath)
 	defer db.Close()
 
 	for name, table := range dump {
@@ -260,11 +231,7 @@ func LoadDumpIntoDB(t *testing.T, dumpPath, dbPath string) (err error) {
 			// Formats the statement removing the last trailing comma from the values string.
 			rowSt := fmt.Sprintf(st, s[:len(s)-1])
 			_, err = db.Exec(rowSt, values...)
-			if err != nil {
-				return fmt.Errorf("failed to execute statement %s: %w", rowSt, err)
-			}
+			require.NoError(t, err, "Expected to insert %#v into the db", row)
 		}
 	}
-
-	return nil
 }
