@@ -1,3 +1,4 @@
+// Package user contains some helpers for user normalization.
 package user
 
 import "strings"
