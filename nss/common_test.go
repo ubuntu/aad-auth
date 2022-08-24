@@ -47,27 +47,6 @@ func outNSSCommandForLib(t *testing.T, rootUID, rootGID, shadowMode int, cacheDi
 	return got, err
 }
 
-func TestMain(m *testing.M) {
-	// Build the pam module in a temporary directory and allow linking to it.
-	libDir, cleanup, err := createTempDir()
-	if err != nil {
-		os.Exit(1)
-	}
-
-	libPath = filepath.Join(libDir, "libnss_aad.so.2")
-	out, err := exec.Command("go", "build", "-buildmode=c-shared", "-tags", "integrationtests", "-o", libPath).CombinedOutput()
-	if err != nil {
-		cleanup()
-		fmt.Fprintf(os.Stderr, "Can not build nss module (%v) : %s", err, out)
-		os.Exit(1)
-	}
-
-	testutils.InstallUpdateFlag()
-	flag.Parse()
-
-	m.Run()
-}
-
 // createTempDir creates a temporary directory with a cleanup teardown not having a testing.T.
 func createTempDir() (tmp string, cleanup func(), err error) {
 	if tmp, err = os.MkdirTemp("", "aad-auth-integration-tests-nss"); err != nil {
@@ -79,4 +58,26 @@ func createTempDir() (tmp string, cleanup func(), err error) {
 			fmt.Fprintf(os.Stderr, "Can not clean up temporary directory %q", tmp)
 		}
 	}, nil
+}
+
+func TestMain(m *testing.M) {
+	// Build the pam module in a temporary directory and allow linking to it.
+	libDir, cleanup, err := createTempDir()
+	if err != nil {
+		os.Exit(1)
+	}
+
+	libPath = filepath.Join(libDir, "libnss_aad.so.2")
+	// #nosec:G204 - we control the command arguments in tests
+	out, err := exec.Command("go", "build", "-buildmode=c-shared", "-tags", "integrationtests", "-o", libPath).CombinedOutput()
+	if err != nil {
+		cleanup()
+		fmt.Fprintf(os.Stderr, "Can not build nss module (%v) : %s", err, out)
+		os.Exit(1)
+	}
+
+	testutils.InstallUpdateFlag()
+	flag.Parse()
+
+	m.Run()
 }

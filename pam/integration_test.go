@@ -143,7 +143,8 @@ func TestPamSmAuthenticate(t *testing.T) {
 				tmp := filepath.Join(t.TempDir(), db+".dump")
 				f, err := os.Create(tmp)
 				require.NoError(t, err, "Setup: can't create temporary dump")
-				testutils.DumpDb(t, ref, f, false)
+				err = testutils.DumpDb(t, ref, f, false)
+				require.NoError(t, err, "Setup: can't deserialize temporary dump")
 				f.Close()
 				gots[db], err = testutils.ReadDumpAsTables(t, tmp)
 				require.NoError(t, err, "Could not temporary read dump file %s", tmp)
@@ -221,6 +222,7 @@ func TestMain(m *testing.M) {
 	}
 
 	libPath = filepath.Join(libDir, "pam_aad.so")
+	// #nosec:G204 - we control the command arguments in tests
 	out, err := exec.Command("go", "build", "-buildmode=c-shared", "-tags", "integrationtests", "-o", libPath).CombinedOutput()
 	if err != nil {
 		cleanup()
