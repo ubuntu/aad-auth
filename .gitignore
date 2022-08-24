@@ -1,6 +1,3 @@
-# Our CLI binary
-/aad-cli
-
 # Binaries for programs and plugins
 *.exe
 *.exe~
@@ -10,9 +7,11 @@
 *.so.*
 *.dylib
 
+# Editor exclusions
+.vsls.json
+
 # Test binary, built with `go test -c`
 *.test
-coverage/
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
@@ -28,4 +27,7 @@ vendor/
 
 # Various files
 conf/aad.conf
-.vsls.json
+
+# Our CLI binary
+bin/
+/aad-cli

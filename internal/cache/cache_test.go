@@ -395,3 +395,124 @@ func TestCanAuthenticate(t *testing.T) {
 		})
 	}
 }
+
+func TestUpdateUserAttribute(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		username  string
+		attribute string
+		value     any
+
+		wantErr bool
+	}{
+		"gecos": {attribute: "gecos", value: "new gecos"},
+		"home":  {attribute: "home", value: "new home"},
+		"shell": {attribute: "shell", value: "new shell"},
+
+		// error cases
+		"unsupported attribute": {attribute: "uid", value: 1, wantErr: true},
+		"unsupported value":     {attribute: "gecos", value: []string{"a"}, wantErr: true},
+		"nonexistent user":      {username: "nonexistentuser@domain.com", attribute: "gecos", wantErr: true},
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			if tc.username == "" {
+				tc.username = "veryolduser@domain.com"
+			}
+
+			cacheDir := t.TempDir()
+			testutils.CopyDBAndFixPermissions(t, "testdata/db_with_old_users", cacheDir)
+			c := newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
+
+			err := c.UpdateUserAttribute(context.Background(), tc.username, tc.attribute, tc.value)
+			if tc.wantErr {
+				require.Error(t, err, "UpdateUserAttribute should return an error but hasn't")
+				return
+			}
+			assert.NoError(t, err, "UpdateUserAttribute should not have returned an error but has")
+
+			got, err := c.GetUserByName(context.Background(), tc.username)
+			require.NoError(t, err, "Setup: GetUserByName should not have returned an error but has")
+
+			switch tc.attribute {
+			case "gecos":
+				require.Equal(t, tc.value, got.Gecos)
+			case "home":
+				require.Equal(t, tc.value, got.Home)
+			case "shell":
+				require.Equal(t, tc.value, got.Shell)
+			}
+		})
+	}
+}
+
+func TestQueryPasswdAttribute(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		username  string
+		attribute string
+
+		wantErr bool
+	}{
+		"get login":            {attribute: "login"},
+		"get password":         {attribute: "password"},
+		"get uid":              {attribute: "uid"},
+		"get gid":              {attribute: "gid"},
+		"get gecos":            {attribute: "gecos"},
+		"get home":             {attribute: "home"},
+		"get shell":            {attribute: "shell"},
+		"get last_online_auth": {attribute: "last_online_auth"},
+
+		// error cases
+		"get nonexistent user": {username: "nouser@domain.com", attribute: "uid", wantErr: true},
+		"get bad_attribute":    {attribute: "bad_attribute", wantErr: true},
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			if tc.username == "" {
+				tc.username = "veryolduser@domain.com"
+			}
+
+			cacheDir := t.TempDir()
+			testutils.CopyDBAndFixPermissions(t, "testdata/db_with_old_users", cacheDir)
+			c := newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
+
+			value, err := c.QueryPasswdAttribute(context.Background(), tc.username, tc.attribute)
+			if tc.wantErr {
+				require.Error(t, err, "QueryPasswdAttribute should return an error but hasn't")
+				return
+			}
+			assert.NoError(t, err, "QueryPasswdAttribute should not have returned an error but has")
+
+			got, err := c.GetUserByName(context.Background(), tc.username)
+			require.NoError(t, err, "Setup: GetUserByName should not have returned an error but has")
+
+			switch tc.attribute {
+			case "login":
+				require.Equal(t, value, got.Name)
+			case "password":
+				require.Equal(t, value, got.Passwd)
+			case "uid":
+				require.Equal(t, value, got.UID)
+			case "gid":
+				require.Equal(t, value, got.GID)
+			case "gecos":
+				require.Equal(t, value, got.Gecos)
+			case "home":
+				require.Equal(t, value, got.Home)
+			case "shell":
+				require.Equal(t, value, got.Shell)
+			case "last_online_auth":
+				require.Equal(t, value, got.LastOnlineAuth.Unix())
+			}
+		})
+	}
+}

@@ -9,11 +9,14 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/ubuntu/aad-auth/conf"
 	"github.com/ubuntu/aad-auth/internal/config"
 	"github.com/ubuntu/aad-auth/internal/consts"
+	"golang.org/x/sys/unix"
 )
 
 func (a *App) installConfig() {
@@ -47,6 +50,11 @@ func (a *App) installConfigEdit() *cobra.Command {
 		Short: "Edit the configuration file in an editor",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Bail early if the config directory is not writable
+			if unix.Access(filepath.Dir(a.options.configFile), unix.W_OK) != nil {
+				return fmt.Errorf("you don't have permissions to write to the config directory %q", filepath.Dir(a.options.configFile))
+			}
+
 			// Create a temporary file with the previous config file contents
 			tempfile, err := tempFileWithPreviousConfig(a.options.configFile)
 			if err != nil {
@@ -58,23 +66,23 @@ func (a *App) installConfigEdit() *cobra.Command {
 			c := exec.Command(a.options.editor, tempfile)
 			c.Stdin, c.Stdout, c.Stderr = os.Stdin, os.Stdout, os.Stderr
 			if err := c.Run(); err != nil {
-				return fmt.Errorf("Error: failed to edit config: %w", err)
+				return fmt.Errorf("failed to edit config: %w", err)
 			}
 
 			// Replace the current config with the temporary file if it has changed and is valid
 			if err := config.Validate(a.ctx, tempfile); err != nil {
-				return fmt.Errorf("Error: invalid config: %w\nThe temporary file was saved at: %s", err, tempfile)
+				return fmt.Errorf("invalid config: %w\nThe temporary file was saved at: %s", err, tempfile)
 			}
 			// TODO see if it's worth checking if the files are the same before doing a pointless write
 			defer os.Remove(tempfile)
 
 			newConfig, err := os.ReadFile(tempfile)
 			if err != nil {
-				return fmt.Errorf("Error: failed to read temporary config file: %w", err)
+				return fmt.Errorf("failed to read temporary config file: %w", err)
 			}
 			//#nosec:G306 these are the expected permissions for the config file
 			if err := os.WriteFile(a.options.configFile, newConfig, 0640); err != nil {
-				return fmt.Errorf("Error: failed to write config file: %w", err)
+				return fmt.Errorf("failed to write config file: %w", err)
 			}
 
 			fmt.Println("The configuration at", a.options.configFile, "has been successfully updated.")
@@ -92,11 +100,13 @@ func tempFileWithPreviousConfig(configFile string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to create temporary config file: %w", err)
 	}
+	defer tempfile.Close()
 
 	config, err := os.OpenFile(configFile, os.O_RDWR, 0600)
 	if err != nil {
 		// If the previous config file doesn't exist, return the empty temporary file
 		if errors.Is(err, fs.ErrNotExist) {
+			_, _ = tempfile.Write([]byte(conf.AADConfTemplate))
 			return tempfile.Name(), nil
 		}
 		return "", fmt.Errorf("could not open previous config file for writing: %w", err)

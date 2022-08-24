@@ -19,5 +19,5 @@ const (
 	DefaultLogLevel = log.WarnLevel
 
 	// DefaultEditor is the default editor to use when no option is passed.
-	DefaultEditor = "nano"
+	DefaultEditor = "sensible-editor"
 )

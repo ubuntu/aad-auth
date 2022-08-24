@@ -57,7 +57,6 @@ var PasswdQueryAttributes = []string{
 	"home",
 	"shell",
 	"last_online_auth",
-	"shadow_password",
 }
 
 // PasswdUpdateAttributes returns a list of attributes that can be modified in

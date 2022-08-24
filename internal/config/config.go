@@ -128,12 +128,12 @@ func Validate(ctx context.Context, p string) error {
 	}
 
 	// Config sections are domains, so check them all if present
-	domainsToCheck := []string{""}
-	if len(cfg.Sections()) > 1 {
-		domainsToCheck = cfg.SectionStrings()[1:]
-	}
-
-	for _, domain := range domainsToCheck {
+	for _, domain := range cfg.SectionStrings() {
+		// Skip default section if we have multiple domains, as users might set
+		// required options only in the domain sections
+		if domain == ini.DefaultSection && len(cfg.Sections()) > 1 {
+			continue
+		}
 		if _, err = Load(ctx, p, domain); err != nil {
 			return err
 		}

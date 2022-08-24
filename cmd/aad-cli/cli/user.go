@@ -99,7 +99,8 @@ Key must be one of: %s.`, strings.Join(cache.PasswdQueryAttributes, ", ")),
 			os.Chmod("./nss/testdata/users_in_db/passwd.db", 0644)
 
 			var err error
-			var login, key, value string
+			var login, key string
+			var value any
 
 			switch len(args) {
 			case 0:
@@ -135,7 +136,7 @@ Key must be one of: %s.`, strings.Join(cache.PasswdQueryAttributes, ", ")),
 				return err
 			}
 
-			fmt.Println(strings.TrimSpace(value))
+			fmt.Println(strings.TrimSpace(fmt.Sprint(value)))
 			return nil
 		},
 	}

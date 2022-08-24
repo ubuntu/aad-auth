@@ -39,10 +39,9 @@ func TestVersion(t *testing.T) {
 func newQueryMockCmd(t *testing.T, installedPkgs []string) string {
 	t.Helper()
 
-	tmpfile, err := os.CreateTemp(os.TempDir(), "dpkg-query.*.sh")
-	require.NoError(t, err, "failed to create temporary file")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "dpkg-query.*.sh")
+	require.NoError(t, err, "Setup: failed to create temporary file")
 	defer tmpfile.Close()
-	t.Cleanup(func() { os.Remove(tmpfile.Name()) })
 
 	var b bytes.Buffer
 	b.WriteString(`#!/bin/sh
@@ -58,10 +57,10 @@ for pkgname; do :; done
 	b.WriteString("exit 1\n")
 
 	err = tmpfile.Chmod(0700)
-	require.NoError(t, err, "failed to set executable permissions on temporary file")
+	require.NoError(t, err, "Setup: failed to set executable permissions on temporary file")
 
 	_, err = tmpfile.Write(b.Bytes())
-	require.NoError(t, err, "failed to write temporary file")
+	require.NoError(t, err, "Setup: failed to write temporary file")
 
 	return tmpfile.Name()
 }

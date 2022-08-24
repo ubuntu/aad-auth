@@ -1,6 +1,0 @@
-TEMPORARY CONFIG PATH: /tmp/aad.conf
-PREVIOUS CONFIG FILE:
-NEW CONFIG FILE:
-tenant_id = something
-app_id = something
-The configuration at /tmp/aad.conf has been successfully updated.

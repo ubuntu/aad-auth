@@ -40,7 +40,7 @@ func TestUserShellCompletion(t *testing.T) {
 			uid, gid := testutils.GetCurrentUIDGID(t)
 
 			cache, err := cache.New(context.Background(), cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid))
-			require.NoError(t, err, "failed to create cache")
+			require.NoError(t, err, "Setup: failed to create cache")
 
 			c := cli.New(cli.WithCache(cache))
 			got, err := testutils.RunApp(t, c, args...)
@@ -99,7 +99,7 @@ func TestUserGet(t *testing.T) {
 				shadowMode = 0
 			}
 			cache, err := cache.New(context.Background(), cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid), cache.WithShadowMode(shadowMode))
-			require.NoError(t, err, "failed to create cache")
+			require.NoError(t, err, "Setup: failed to create cache")
 			c := cli.New(cli.WithCache(cache))
 
 			got, err := testutils.RunApp(t, c, args...)
@@ -145,7 +145,7 @@ func TestUserSet(t *testing.T) {
 			uid, gid := testutils.GetCurrentUIDGID(t)
 
 			cache, err := cache.New(context.Background(), cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid))
-			require.NoError(t, err, "failed to create cache")
+			require.NoError(t, err, "Setup: failed to create cache")
 
 			c := cli.New(cli.WithCache(cache))
 
@@ -157,7 +157,7 @@ func TestUserSet(t *testing.T) {
 			require.NoError(t, err, "expected command to succeed")
 
 			got, err := cache.GetUserByName(context.Background(), tc.username)
-			require.NoError(t, err, "failed to get user from cache")
+			require.NoError(t, err, "Setup: failed to get user from cache")
 
 			switch tc.attribute {
 			case "gecos":
