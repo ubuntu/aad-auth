@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 
 	pamCom "github.com/msteinert/pam"
 	"github.com/stretchr/testify/require"
+	"github.com/ubuntu/aad-auth/internal/cache"
 	"github.com/ubuntu/aad-auth/internal/testutils"
 )
 
@@ -88,28 +90,13 @@ func TestPamSmAuthenticate(t *testing.T) {
 
 			cacheDir := filepath.Join(tmp, "cache")
 
-			dbs := []string{"passwd.db", "shadow.db"}
-
 			if tc.initialCache != "" {
-				dbsSQL := make([]testutils.DbStruct, 0, len(dbs))
-				for _, db := range dbs {
-					b, err := os.ReadFile(filepath.Join("testdata", "dbs", db[:len(db)-3]+".sql"))
-					require.NoError(t, err, "SQL file for %s must be read successfully", db)
+				c := cache.NewCacheForTests(t, cacheDir, cache.WithTeardownDuration(0))
+				c.Close(context.Background())
 
-					dbsSQL = append(dbsSQL, testutils.DbStruct{
-						Name: db,
-						SQL:  string(b),
-					})
+				for _, db := range []string{"passwd.db", "shadow.db"} {
+					testutils.LoadDumpIntoDB(t, filepath.Join("testdata", tc.initialCache, db+".dump"), filepath.Join(cacheDir, db))
 				}
-
-				dir, err := testutils.CreateTempTestDBs(t, dbsSQL)
-				require.NoError(t, err, "failed to init test dbs")
-
-				for _, db := range dbs {
-					err = testutils.LoadDumpIntoDB(t, filepath.Join("testdata", tc.initialCache, db+"_dump"), filepath.Join(dir, db))
-					require.NoError(t, err, "The content of the dump file must be read into the database.")
-				}
-				testutils.CopyDBAndFixPermissions(t, dir, cacheDir)
 			}
 
 			// pam service configuration
