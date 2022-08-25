@@ -1,0 +1,6 @@
+shadow
+uid,password,last_pwd_change,min_pwd_age,max_pwd_age,pwd_warn_period,pwd_inactivity,expiration_date
+80938656,$2a$10$cF4IsiVtLzwUTpboXHlv.eaK4BCnwn4r/Rjdry5iSJpq6zAjA0gGy,-1,-1,-1,-1,-1,-1
+2128709280,$2a$10$58zoPzYVv5Oe3l09QWUrp.7u2CoqeZ1wR.jQL367srBa6j9dS0Si2,-1,-1,-1,-1,-1,-1
+3191309984,$2a$10$7ATX1P7pRgkYhsDVxE.mIe1V2WKIXuTb5TMRqkmJjWGFqx9hD74kW,-1,-1,-1,-1,-1,-1
+

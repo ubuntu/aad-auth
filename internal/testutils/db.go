@@ -1,17 +1,21 @@
 package testutils
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	// Used as driver for the db.
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/require"
+	"github.com/ubuntu/aad-auth/internal/cache"
 )
 
 // LoadAndUpdateFromGoldenDump loads the specified database from golden file in testdata/.
@@ -199,10 +203,40 @@ func predicatableFieldValues(name string, data, cols []string) {
 	}
 }
 
-// DbStruct represents the values required for the creation of a database.
-type DbStruct struct {
-	Name string
-	SQL  string
+// PrepareDBsForTests initializes a cache in the specified directory and load it with the specified dump.
+func PrepareDBsForTests(t *testing.T, cacheDir, initialCache string, options ...cache.Option) {
+	t.Helper()
+
+	// Gets the path to the testutils package.
+	_, p, _, _ := runtime.Caller(0)
+	testutilsPath := filepath.Dir(p)
+
+	options = append(options, cache.WithTeardownDuration(0))
+
+	c := NewCacheForTests(t, cacheDir, options...)
+	err := c.Close(context.Background())
+	require.NoError(t, err, "Cache must be closed to enable the dump loading.")
+
+	for _, db := range []string{"passwd.db", "shadow.db"} {
+		LoadDumpIntoDB(t, filepath.Join(testutilsPath, "cache_dumps", initialCache, db+".dump"), filepath.Join(cacheDir, db))
+	}
+}
+
+// NewCacheForTests returns a cache that is closed automatically, with permissions set to current user.
+func NewCacheForTests(t *testing.T, cacheDir string, options ...cache.Option) (c *cache.Cache) {
+	t.Helper()
+
+	uid, gid := GetCurrentUIDGID(t)
+	opts := append([]cache.Option{}, cache.WithCacheDir(cacheDir),
+		cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid))
+
+	opts = append(opts, options...)
+
+	c, err := cache.New(context.Background(), opts...)
+	require.NoError(t, err, "Setup: should be able to create a cache")
+	t.Cleanup(func() { c.Close(context.Background()) })
+
+	return c
 }
 
 // LoadDumpIntoDB reads the specified dump file and inserts its contents into the database.
@@ -225,6 +259,9 @@ func LoadDumpIntoDB(t *testing.T, dumpPath, dbPath string) {
 			// Looping through the columns to ensure that the values will be ordered as supposed to.
 			for i, col := range table.Cols {
 				values[i] = row[col]
+				if col == "last_online_auth" && values[i] == "RECENT_TIME" {
+					values[i] = time.Now().Add(-time.Hour * 48).Unix()
+				}
 				s += "?,"
 			}
 
