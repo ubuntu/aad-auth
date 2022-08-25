@@ -33,9 +33,9 @@ override_dh_auto_install:
 	mkdir -p debian/tmp/usr/share/pam-configs
 	cp debian/libpam-aad.pam-auth-update debian/tmp/usr/share/pam-configs/aad
 
-	# Comment configuration and install it to /etc
+	# Install configuration template to /etc
 	mkdir -p debian/tmp/etc
-	sed -e 's/^\(\)/# \1/' conf/aad.conf.template > debian/tmp/etc/aad.conf
+	cp conf/aad.conf.template debian/tmp/etc/aad.conf
 
 	# Install PAM and NSS libraries
 	mkdir -p debian/tmp/usr/lib/$(DEB_HOST_GNU_TYPE)/security
