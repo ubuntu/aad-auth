@@ -1,3 +1,4 @@
+// Package main implements the main entry point for the aad-cli command.
 package main
 
 import (

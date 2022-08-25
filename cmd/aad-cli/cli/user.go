@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -95,9 +94,6 @@ Key must be one of: %s.`, strings.Join(cache.PasswdQueryAttributes, ", ")),
 			return cmd.Parent().PreRunE(cmd, args)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			os.Chmod("./nss/testdata/users_in_db/shadow.db", 0640)
-			os.Chmod("./nss/testdata/users_in_db/passwd.db", 0644)
-
 			var err error
 			var login, key string
 			var value any

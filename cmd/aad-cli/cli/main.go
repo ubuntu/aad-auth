@@ -1,3 +1,4 @@
+// Package cli contains the CLI implementation.
 package cli
 
 import (

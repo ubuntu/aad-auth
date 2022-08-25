@@ -1,3 +1,4 @@
+// Package conf includes the embedded configuration template for the application.
 package conf
 
 import _ "embed"
