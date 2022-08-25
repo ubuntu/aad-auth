@@ -5,11 +5,11 @@
     - myuser@domain.com
 - name: otheruser@domain.com
   passwd: x
-  gid: 165119649
+  gid: 165119648
   members:
     - otheruser@domain.com
 - name: user@otherdomain.com
   passwd: x
-  gid: 165119648
+  gid: 165119649
   members:
     - user@otherdomain.com
