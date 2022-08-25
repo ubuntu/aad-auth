@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -15,7 +14,6 @@ import (
 
 	pamCom "github.com/msteinert/pam"
 	"github.com/stretchr/testify/require"
-	"github.com/ubuntu/aad-auth/internal/cache"
 	"github.com/ubuntu/aad-auth/internal/testutils"
 )
 
@@ -91,12 +89,7 @@ func TestPamSmAuthenticate(t *testing.T) {
 			cacheDir := filepath.Join(tmp, "cache")
 
 			if tc.initialCache != "" {
-				c := cache.NewCacheForTests(t, cacheDir, cache.WithTeardownDuration(0))
-				c.Close(context.Background())
-
-				for _, db := range []string{"passwd.db", "shadow.db"} {
-					testutils.LoadDumpIntoDB(t, filepath.Join("testdata", tc.initialCache, db+".dump"), filepath.Join(cacheDir, db))
-				}
+				testutils.PrepareDBsForTests(t, cacheDir, tc.initialCache)
 			}
 
 			// pam service configuration
