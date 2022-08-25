@@ -435,17 +435,11 @@ func TestUpdateUserAttribute(t *testing.T) {
 			}
 			assert.NoError(t, err, "UpdateUserAttribute should not have returned an error but has")
 
-			got, err := c.GetUserByName(context.Background(), tc.username)
+			user, err := c.GetUserByName(context.Background(), tc.username)
 			require.NoError(t, err, "Setup: GetUserByName should not have returned an error but has")
+			got := user.KeysHash()
 
-			switch tc.attribute {
-			case "gecos":
-				require.Equal(t, tc.value, got.Gecos)
-			case "home":
-				require.Equal(t, tc.value, got.Home)
-			case "shell":
-				require.Equal(t, tc.value, got.Shell)
-			}
+			require.Equal(t, tc.value, got[tc.attribute], "UpdateUserAttribute should have updated the user attribute")
 		})
 	}
 }
@@ -492,27 +486,11 @@ func TestQueryPasswdAttribute(t *testing.T) {
 			}
 			assert.NoError(t, err, "QueryPasswdAttribute should not have returned an error but has")
 
-			got, err := c.GetUserByName(context.Background(), tc.username)
+			user, err := c.GetUserByName(context.Background(), tc.username)
 			require.NoError(t, err, "Setup: GetUserByName should not have returned an error but has")
 
-			switch tc.attribute {
-			case "login":
-				require.Equal(t, value, got.Name)
-			case "password":
-				require.Equal(t, value, got.Passwd)
-			case "uid":
-				require.Equal(t, value, got.UID)
-			case "gid":
-				require.Equal(t, value, got.GID)
-			case "gecos":
-				require.Equal(t, value, got.Gecos)
-			case "home":
-				require.Equal(t, value, got.Home)
-			case "shell":
-				require.Equal(t, value, got.Shell)
-			case "last_online_auth":
-				require.Equal(t, value, got.LastOnlineAuth.Unix())
-			}
+			got := user.KeysHash()
+			require.Equal(t, value, got[tc.attribute], "QueryPasswdAttribute should return the correct value")
 		})
 	}
 }

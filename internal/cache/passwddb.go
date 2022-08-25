@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/go-ini/ini"
@@ -32,18 +31,31 @@ type UserRecord struct {
 // IniString returns an ini representation of the user record as a string.
 func (u UserRecord) IniString() (string, error) {
 	buf := new(bytes.Buffer)
-	out := ini.Empty(ini.LoadOptions{})
+	out := ini.Empty()
 	if err := ini.ReflectFrom(out, &u); err != nil {
 		return "", err
 	}
 
-	// Store this as unix timestamp to avoid any timezone issues
-	out.Section(ini.DefaultSection).Key("last_online_auth").SetValue(strconv.FormatInt(u.LastOnlineAuth.Unix(), 10))
 	if _, err := out.WriteTo(buf); err != nil {
 		return "", err
 	}
 
 	return buf.String(), nil
+}
+
+// KeysHash returns the object represented as a hash with DB column names as keys.
+func (u UserRecord) KeysHash() map[string]interface{} {
+	return map[string]interface{}{
+		"login":            u.Name,
+		"password":         u.Passwd,
+		"uid":              u.UID,
+		"gid":              u.GID,
+		"gecos":            u.Gecos,
+		"home":             u.Home,
+		"shell":            u.Shell,
+		"last_online_auth": u.LastOnlineAuth.Unix(),
+		"shadow_password":  u.ShadowPasswd,
+	}
 }
 
 // PasswdQueryAttributes returns a list of attributes that can be queried in the

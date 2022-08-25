@@ -3,7 +3,10 @@ package cli_test
 import (
 	"context"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
@@ -109,6 +112,16 @@ func TestUserGet(t *testing.T) {
 			}
 			require.NoError(t, err, "expected command to succeed")
 
+			if tc.username != "" {
+				user, err := cache.GetUserByName(context.Background(), tc.username)
+				require.NoError(t, err, "Setup: failed to get user from cache")
+				// Timestamps get serialized as RFC3339 which includes timezone
+				// information.
+				// We replace this with the unix timestamp to make
+				// the comparison easier.
+				got = timestampToUnix(t, got, user.LastOnlineAuth)
+			}
+
 			want := testutils.SaveAndLoadFromGolden(t, got)
 			require.Equal(t, want, got, "expected output to match golden file")
 		})
@@ -156,17 +169,17 @@ func TestUserSet(t *testing.T) {
 			}
 			require.NoError(t, err, "expected command to succeed")
 
-			got, err := cache.GetUserByName(context.Background(), tc.username)
+			user, err := cache.GetUserByName(context.Background(), tc.username)
 			require.NoError(t, err, "Setup: failed to get user from cache")
+			got := user.KeysHash()
 
-			switch tc.attribute {
-			case "gecos":
-				require.Equal(t, "newvalue", got.Gecos)
-			case "home":
-				require.Equal(t, "newvalue", got.Home)
-			case "shell":
-				require.Equal(t, "newvalue", got.Shell)
-			}
+			require.Equal(t, "newvalue", got[tc.attribute], "expected value to be set")
 		})
 	}
+}
+
+func timestampToUnix(t *testing.T, s string, timestamp time.Time) string {
+	t.Helper()
+
+	return strings.ReplaceAll(s, timestamp.Format(time.RFC3339), strconv.FormatInt(timestamp.Unix(), 10))
 }
