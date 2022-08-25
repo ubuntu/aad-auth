@@ -59,15 +59,6 @@ func installSignalHandler(a *cli.App) func() {
 }
 
 func main() {
-	// Test with dummy args from the repo root (AAD setup not necessary)
-	// cache, err := cache.New(context.Background(), cache.WithCacheDir("./nss/testdata/users_in_db"),
-	// 	cache.WithRootUID(1000), cache.WithRootGID(1000), cache.WithShadowGID(1000))
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// app := cli.New(cli.WithCache(cache), cli.WithConfigFile("./conf/aad.conf.template"))
-
-	// The real deal
 	app := cli.New()
 
 	os.Exit(run(app))
