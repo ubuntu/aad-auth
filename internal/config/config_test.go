@@ -179,6 +179,7 @@ func TestValidate(t *testing.T) {
 
 		// Error cases
 		"invalid config, default domain":   {configFile: "invalid.conf", wantErr: true},
+		"invalid config, commented values": {configFile: "invalid-commented.conf", wantErr: true},
 		"invalid config, multiple domains": {configFile: "invalid-multiple-domains.conf", wantErr: true},
 	}
 	for name, tc := range tests {
