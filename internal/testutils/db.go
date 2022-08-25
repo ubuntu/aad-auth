@@ -243,8 +243,14 @@ func NewCacheForTests(t *testing.T, cacheDir string, options ...cache.Option) (c
 func LoadDumpIntoDB(t *testing.T, dumpPath, dbPath string) {
 	t.Helper()
 
-	dump, err := ReadDumpAsTables(t, dumpPath)
+	f, err := os.Open(dumpPath)
+	require.NoError(t, err, "Expected to open dump file %s.", dumpPath)
+
+	dump, err := ReadDumpAsTables(t, f)
 	require.NoError(t, err, "Expected to read dump file %s.", dumpPath)
+
+	err = f.Close()
+	require.NoError(t, err, "File should be correctly close")
 
 	db, err := sql.Open("sqlite3", dbPath)
 	require.NoError(t, err, "Expected to open database %s.", dbPath)
