@@ -182,13 +182,13 @@ func requireEqualDumps(t *testing.T, want, got map[string]testutils.Table, offli
 				case "last_online_auth":
 					// last_online_auth is updated everytime a user logs in (online).
 					// Comparison must be done with the time of the test, rather than with the golden dump.
-					n, err := strconv.Atoi(gotData)
+					n, err := strconv.ParseInt(gotData, 10, 64)
 					require.NoError(t, err, "last_online_auth should be a valid timestamp")
 					if offline {
-						require.False(t, testutils.TimeBetweenOrEquals(time.Unix(int64(n), 0), start, end), "Expected time to not have been changed")
+						require.False(t, testutils.TimeBetweenOrEquals(time.Unix(n, 0), start, end), "Expected time to not have been changed")
 						break
 					}
-					require.True(t, testutils.TimeBetweenOrEquals(time.Unix(int64(n), 0), start, end), "Expected time to be between start and end")
+					require.True(t, testutils.TimeBetweenOrEquals(time.Unix(n, 0), start, end), "Expected time to be between start and end")
 
 				default:
 					// Handles comparison for most columns.
