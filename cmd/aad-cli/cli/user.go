@@ -2,17 +2,40 @@ package cli
 
 import (
 	"fmt"
+	"os/user"
 	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/ubuntu/aad-auth/internal/cache"
+	"github.com/ubuntu/aad-auth/internal/logger"
 )
 
 func (a *App) installUser() {
 	cmd := &cobra.Command{
-		Use:   "user",
+		Use:   "user <key> <value>",
 		Short: "Manage local Azure AD user information",
-		Args:  cobra.NoArgs,
+		Long: fmt.Sprintf(`Manage local Azure AD user information
+
+When called without arguments, this command will retrieve the cache record for the current user.
+
+Specific values can be retrieved by passing an attribute name.
+Values can be set by passing an attribute name and a value.
+
+Currently the only modifiable attributes are: %s.`, strings.Join(cache.PasswdUpdateAttributes, ", ")),
+		Args: cobra.MaximumNArgs(2),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			switch len(args) {
+			case 0:
+				// Get available keys
+				return cache.PasswdQueryAttributes, cobra.ShellCompDirectiveNoFileComp
+			case 1:
+				// Let the shell complete the value for the last argument
+				return nil, cobra.ShellCompDirectiveDefault
+			}
+
+			// We already have our 2 args: no more arg completion
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		},
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			var err error
 			a.cache, err = a.fetchCache()
@@ -22,110 +45,44 @@ func (a *App) installUser() {
 
 			return nil
 		},
-	}
-	cmd.AddCommand(a.installUserSet())
-	cmd.AddCommand(a.installUserGet())
-	a.rootCmd.AddCommand(cmd)
-}
-
-func (a *App) installUserSet() *cobra.Command {
-	return &cobra.Command{
-		Use:   "set <username> <key> <value>",
-		Short: "Configure local Azure AD user settings",
-		Long: fmt.Sprintf(`Set a specific key for a user.
-
-Configurable keys are: %s.`, strings.Join(cache.PasswdUpdateAttributes, ", ")),
-		Args: cobra.ExactArgs(3),
-		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			switch len(args) {
-			case 0:
-				// Get locally available users
-				return a.completeWithAvailableUsers()
-			case 1:
-				// Get available keys
-				return cache.PasswdUpdateAttributes, cobra.ShellCompDirectiveNoFileComp
-			case 2:
-				// Let the shell complete the value for the last argument
-				return nil, cobra.ShellCompDirectiveDefault
-			}
-
-			// We already have our 2 args: no more arg completion
-			return nil, cobra.ShellCompDirectiveNoFileComp
-		},
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return cmd.Parent().PreRunE(cmd, args)
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			login, key, value := args[0], args[1], args[2]
-			if err := a.cache.UpdateUserAttribute(a.ctx, login, key, value); err != nil {
-				return err
-			}
-
-			return nil
-		},
-	}
-}
-
-func (a *App) installUserGet() *cobra.Command {
-	return &cobra.Command{
-		Use:   "get [username] [key]",
-		Short: "Query local Azure AD user settings",
-		Long: fmt.Sprintf(`Get user information from the local cache.
-
-If no username is provided, all users are listed.
-If no key is provided, all keys are listed for the given user.
-
-Key must be one of: %s.`, strings.Join(cache.PasswdQueryAttributes, ", ")),
-		Args: cobra.MaximumNArgs(2), // allow querying everything or a specific setting
-		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			switch len(args) {
-			case 0:
-				// Get locally available users
-				return a.completeWithAvailableUsers()
-			case 1:
-				// Get available keys
-				return cache.PasswdQueryAttributes, cobra.ShellCompDirectiveNoFileComp
-			}
-
-			// We already have our 2 args: no more arg completion
-			return nil, cobra.ShellCompDirectiveNoFileComp
-		},
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return cmd.Parent().PreRunE(cmd, args)
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var err error
-			var login, key string
+			var key string
 			var value any
 
 			switch len(args) {
 			case 0:
-				// Return all user names if no user was specified
-				var users []string
-				users, err = a.cache.GetAllUserNames(a.ctx)
-				value = strings.Join(users, "\n")
+				// Return current user information or all user names if explicitly requested.
+				if a.allusers {
+					var users []string
+					users, err = a.cache.GetAllUserNames(a.ctx)
+					value = strings.Join(users, "\n")
+				} else {
+					var user cache.UserRecord
+					user, err = a.cache.GetUserByName(a.ctx, a.username)
+					value, _ = user.IniString()
+				}
 			case 1:
-				// Return all keys for the given user
-				login = args[0]
-				var user cache.UserRecord
-				user, err = a.cache.GetUserByName(a.ctx, login)
-				value, _ = user.IniString()
-			case 2:
 				// Return the value for the given key
-				login = args[0]
-				key = args[1]
-
+				key = args[0]
 				if key == "shadow_password" {
 					if !a.cache.ShadowReadable() {
 						return fmt.Errorf("You do not have permission to read the shadow database")
 					}
 					var user cache.UserRecord
-					user, err = a.cache.GetUserByName(a.ctx, login)
+					user, err = a.cache.GetUserByName(a.ctx, a.username)
 					value = user.ShadowPasswd
 					break
 				}
 
-				value, err = a.cache.QueryPasswdAttribute(a.ctx, login, key)
+				value, err = a.cache.QueryPasswdAttribute(a.ctx, a.username, key)
+			case 2:
+				// Set the value for the given key and exit
+				key, value = args[0], args[1]
+				if err := a.cache.UpdateUserAttribute(a.ctx, a.username, key, value); err != nil {
+					return err
+				}
+				return nil
 			}
 
 			if err != nil {
@@ -136,6 +93,18 @@ Key must be one of: %s.`, strings.Join(cache.PasswdQueryAttributes, ", ")),
 			return nil
 		},
 	}
+	cmd.Flags().StringVarP(&a.username, "name", "n", getDefaultUser(), "username to operate on")
+	cmd.Flags().BoolVarP(&a.allusers, "all", "a", false, "list all users")
+	cmd.MarkFlagsMutuallyExclusive("name", "all")
+
+	// Register completion for the --name flag
+	if err := cmd.RegisterFlagCompletionFunc("name", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return a.completeWithAvailableUsers()
+	}); err != nil {
+		logger.Warn(a.ctx, "Unable to register completion for user command: %v", err)
+	}
+
+	a.rootCmd.AddCommand(cmd)
 }
 
 // completeWithAvailableUsers returns a list of users available in the local cache.
@@ -162,4 +131,14 @@ func (a *App) fetchCache() (*cache.Cache, error) {
 	}
 
 	return cache.New(a.ctx)
+}
+
+// getDefaultUser returns the current user name or a blank string if an error occurs.
+func getDefaultUser() string {
+	u, err := user.Current()
+	if err != nil {
+		return ""
+	}
+
+	return u.Username
 }

@@ -19,16 +19,12 @@ func TestUserShellCompletion(t *testing.T) {
 	tests := map[string]struct {
 		args []string
 	}{
-		// user get
-		"get all users for get":   {args: []string{"user", "get"}},
-		"get attributes for user": {args: []string{"user", "get", "myuser@domain.com"}},
-		"no more get completion":  {args: []string{"user", "get", "myuser@domain.com", "gecos"}},
-
-		// user set
-		"get all users for set":                {args: []string{"user", "set"}},
-		"get attributes for set":               {args: []string{"user", "set", "myuser@domain.com"}},
-		"default completion for last argument": {args: []string{"user", "set", "myuser@domain.com", "gecos"}},
-		"no more set completion":               {args: []string{"user", "set", "myuser@domain.com", "gecos", "mycomment"}},
+		"get all users for get, short flag":    {args: []string{"user", "-n"}},
+		"get all users for get, long flag":     {args: []string{"user", "--name"}},
+		"get attributes for user":              {args: []string{"user"}},
+		"get attributes for overridden user":   {args: []string{"user", "--name", "myuser@domain.com"}},
+		"default completion for last argument": {args: []string{"user", "gecos"}},
+		"default completion, overridden user":  {args: []string{"user", "gecos", "--name", "myuser@domain.com"}},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -60,10 +56,11 @@ func TestUserGet(t *testing.T) {
 		username           string
 		attribute          string
 		shadowNotAvailable bool
+		allUsers           bool
 
 		wantErr bool
 	}{
-		"get all users":                  {},
+		"get all users":                  {allUsers: true},
 		"get user":                       {username: "myuser@domain.com"},
 		"get user, shadow not available": {username: "myuser@domain.com", shadowNotAvailable: true},
 
@@ -85,12 +82,15 @@ func TestUserGet(t *testing.T) {
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			args := []string{"user", "get"}
+			args := []string{"user"}
 			if tc.username != "" {
-				args = append(args, tc.username)
+				args = append(args, "--name", tc.username)
 			}
 			if tc.attribute != "" {
 				args = append(args, tc.attribute)
+			}
+			if tc.allUsers {
+				args = append(args, "--all")
 			}
 
 			cacheDir := t.TempDir()
@@ -147,11 +147,11 @@ func TestUserSet(t *testing.T) {
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			args := []string{"user", "set"}
+			args := []string{"user"}
 			if tc.username == "" {
 				tc.username = "myuser@domain.com"
 			}
-			args = append(args, tc.username, tc.attribute, "newvalue")
+			args = append(args, "--name", tc.username, tc.attribute, "newvalue")
 
 			cacheDir := t.TempDir()
 			testutils.CopyDBAndFixPermissions(t, filepath.Join("testdata", "cachedb"), cacheDir)
@@ -176,6 +176,18 @@ func TestUserSet(t *testing.T) {
 			require.Equal(t, "newvalue", got[tc.attribute], "expected value to be set")
 		})
 	}
+}
+
+func TestUserMutuallyExclusiveFlags(t *testing.T) {
+	uid, gid := testutils.GetCurrentUIDGID(t)
+	cacheDir := t.TempDir()
+	testutils.CopyDBAndFixPermissions(t, filepath.Join("testdata", "cachedb"), cacheDir)
+	cache, err := cache.New(context.Background(), cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid))
+	c := cli.New(cli.WithCache(cache))
+	require.NoError(t, err, "Setup: failed to create cache")
+
+	_, err = testutils.RunApp(t, c, "user", "--name", "myuser@domain.com", "--all")
+	require.ErrorContains(t, err, "if any flags in the group [name all] are set none of the others can be", "expected command to return mutually exclusive flag error")
 }
 
 func timestampToUnix(t *testing.T, s string, timestamp time.Time) string {

@@ -18,6 +18,10 @@ type App struct {
 	domain  string
 	cache   *cache.Cache
 
+	// CLI flags
+	username string
+	allusers bool
+
 	options options
 }
 
