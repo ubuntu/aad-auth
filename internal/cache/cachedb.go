@@ -16,6 +16,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/ubuntu/aad-auth/internal/logger"
 	"golang.org/x/exp/slices"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -114,11 +115,9 @@ func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGID, f
 	shadowMode = forceShadowMode
 	if forceShadowMode == -1 {
 		shadowMode = 0
-		if f, err := os.OpenFile(shadowPath, os.O_RDWR, 0); err == nil {
-			f.Close()
+		if unix.Access(shadowPath, unix.W_OK) == nil {
 			shadowMode = shadowRWMode
-		} else if f, err := os.Open(shadowPath); err == nil {
-			f.Close()
+		} else if unix.Access(shadowPath, unix.R_OK) == nil {
 			shadowMode = shadowROMode
 		}
 	}
