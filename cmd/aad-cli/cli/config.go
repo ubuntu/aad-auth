@@ -16,7 +16,6 @@ import (
 	"github.com/ubuntu/aad-auth/conf"
 	"github.com/ubuntu/aad-auth/internal/config"
 	"github.com/ubuntu/aad-auth/internal/consts"
-	"golang.org/x/sys/unix"
 )
 
 func (a *App) installConfig() {
@@ -50,11 +49,6 @@ func (a *App) installConfigEdit() *cobra.Command {
 		Short: "Edit the configuration file in an editor",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Bail early if the config directory is not writable
-			if unix.Access(filepath.Dir(a.options.configFile), unix.W_OK) != nil {
-				return fmt.Errorf("you don't have permissions to write to the config directory %q", filepath.Dir(a.options.configFile))
-			}
-
 			// Create a temporary file with the previous config file contents
 			tempfile, err := tempFileWithPreviousConfig(a.options.configFile)
 			if err != nil {
@@ -73,15 +67,7 @@ func (a *App) installConfigEdit() *cobra.Command {
 			if err := config.Validate(a.ctx, tempfile); err != nil {
 				return fmt.Errorf("invalid config: %w\nThe temporary file was saved at: %s", err, tempfile)
 			}
-			// TODO see if it's worth checking if the files are the same before doing a pointless write
-			defer os.Remove(tempfile)
-
-			newConfig, err := os.ReadFile(tempfile)
-			if err != nil {
-				return fmt.Errorf("failed to read temporary config file: %w", err)
-			}
-			//#nosec:G306 these are the expected permissions for the config file
-			if err := os.WriteFile(a.options.configFile, newConfig, 0640); err != nil {
+			if err := os.Rename(tempfile, a.options.configFile); err != nil {
 				return fmt.Errorf("failed to write config file: %w", err)
 			}
 
@@ -96,7 +82,7 @@ func (a *App) installConfigEdit() *cobra.Command {
 // If the previous config file does not exist, its contents are empty.
 // If the previous config file cannot be read, an error is returned.
 func tempFileWithPreviousConfig(configFile string) (string, error) {
-	tempfile, err := os.CreateTemp(os.TempDir(), "aad.*.conf")
+	tempfile, err := os.CreateTemp(filepath.Dir(configFile), "aad.*.conf")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temporary config file: %w", err)
 	}
