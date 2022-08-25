@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/aad-auth/internal/cache"
+	"github.com/ubuntu/aad-auth/internal/testutils"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -33,9 +34,9 @@ func TestGetShadowByName(t *testing.T) {
 			t.Parallel()
 
 			cacheDir := t.TempDir()
-			insertUsersInDb(t, cacheDir)
+			testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
 
-			c := cache.NewCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
+			c := testutils.NewCacheForTests(t, cacheDir)
 			c.SetShadowMode(tc.shadowMode)
 
 			s, err := c.GetShadowByName(context.Background(), tc.name)
@@ -89,9 +90,9 @@ func TestNextShadowEntry(t *testing.T) {
 	}
 
 	cacheDir := t.TempDir()
-	insertUsersInDb(t, cacheDir)
+	testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
 
-	c := cache.NewCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
+	c := testutils.NewCacheForTests(t, cacheDir)
 
 	// Iterate over all entries
 	numIteration := len(wanted)
@@ -118,7 +119,7 @@ func TestNextShadowEntry(t *testing.T) {
 func TestNextShadowEntryNoShadow(t *testing.T) {
 	t.Parallel()
 
-	c := cache.NewCacheForTests(t, t.TempDir(), cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
+	c := testutils.NewCacheForTests(t, t.TempDir())
 	s, err := c.NextShadowEntry(context.Background())
 	require.ErrorIs(t, err, cache.ErrNoEnt, "first and final iteration should return ENOENT, but we got %v", s)
 }
@@ -127,9 +128,9 @@ func TestNextShadowCloseBeforeIterationEnds(t *testing.T) {
 	t.Parallel()
 
 	cacheDir := t.TempDir()
-	insertUsersInDb(t, cacheDir)
+	testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
 
-	c := cache.NewCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
+	c := testutils.NewCacheForTests(t, cacheDir)
 
 	_, err := c.NextShadowEntry(context.Background())
 	require.NoError(t, err, "NextShadowEntry should initiate and returns values without any error")

@@ -35,11 +35,9 @@ func TestGetUserByName(t *testing.T) {
 			t.Parallel()
 
 			cacheDir := t.TempDir()
-			startTime := time.Now()
-			insertUsersInDb(t, cacheDir)
-			endTime := time.Now()
+			testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
 
-			c := cache.NewCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
+			c := testutils.NewCacheForTests(t, cacheDir)
 			c.SetShadowMode(tc.shadowMode)
 
 			u, err := c.GetUserByName(context.Background(), tc.name)
@@ -51,8 +49,8 @@ func TestGetUserByName(t *testing.T) {
 			require.NoError(t, err, "GetUserByName should not have returned an error and has")
 
 			// Handle dynamic fields
-			// LastOnlineAuth should be recent
-			assert.True(t, testutils.TimeBetweenOrEquals(u.LastOnlineAuth, startTime, endTime), "Last Online auth should match insertion time. Last Online auth: %v. Start: %v, End: %v", u.LastOnlineAuth, startTime, endTime)
+			// LastOnlineAuth should be greater than 0
+			assert.False(t, u.LastOnlineAuth.IsZero(), "Last Online should not be zero.")
 			u.LastOnlineAuth = time.Unix(0, 0)
 
 			// Validate password
@@ -100,11 +98,9 @@ func TestGetUserByUID(t *testing.T) {
 			t.Parallel()
 
 			cacheDir := t.TempDir()
-			startTime := time.Now()
-			insertUsersInDb(t, cacheDir)
-			endTime := time.Now()
+			testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
 
-			c := cache.NewCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
+			c := testutils.NewCacheForTests(t, cacheDir)
 			c.SetShadowMode(tc.shadowMode)
 
 			u, err := c.GetUserByUID(context.Background(), tc.uid)
@@ -116,8 +112,8 @@ func TestGetUserByUID(t *testing.T) {
 			require.NoError(t, err, "GetUserByName should not have returned an error and has")
 
 			// Handle dynamic fields
-			// LastOnlineAuth should be recent
-			assert.True(t, testutils.TimeBetweenOrEquals(u.LastOnlineAuth, startTime, endTime), "Last Online auth should match insertion time. Last Online auth: %v. Start: %v, End: %v", u.LastOnlineAuth, startTime, endTime)
+			// LastOnlineAuth should be greater than 0
+			assert.False(t, u.LastOnlineAuth.IsZero(), "Last Online should not be zero.")
 			u.LastOnlineAuth = time.Unix(0, 0)
 
 			// Validate password
@@ -163,11 +159,9 @@ func TestNextPasswdEntry(t *testing.T) {
 	}
 
 	cacheDir := t.TempDir()
-	startTime := time.Now()
-	insertUsersInDb(t, cacheDir)
-	endTime := time.Now()
+	testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
 
-	c := cache.NewCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
+	c := testutils.NewCacheForTests(t, cacheDir)
 
 	// Iterate over all entries
 	numIteration := len(wanted)
@@ -175,8 +169,8 @@ func TestNextPasswdEntry(t *testing.T) {
 		u, err := c.NextPasswdEntry(context.Background())
 		require.NoError(t, err, "NextPasswdEntry should initiate and returns values without any error")
 
-		// LastOnlineAuth should be recent
-		assert.True(t, testutils.TimeBetweenOrEquals(u.LastOnlineAuth, startTime, endTime), "Last Online auth should match insertion time. Last Online auth: %v. Start: %v, End: %v", u.LastOnlineAuth, startTime, endTime)
+		// LastOnlineAuth should be greater than 0
+		assert.False(t, u.LastOnlineAuth.IsZero(), "Last Online should not be zero.")
 		u.LastOnlineAuth = time.Unix(0, 0)
 
 		wantUser, found := wanted[u.Name]
@@ -192,7 +186,7 @@ func TestNextPasswdEntry(t *testing.T) {
 func TestNextPasswdEntryNoUser(t *testing.T) {
 	t.Parallel()
 
-	c := cache.NewCacheForTests(t, t.TempDir(), cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
+	c := testutils.NewCacheForTests(t, t.TempDir())
 	u, err := c.NextPasswdEntry(context.Background())
 	require.ErrorIs(t, err, cache.ErrNoEnt, "first and final iteration should return ENOENT, but we got %v", u)
 }
@@ -201,9 +195,9 @@ func TestNextPasswdCloseBeforeIterationEnds(t *testing.T) {
 	t.Parallel()
 
 	cacheDir := t.TempDir()
-	insertUsersInDb(t, cacheDir)
+	testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
 
-	c := cache.NewCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
+	c := testutils.NewCacheForTests(t, cacheDir)
 
 	_, err := c.NextPasswdEntry(context.Background())
 	require.NoError(t, err, "NextPasswdEntry should initiate and returns values without any error")
