@@ -3,7 +3,6 @@ package passwd_test
 import (
 	"context"
 	"flag"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -30,12 +29,8 @@ func TestNewByName(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			cacheDir := t.TempDir()
-			c := cache.NewCacheForTests(t, cacheDir, cache.WithTeardownDuration(0))
-			c.Close(context.Background())
+			testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
 
-			for _, db := range []string{"passwd.db", "shadow.db"} {
-				testutils.LoadDumpIntoDB(t, filepath.Join("../testdata", "users_in_db", db+".dump"), filepath.Join(cacheDir, db))
-			}
 			uid, gid := testutils.GetCurrentUIDGID(t)
 			opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid)}
 			if tc.failingCache {
@@ -74,12 +69,7 @@ func TestNewByUID(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			cacheDir := t.TempDir()
-			c := cache.NewCacheForTests(t, cacheDir, cache.WithTeardownDuration(0))
-			c.Close(context.Background())
-
-			for _, db := range []string{"passwd.db", "shadow.db"} {
-				testutils.LoadDumpIntoDB(t, filepath.Join("../testdata", "users_in_db", db+".dump"), filepath.Join(cacheDir, db))
-			}
+			testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
 
 			uid, gid := testutils.GetCurrentUIDGID(t)
 			opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid)}
@@ -122,12 +112,7 @@ func TestNextEntry(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			cacheDir := t.TempDir()
 			if !tc.hasNoUser {
-				c := cache.NewCacheForTests(t, cacheDir, cache.WithTeardownDuration(0))
-				c.Close(context.Background())
-
-				for _, db := range []string{"passwd.db", "shadow.db"} {
-					testutils.LoadDumpIntoDB(t, filepath.Join("../testdata", "users_in_db", db+".dump"), filepath.Join(cacheDir, db))
-				}
+				testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
 			}
 
 			uid, gid := testutils.GetCurrentUIDGID(t)
@@ -219,12 +204,7 @@ func TestStartEndEntryIteration(t *testing.T) {
 
 func TestRestartIterationWithoutEndingPreviousOne(t *testing.T) {
 	cacheDir := t.TempDir()
-	c := cache.NewCacheForTests(t, cacheDir, cache.WithTeardownDuration(0))
-	c.Close(context.Background())
-
-	for _, db := range []string{"passwd.db", "shadow.db"} {
-		testutils.LoadDumpIntoDB(t, filepath.Join("../testdata", "users_in_db", db+".dump"), filepath.Join(cacheDir, db))
-	}
+	testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
 
 	uid, gid := testutils.GetCurrentUIDGID(t)
 	opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid)}
