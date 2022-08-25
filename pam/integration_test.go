@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"flag"
 	"fmt"
@@ -138,16 +139,13 @@ func TestPamSmAuthenticate(t *testing.T) {
 				ref := filepath.Join(cacheDir, db)
 				wants[db] = testutils.LoadAndUpdateFromGoldenDump(t, ref)
 
-				// TODO: make this better, using a reader
 				// Load temporary got to memory
-				tmp := filepath.Join(t.TempDir(), db+".dump")
-				f, err := os.Create(tmp)
-				require.NoError(t, err, "Setup: can't create temporary dump")
-				err = testutils.DumpDb(t, ref, f, false)
+				b := &bytes.Buffer{}
+				err = testutils.DumpDb(t, ref, b, false)
 				require.NoError(t, err, "Setup: can't deserialize temporary dump")
-				f.Close()
-				gots[db], err = testutils.ReadDumpAsTables(t, tmp)
-				require.NoError(t, err, "Could not temporary read dump file %s", tmp)
+
+				gots[db], err = testutils.ReadDumpAsTables(t, b)
+				require.NoError(t, err, "Could not read temporary dump file for %s", db)
 			}
 
 			// Compare the dumps, handling special fields

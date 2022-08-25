@@ -29,13 +29,16 @@ func LoadAndUpdateFromGoldenDump(t *testing.T, ref string) map[string]Table {
 
 		f, err := os.Create(wantPath)
 		require.NoError(t, err, "could not create file to dump the db")
-		defer f.Close()
 
 		err = DumpDb(t, ref, f, true)
+		f.Close()
 		require.NoError(t, err, "could not dump the db")
 	}
 
-	want, err := ReadDumpAsTables(t, wantPath)
+	f, err := os.Open(wantPath)
+	require.NoError(t, err, "Wanted golden dump must be read.")
+	defer f.Close()
+	want, err := ReadDumpAsTables(t, f)
 	require.NoError(t, err, "Could not read dump file %s", wantPath)
 
 	return want
@@ -50,16 +53,12 @@ type Table struct {
 }
 
 // ReadDumpAsTables opens the file specified and reads its contents into a map[name]Table.
-func ReadDumpAsTables(t *testing.T, p string) (map[string]Table, error) {
+func ReadDumpAsTables(t *testing.T, r io.Reader) (map[string]Table, error) {
 	t.Helper()
-
-	f, err := os.Open(p)
-	require.NoError(t, err, "failed to open dump file")
-	defer f.Close()
 
 	tables := make(map[string]Table)
 
-	data, err := io.ReadAll(f)
+	data, err := io.ReadAll(r)
 	require.NoError(t, err, "failed to read dump file")
 
 	for _, table := range strings.Split(string(data), "\n\n") {
