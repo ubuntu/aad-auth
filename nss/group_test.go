@@ -1,13 +1,10 @@
 package main
 
 import (
-	"context"
 	"os/exec"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/ubuntu/aad-auth/internal/cache"
 	"github.com/ubuntu/aad-auth/internal/testutils"
 )
 
@@ -51,12 +48,7 @@ func TestNssGetGroupByName(t *testing.T) {
 				tc.cacheDB = "users_in_db"
 			}
 			if tc.cacheDB != "-" {
-				c := cache.NewCacheForTests(t, cacheDir, cache.WithTeardownDuration(0))
-				c.Close(context.Background())
-
-				for _, db := range []string{"passwd.db", "shadow.db"} {
-					testutils.LoadDumpIntoDB(t, filepath.Join("testdata", tc.cacheDB, db+".dump"), filepath.Join(cacheDir, db))
-				}
+				testutils.PrepareDBsForTests(t, cacheDir, tc.cacheDB)
 			}
 
 			if tc.rootUID == 0 {
@@ -119,12 +111,7 @@ func TestNssGetGroupByGID(t *testing.T) {
 				tc.cacheDB = "users_in_db"
 			}
 			if tc.cacheDB != "-" {
-				c := cache.NewCacheForTests(t, cacheDir, cache.WithTeardownDuration(0))
-				c.Close(context.Background())
-
-				for _, db := range []string{"passwd.db", "shadow.db"} {
-					testutils.LoadDumpIntoDB(t, filepath.Join("testdata", tc.cacheDB, db+".dump"), filepath.Join(cacheDir, db))
-				}
+				testutils.PrepareDBsForTests(t, cacheDir, tc.cacheDB)
 			}
 
 			if tc.rootUID == 0 {
@@ -183,12 +170,7 @@ func TestNssGetGroup(t *testing.T) {
 				tc.cacheDB = "users_in_db"
 			}
 			if tc.cacheDB != "-" {
-				c := cache.NewCacheForTests(t, cacheDir, cache.WithTeardownDuration(0))
-				c.Close(context.Background())
-
-				for _, db := range []string{"passwd.db", "shadow.db"} {
-					testutils.LoadDumpIntoDB(t, filepath.Join("testdata", tc.cacheDB, db+".dump"), filepath.Join(cacheDir, db))
-				}
+				testutils.PrepareDBsForTests(t, cacheDir, tc.cacheDB)
 			}
 
 			if tc.rootUID == 0 {
