@@ -5,10 +5,12 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/aad-auth/cmd/aad-cli/cli"
+	"github.com/ubuntu/aad-auth/internal/consts"
 	"github.com/ubuntu/aad-auth/internal/testutils"
 )
 
@@ -29,6 +31,7 @@ func TestVersion(t *testing.T) {
 			c := cli.New(cli.WithDpkgQueryCmd(mockCmd))
 			got, err := testutils.RunApp(t, c, "version")
 			require.NoError(t, err, "Version should not fail")
+			got = sanitizeDevVersion(got)
 
 			want := testutils.SaveAndLoadFromGolden(t, got)
 			require.Equal(t, want, got, "Should get expected version output")
@@ -63,6 +66,10 @@ for pkgname; do :; done
 	require.NoError(t, err, "Setup: failed to write temporary file")
 
 	return tmpfile.Name()
+}
+
+func sanitizeDevVersion(s string) string {
+	return strings.ReplaceAll(s, consts.Version, "dev")
 }
 
 func TestMain(m *testing.M) {
