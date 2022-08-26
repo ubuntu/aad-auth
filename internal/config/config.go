@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"strconv"
 
 	"github.com/go-ini/ini"
 	"github.com/ubuntu/aad-auth/internal/logger"
@@ -84,29 +83,9 @@ func Load(ctx context.Context, p, domain string, opts ...Option) (config AAD, er
 	}
 
 	// Load default section first, and then override with domain specified keys.
-	// TODO we could refactor this to use ini map/reflection
-	for _, section := range []string{"", domain} {
-		cfgSection := cfg.Section(section)
-		if tmp := cfgSection.Key("tenant_id").String(); tmp != "" {
-			config.TenantID = tmp
-		}
-		if tmp := cfgSection.Key("app_id").String(); tmp != "" {
-			config.AppID = tmp
-		}
-		if tmp := cfgSection.Key("offline_credentials_expiration").String(); tmp != "" {
-			v, err := strconv.Atoi(tmp)
-			if err != nil {
-				logger.Warn(ctx, "Invalid cache revalidation period %v", err)
-				config.OfflineCredentialsExpiration = nil
-			} else {
-				config.OfflineCredentialsExpiration = &v
-			}
-		}
-		if tmp := cfgSection.Key("homedir").String(); tmp != "" {
-			config.HomeDirPattern = tmp
-		}
-		if tmp := cfgSection.Key("shell").String(); tmp != "" {
-			config.Shell = tmp
+	for _, section := range []string{ini.DefaultSection, domain} {
+		if err := cfg.Section(section).StrictMapTo(&config); err != nil {
+			return AAD{}, err
 		}
 	}
 

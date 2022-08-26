@@ -103,12 +103,6 @@ func TestLoadConfig(t *testing.T) {
 			aadConfigPath: "aad-missing_homedirpattern_and_shell.conf",
 			addUserPath:   "doesnotexist.conf",
 		},
-		"aad.conf with invalid 'offline_credentials_expiration' value": {
-			aadConfigPath: "aad-invalid_expiration.conf",
-		},
-		"aad.conf with invalid 'offline_credentials_expiration' value in domain": {
-			aadConfigPath: "aad-invalid_expiration-domain.conf",
-		},
 
 		// Error cases
 		"aad.conf does not exist": {
@@ -121,6 +115,14 @@ func TestLoadConfig(t *testing.T) {
 		},
 		"aad.conf missing 'app_id' value": {
 			aadConfigPath: "aad-missing_appId.conf",
+			wantErr:       true,
+		},
+		"aad.conf with invalid 'offline_credentials_expiration' value": {
+			aadConfigPath: "aad-invalid_expiration.conf",
+			wantErr:       true,
+		},
+		"aad.conf with invalid 'offline_credentials_expiration' value in domain": {
+			aadConfigPath: "aad-invalid_expiration-domain.conf",
 			wantErr:       true,
 		},
 	}
@@ -143,6 +145,7 @@ func TestLoadConfig(t *testing.T) {
 				require.Error(t, err, "LoadConfig should have failed, but didn't")
 				return
 			}
+			require.NoError(t, err, "LoadConfig failed when it shouldn't")
 
 			goldenPath := filepath.Join(testFilesPath, "golden", def)
 			want := testutils.LoadAndUpdateYAMLFromGolden(t, got, testutils.WithGoldPath(goldenPath))

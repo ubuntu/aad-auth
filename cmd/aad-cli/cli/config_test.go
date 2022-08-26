@@ -23,12 +23,12 @@ func TestConfigPrint(t *testing.T) {
 	}{
 		"default domain": {},
 		"custom domain":  {domain: "example.com"},
-		"type mismatch":  {configFile: "type-mismatch.conf"},
 
 		// error cases
 		"missing required entries": {configFile: "missing-required.conf", wantErr: true},
 		"non-existent config":      {configFile: "non-existent.conf", wantErr: true},
 		"malformed config":         {configFile: "malformed.conf", wantErr: true},
+		"type mismatch":            {configFile: "type-mismatch.conf", wantErr: true},
 	}
 	for name, tc := range tests {
 		tc := tc
