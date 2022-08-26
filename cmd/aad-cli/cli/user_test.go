@@ -188,6 +188,9 @@ func TestUserMutuallyExclusiveFlags(t *testing.T) {
 
 	_, err = testutils.RunApp(t, c, "user", "--name", "myuser@domain.com", "--all")
 	require.ErrorContains(t, err, "if any flags in the group [name all] are set none of the others can be", "expected command to return mutually exclusive flag error")
+
+	_, err = testutils.RunApp(t, c, "user", "-n", "myuser@domain.com", "-a")
+	require.ErrorContains(t, err, "if any flags in the group [name all] are set none of the others can be", "expected command to return mutually exclusive flag error")
 }
 
 func timestampToUnix(t *testing.T, s string, timestamp time.Time) string {

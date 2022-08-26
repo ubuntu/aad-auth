@@ -22,33 +22,17 @@ func (a *App) installConfig() {
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "Manage aad-auth configuration",
-		Args:  cobra.NoArgs,
-	}
-	cmd.AddCommand(a.installConfigEdit())
-	cmd.AddCommand(a.installConfigPrint())
-	a.rootCmd.AddCommand(cmd)
-}
+		Long: fmt.Sprintf(`Manage aad-auth configuration
 
-func (a *App) installConfigPrint() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "print",
-		Short: fmt.Sprintf("Print the current configuration, parsed from %s", a.options.configFile),
-		Args:  cobra.NoArgs,
+Edit or print the configuration file at %s.`, a.options.configFile),
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return printConfig(a.ctx, a.options.configFile, a.domain)
-		},
-	}
-	cmd.Flags().StringVarP(&a.domain, "domain", "d", getDefaultDomain(), "Domain to use for parsing configuration")
+			// Handle config printing if editing wasn't requested
+			if !a.editConfig {
+				return printConfig(a.ctx, a.options.configFile, a.domain)
+			}
 
-	return cmd
-}
-
-func (a *App) installConfigEdit() *cobra.Command {
-	return &cobra.Command{
-		Use:   "edit",
-		Short: "Edit the configuration file in an editor",
-		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+			// Otherwise, edit the config file
 			// Create a temporary file with the previous config file contents
 			tempfile, err := tempFileWithPreviousConfig(a.options.configFile)
 			if err != nil {
@@ -75,6 +59,10 @@ func (a *App) installConfigEdit() *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().BoolVarP(&a.editConfig, "edit", "e", false, "Edit the configuration file in an external editor")
+	cmd.Flags().StringVarP(&a.domain, "domain", "d", getDefaultDomain(), "Domain to use for parsing configuration")
+	cmd.MarkFlagsMutuallyExclusive("edit", "domain")
+	a.rootCmd.AddCommand(cmd)
 }
 
 // tempFileWithPreviousConfig returns a temporary file with the contents of the

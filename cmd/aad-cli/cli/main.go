@@ -19,8 +19,10 @@ type App struct {
 	cache   *cache.Cache
 
 	// CLI flags
-	username string
-	allusers bool
+	verbosity  int
+	username   string
+	allusers   bool
+	editConfig bool
 
 	options options
 }
@@ -57,8 +59,7 @@ func New(opts ...option) *App {
 			cmd.SilenceUsage = true
 
 			// Set logger parameters and attach to the context
-			verbosity, _ := cmd.Flags().GetCount("verbose")
-			logger.SetVerboseMode(verbosity)
+			logger.SetVerboseMode(a.verbosity)
 			logrus.SetFormatter(&logger.LogrusFormatter{})
 			a.ctx = logger.CtxWithLogger(a.ctx, logger.LogrusLogger{FieldLogger: logrus.StandardLogger()})
 
@@ -67,7 +68,7 @@ func New(opts ...option) *App {
 		SilenceErrors: true,
 	}
 
-	a.rootCmd.PersistentFlags().CountP("verbose", "v", "issue INFO (-v), DEBUG (-vv) or DEBUG with caller (-vvv) output")
+	a.rootCmd.PersistentFlags().CountVarP(&a.verbosity, "verbose", "v", "issue INFO (-v), DEBUG (-vv) or DEBUG with caller (-vvv) output")
 
 	a.installUser()
 	a.installConfig()

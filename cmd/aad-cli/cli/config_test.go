@@ -33,7 +33,7 @@ func TestConfigPrint(t *testing.T) {
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			cmdArgs := []string{"config", "print"}
+			cmdArgs := []string{"config"}
 
 			if tc.domain != "" {
 				cmdArgs = append(cmdArgs, "--domain", tc.domain)
@@ -93,7 +93,7 @@ func TestConfigEdit(t *testing.T) {
 			editorMock := newEditorMock(t, tc.configFile, tc.newConfig, tc.wantEditorErr)
 
 			c := cli.New(cli.WithConfigFile(tc.configFile), cli.WithEditor(editorMock))
-			got, err := testutils.RunApp(t, c, "config", "edit")
+			got, err := testutils.RunApp(t, c, "config", "-e")
 
 			tempConfigPath := tempConfigPathFromOutput(t, got)
 			if tc.wantErr {
@@ -112,19 +112,29 @@ func TestConfigEdit(t *testing.T) {
 }
 
 func TestConfigEditor(t *testing.T) {
-	// Default behavior
-	err := os.Unsetenv("EDITOR")
-	require.NoError(t, err, "Setup: failed to unset EDITOR")
-
-	c := cli.New()
-	require.Equal(t, "sensible-editor", c.Editor(), "expected default editor to be sensible-editor")
-
 	// Custom editor
-	err = os.Setenv("EDITOR", "vim")
+	err := os.Setenv("EDITOR", "vim")
 	require.NoError(t, err, "Setup: failed to set EDITOR")
 
-	c = cli.New()
+	c := cli.New()
 	require.Equal(t, "vim", c.Editor(), "expected editor to be vim")
+
+	// Default behavior
+	err = os.Unsetenv("EDITOR")
+	require.NoError(t, err, "Setup: failed to unset EDITOR")
+
+	c = cli.New()
+	require.Equal(t, "sensible-editor", c.Editor(), "expected default editor to be sensible-editor")
+}
+
+func TestConfigMutuallyExclusiveFlags(t *testing.T) {
+	c := cli.New()
+	_, err := testutils.RunApp(t, c, "config", "--edit", "--domain", "example.com")
+	require.ErrorContains(t, err, "if any flags in the group [edit domain] are set none of the others can be", "expected command to return mutually exclusive flag error")
+
+	// Short flags
+	_, err = testutils.RunApp(t, c, "config", "-e", "-d", "example.com")
+	require.ErrorContains(t, err, "if any flags in the group [edit domain] are set none of the others can be", "expected command to return mutually exclusive flag error")
 }
 
 // newEditorMock returns the path to a shell script that overrides the default
