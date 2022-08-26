@@ -17,6 +17,8 @@ import (
 	"strings"
 
 	"github.com/ubuntu/aad-auth/internal/cache"
+	"github.com/ubuntu/aad-auth/internal/consts"
+	"github.com/ubuntu/aad-auth/internal/i18n"
 	"github.com/ubuntu/aad-auth/internal/logger"
 	"github.com/ubuntu/aad-auth/internal/pam"
 )
@@ -34,6 +36,9 @@ var (
 
 //export pam_sm_authenticate
 func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char) C.int {
+	// Initialize localization
+	i18n.InitI18nDomain(consts.TEXTDOMAIN)
+
 	// Attach logger and info handler.
 	ctx := pam.CtxWithPamh(context.Background(), pam.Handle(pamh))
 	pamLogger := pam.NewLogger(pam.Handle(pamh), pam.LogInfo)
