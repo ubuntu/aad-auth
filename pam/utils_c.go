@@ -26,6 +26,11 @@ char *get_password(pam_handle_t *pamh) {
   const char *passwd;
   if ((pam_err = pam_get_item(pamh, PAM_AUTHTOK, (const void**)&passwd)) != PAM_SUCCESS)
     return NULL;
+
+  // pam_get_item will still return PAM_SUCCESS on Ctrl+C when asking for a password.
+  if (passwd == NULL) {
+    return NULL;
+  }
   return strdup(passwd);
 }
 */
