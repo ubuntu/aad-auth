@@ -9,6 +9,8 @@ import (
 )
 
 // TODO: process coverage once https://github.com/golang/go/issues/51430 is implemented in Go.
+
+//nolint:dupl // TestNssGetGroupByName and TestGetPasswdByName have similar code that triggers dupl, despite being different.
 func TestNssGetPasswdByName(t *testing.T) {
 	t.Parallel()
 
@@ -71,6 +73,8 @@ func TestNssGetPasswdByName(t *testing.T) {
 		})
 	}
 }
+
+//nolint:dupl // TestNssGetGroupByGID and TestGetPasswdByUID have similar code that triggers dupl, despite being different.
 func TestNssGetPasswdByUID(t *testing.T) {
 	t.Parallel()
 

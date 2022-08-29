@@ -12,6 +12,7 @@ import (
 	"github.com/ubuntu/aad-auth/internal/testutils"
 )
 
+//nolint:dupl // TestNewByName and TestNewByGID have similar code that triggers dupl, despite being different.
 func TestNewByName(t *testing.T) {
 	tests := map[string]struct {
 		name         string
@@ -52,6 +53,7 @@ func TestNewByName(t *testing.T) {
 	}
 }
 
+//nolint:dupl // TestNewByName and TestNewByUID have similar code that triggers dupl, despite being different.
 func TestNewByUID(t *testing.T) {
 	tests := map[string]struct {
 		uid          uint
