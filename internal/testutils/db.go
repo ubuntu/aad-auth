@@ -211,14 +211,12 @@ func PrepareDBsForTests(t *testing.T, cacheDir, initialCache string, options ...
 	_, p, _, _ := runtime.Caller(0)
 	testutilsPath := filepath.Dir(p)
 
-	options = append(options, cache.WithTeardownDuration(0))
-
 	c := NewCacheForTests(t, cacheDir, options...)
 	err := c.Close(context.Background())
 	require.NoError(t, err, "Cache must be closed to enable the dump loading.")
 
 	for _, db := range []string{"passwd.db", "shadow.db"} {
-		LoadDumpIntoDB(t, filepath.Join(testutilsPath, "cache_dumps", initialCache, db+".dump"), filepath.Join(cacheDir, db))
+		loadDumpIntoDB(t, filepath.Join(testutilsPath, "cache_dumps", initialCache, db+".dump"), filepath.Join(cacheDir, db))
 	}
 }
 
@@ -228,7 +226,7 @@ func NewCacheForTests(t *testing.T, cacheDir string, options ...cache.Option) (c
 
 	uid, gid := GetCurrentUIDGID(t)
 	opts := append([]cache.Option{}, cache.WithCacheDir(cacheDir),
-		cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid))
+		cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid), cache.WithTeardownDuration(0))
 
 	opts = append(opts, options...)
 
@@ -239,18 +237,17 @@ func NewCacheForTests(t *testing.T, cacheDir string, options ...cache.Option) (c
 	return c
 }
 
-// LoadDumpIntoDB reads the specified dump file and inserts its contents into the database.
-func LoadDumpIntoDB(t *testing.T, dumpPath, dbPath string) {
+// loadDumpIntoDB reads the specified dump file and inserts its contents into the database.
+func loadDumpIntoDB(t *testing.T, dumpPath, dbPath string) {
 	t.Helper()
 
 	f, err := os.Open(dumpPath)
 	require.NoError(t, err, "Expected to open dump file %s.", dumpPath)
+	defer f.Close()
 
 	dump, err := ReadDumpAsTables(t, f)
 	require.NoError(t, err, "Expected to read dump file %s.", dumpPath)
-
-	err = f.Close()
-	require.NoError(t, err, "File should be correctly close")
+	require.NoError(t, f.Close(), "File should be closed correctly.")
 
 	db, err := sql.Open("sqlite3", dbPath)
 	require.NoError(t, err, "Expected to open database %s.", dbPath)
@@ -266,6 +263,9 @@ func LoadDumpIntoDB(t *testing.T, dumpPath, dbPath string) {
 			for i, col := range table.Cols {
 				values[i] = row[col]
 				if col == "last_online_auth" && values[i] == "RECENT_TIME" {
+					// RECENT_TIME ensures that the values that will be inserted in the db will be adjusted based on the time the test was run.
+					// This way, we don't need to always initialize caches that don't clean old users from the database, since the last_online_auth
+					// for users will be updated when inserted into the db.
 					values[i] = time.Now().Add(-time.Hour * 48).Unix()
 				}
 				s += "?,"

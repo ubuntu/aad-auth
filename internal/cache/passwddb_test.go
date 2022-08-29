@@ -49,7 +49,7 @@ func TestGetUserByName(t *testing.T) {
 			require.NoError(t, err, "GetUserByName should not have returned an error and has")
 
 			// Handle dynamic fields
-			// LastOnlineAuth should be greater than 0
+			// Checks if the lastOnlineAuth value was loaded properly.
 			assert.False(t, u.LastOnlineAuth.IsZero(), "Last Online should not be zero.")
 			u.LastOnlineAuth = time.Unix(0, 0)
 
@@ -112,7 +112,7 @@ func TestGetUserByUID(t *testing.T) {
 			require.NoError(t, err, "GetUserByName should not have returned an error and has")
 
 			// Handle dynamic fields
-			// LastOnlineAuth should be greater than 0
+			// Checks if the lastOnlineAuth value was loaded properly.
 			assert.False(t, u.LastOnlineAuth.IsZero(), "Last Online should not be zero.")
 			u.LastOnlineAuth = time.Unix(0, 0)
 
@@ -169,7 +169,7 @@ func TestNextPasswdEntry(t *testing.T) {
 		u, err := c.NextPasswdEntry(context.Background())
 		require.NoError(t, err, "NextPasswdEntry should initiate and returns values without any error")
 
-		// LastOnlineAuth should be greater than 0
+		// Checks if the lastOnlineAuth value was loaded properly.
 		assert.False(t, u.LastOnlineAuth.IsZero(), "Last Online should not be zero.")
 		u.LastOnlineAuth = time.Unix(0, 0)
 
