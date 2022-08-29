@@ -17,6 +17,9 @@ coverage/
 # Output folder of the coverage script
 coverage/
 
+# Generated code (translations/shell completions)
+generated/
+
 # Dependency directories (remove the comment below to include it)
 vendor/
 
