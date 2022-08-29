@@ -45,10 +45,10 @@ issues:
       path: _c\.go
 
     # Some test and cgo files have look-alike code (specially in nss/), but they are not duplicates, despite the dupl complaining about it.
-    - linters:
-      - dupl
-      # path: _(test|c)\.go
-      text: ".lines are duplicate of `(nss/*|internal/*)`*"
+    # - linters:
+    #   - dupl
+    #   # path: _(test|c)\.go
+    #   text: ".lines are duplicate of `(nss/*|internal/*)`*"
 
   exclude:
     # EXC0001 errcheck: most errors are in defer calls, which are safe to ignore and idiomatic Go (would be good to only ignore defer ones though)
