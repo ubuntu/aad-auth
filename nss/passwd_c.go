@@ -1,3 +1,4 @@
+//nolint:dupl // nss/(group|passwd|shadow)_c.go files have similar code that triggers dupl, but they are different.
 package main
 
 /*
