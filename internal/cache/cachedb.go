@@ -141,7 +141,9 @@ func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGID, f
 	}
 
 	// Attach shadow if our user has access to the file (even read-only)
+	shadowMode = forceShadowMode
 	if forceShadowMode == -1 {
+		shadowMode = 0
 		if f, err := os.OpenFile(shadowPath, os.O_RDWR, 0); err == nil {
 			f.Close()
 			shadowMode = shadowRWMode

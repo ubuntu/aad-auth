@@ -57,8 +57,8 @@ func NewByName(ctx context.Context, name string) (s Shadow, err error) {
 		//passwd: spw.Password,
 		lstchg: spw.LastPwdChange,
 		min:    spw.MinPwdAge,
-		max:    spw.MinPwdAge,
-		warn:   spw.MaxPwdAge,
+		max:    spw.MaxPwdAge,
+		warn:   spw.PwdWarnPeriod,
 		inact:  spw.PwdInactivity,
 		expire: spw.ExpirationDate,
 	}, nil

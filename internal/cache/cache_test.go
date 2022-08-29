@@ -39,8 +39,8 @@ func TestNew(t *testing.T) {
 		"reuse closed cache (files exists)": {waitForClose: true, reOpenCache: true},
 
 		// Shadow files special cases
-		"can still open shadow file RO":              {shadowCreationFilePerm: &roFilePerm, wantShadowMode: &cache.ShadowROMode},
-		"no access to shadow file is still allowded": {shadowCreationFilePerm: &noAccessFilePerm, wantShadowMode: &cache.ShadowNotAvailableMode},
+		"can still open shadow file RO":             {shadowCreationFilePerm: &roFilePerm, wantShadowMode: &cache.ShadowROMode},
+		"no access to shadow file is still allowed": {shadowCreationFilePerm: &noAccessFilePerm, wantShadowMode: &cache.ShadowNotAvailableMode},
 
 		// error cases
 		"can't create DB not being root UID or GID": {isNotRootUIDGID: true, wantErr: true},
@@ -89,7 +89,7 @@ func TestNew(t *testing.T) {
 			if tc.wantShadowMode != nil {
 				wantShadowMode = *tc.wantShadowMode
 			}
-			require.Equal(t, c.ShadowMode(), wantShadowMode, "Shadow attached mode is not the expected one")
+			require.Equal(t, wantShadowMode, c.ShadowMode(), "Shadow attached mode is not the expected one")
 
 			if !tc.reOpenCache {
 				return
