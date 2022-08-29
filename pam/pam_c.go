@@ -58,7 +58,7 @@ func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 			if supportedOption(&pamLogger, opt, optarg) {
 				continue
 			}
-			pamLogger.Warn("unknown option: %s\n", opt)
+			pamLogger.Warn(i18n.G("unknown option: %s\n"), opt)
 		}
 	}
 	if !logsOnStderr {
@@ -68,12 +68,12 @@ func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 
 	username, err := getUser(pamh)
 	if err != nil {
-		pamLogger.Err("%v", err)
+		pamLogger.Err(err.Error())
 		return C.PAM_SYSTEM_ERR
 	}
 	password, err := getPassword(pamh)
 	if err != nil {
-		pamLogger.Err("%v", err)
+		pamLogger.Err(err.Error())
 		return C.PAM_SYSTEM_ERR
 	}
 

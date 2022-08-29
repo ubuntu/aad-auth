@@ -10,6 +10,7 @@ import (
 	"github.com/ubuntu/aad-auth/internal/aad"
 	"github.com/ubuntu/aad-auth/internal/cache"
 	"github.com/ubuntu/aad-auth/internal/config"
+	"github.com/ubuntu/aad-auth/internal/i18n"
 	"github.com/ubuntu/aad-auth/internal/logger"
 	"github.com/ubuntu/aad-auth/internal/user"
 )
@@ -59,7 +60,7 @@ func Authenticate(ctx context.Context, username, password, conf string, opts ...
 	_, domain, _ := strings.Cut(username, "@")
 	cfg, err := config.Load(ctx, conf, domain)
 	if err != nil {
-		logger.Err(ctx, "No valid configuration found: %v", err)
+		logger.Err(ctx, i18n.G("No valid configuration found: %v"), err)
 		return ErrPamSystem
 	}
 
@@ -79,13 +80,13 @@ func Authenticate(ctx context.Context, username, password, conf string, opts ...
 	if errors.Is(errAAD, aad.ErrDeny) {
 		return ErrPamAuth
 	} else if errAAD != nil && !errors.Is(errAAD, aad.ErrNoNetwork) {
-		logger.Warn(ctx, "Unhandled error of type: %v. Denying access.", errAAD)
+		logger.Warn(ctx, i18n.G("Unhandled error of type: %v. Denying access."), errAAD)
 		return ErrPamAuth
 	}
 
 	c, err := cache.New(ctx, o.cacheOpts...)
 	if err != nil {
-		logError(ctx, "%w. Denying access.", err)
+		logError(ctx, i18n.G("%w. Denying access."), err)
 		return ErrPamSystem
 	}
 	defer c.Close(ctx)
@@ -94,9 +95,9 @@ func Authenticate(ctx context.Context, username, password, conf string, opts ...
 	if errors.Is(errAAD, aad.ErrNoNetwork) {
 		if err := c.CanAuthenticate(ctx, username, password); err != nil {
 			if errors.Is(err, cache.ErrOfflineCredentialsExpired) {
-				Info(ctx, "Machine is offline and cached credentials expired. Please try again when the machine is online.")
+				Info(ctx, i18n.G("Machine is offline and cached credentials expired. Please try again when the machine is online."))
 			}
-			logError(ctx, "%w. Denying access.", err)
+			logError(ctx, i18n.G("%w. Denying access."), err)
 			return ErrPamAuth
 		}
 		return nil
@@ -104,7 +105,7 @@ func Authenticate(ctx context.Context, username, password, conf string, opts ...
 
 	// Successful online login, update cache.
 	if err := c.Update(ctx, username, password, cfg.HomeDirPattern, cfg.Shell); err != nil {
-		logError(ctx, "%w. Denying access.", err)
+		logError(ctx, i18n.G("%w. Denying access."), err)
 		return ErrPamAuth
 	}
 
