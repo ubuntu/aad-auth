@@ -35,10 +35,9 @@ func TestGetUserByName(t *testing.T) {
 			t.Parallel()
 
 			cacheDir := t.TempDir()
-			testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
+			testutils.PrepareDBsForTests(t, cacheDir, "users_in_db", cache.WithShadowMode(tc.shadowMode))
 
-			c := testutils.NewCacheForTests(t, cacheDir)
-			c.SetShadowMode(tc.shadowMode)
+			c := testutils.NewCacheForTests(t, cacheDir, cache.WithShadowMode(tc.shadowMode))
 
 			u, err := c.GetUserByName(context.Background(), tc.name)
 			if tc.wantErr {
@@ -98,10 +97,9 @@ func TestGetUserByUID(t *testing.T) {
 			t.Parallel()
 
 			cacheDir := t.TempDir()
-			testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
+			testutils.PrepareDBsForTests(t, cacheDir, "users_in_db", cache.WithShadowMode(tc.shadowMode))
 
-			c := testutils.NewCacheForTests(t, cacheDir)
-			c.SetShadowMode(tc.shadowMode)
+			c := testutils.NewCacheForTests(t, cacheDir, cache.WithShadowMode(tc.shadowMode))
 
 			u, err := c.GetUserByUID(context.Background(), tc.uid)
 			if tc.wantErr {

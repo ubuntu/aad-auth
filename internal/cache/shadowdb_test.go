@@ -34,10 +34,9 @@ func TestGetShadowByName(t *testing.T) {
 			t.Parallel()
 
 			cacheDir := t.TempDir()
-			testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
+			testutils.PrepareDBsForTests(t, cacheDir, "users_in_db", cache.WithShadowMode(tc.shadowMode))
 
-			c := testutils.NewCacheForTests(t, cacheDir)
-			c.SetShadowMode(tc.shadowMode)
+			c := testutils.NewCacheForTests(t, cacheDir, cache.WithShadowMode(tc.shadowMode))
 
 			s, err := c.GetShadowByName(context.Background(), tc.name)
 			if tc.wantErr {
