@@ -29,7 +29,7 @@ func TestNewByName(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			cacheDir := t.TempDir()
-			testutils.CopyDBAndFixPermissions(t, "../testdata/users_in_db", cacheDir)
+			testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
 
 			uid, gid := testutils.GetCurrentUIDGID(t)
 			opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid)}
@@ -72,7 +72,7 @@ func TestNextEntry(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			cacheDir := t.TempDir()
 			if !tc.hasNoUser {
-				testutils.CopyDBAndFixPermissions(t, "../testdata/users_in_db", cacheDir)
+				testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
 			}
 
 			uid, gid := testutils.GetCurrentUIDGID(t)
@@ -164,7 +164,7 @@ func TestStartEndEntryIteration(t *testing.T) {
 
 func TestRestartIterationWithoutEndingPreviousOne(t *testing.T) {
 	cacheDir := t.TempDir()
-	testutils.CopyDBAndFixPermissions(t, "../testdata/users_in_db", cacheDir)
+	testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
 
 	uid, gid := testutils.GetCurrentUIDGID(t)
 	opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid)}

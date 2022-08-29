@@ -2,7 +2,6 @@ package main
 
 import (
 	"os/exec"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -49,7 +48,7 @@ func TestNssGetPasswdByName(t *testing.T) {
 				tc.cacheDB = "users_in_db"
 			}
 			if tc.cacheDB != "-" {
-				testutils.CopyDBAndFixPermissions(t, filepath.Join("testdata", tc.cacheDB), cacheDir)
+				testutils.PrepareDBsForTests(t, cacheDir, tc.cacheDB)
 			}
 
 			if tc.rootUID == 0 {
@@ -111,7 +110,7 @@ func TestNssGetPasswdByUID(t *testing.T) {
 				tc.cacheDB = "users_in_db"
 			}
 			if tc.cacheDB != "-" {
-				testutils.CopyDBAndFixPermissions(t, filepath.Join("testdata", tc.cacheDB), cacheDir)
+				testutils.PrepareDBsForTests(t, cacheDir, tc.cacheDB)
 			}
 
 			if tc.rootUID == 0 {
@@ -168,7 +167,7 @@ func TestNssGetPasswd(t *testing.T) {
 				tc.cacheDB = "users_in_db"
 			}
 			if tc.cacheDB != "-" {
-				testutils.CopyDBAndFixPermissions(t, filepath.Join("testdata", tc.cacheDB), cacheDir)
+				testutils.PrepareDBsForTests(t, cacheDir, tc.cacheDB)
 			}
 
 			if tc.rootUID == 0 {

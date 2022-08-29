@@ -89,7 +89,7 @@ func TestPamSmAuthenticate(t *testing.T) {
 			cacheDir := filepath.Join(tmp, "cache")
 
 			if tc.initialCache != "" {
-				testutils.CopyDBAndFixPermissions(t, filepath.Join("testdata", tc.initialCache), cacheDir)
+				testutils.PrepareDBsForTests(t, cacheDir, tc.initialCache)
 			}
 
 			// pam service configuration

@@ -65,7 +65,7 @@ func TestAuthenticate(t *testing.T) {
 
 			cacheDir := t.TempDir()
 			if tc.initialCache != "" {
-				testutils.CopyDBAndFixPermissions(t, filepath.Join("testdata", tc.initialCache), cacheDir)
+				testutils.PrepareDBsForTests(t, cacheDir, tc.initialCache)
 			}
 
 			auth := aad.NewWithMockClient()

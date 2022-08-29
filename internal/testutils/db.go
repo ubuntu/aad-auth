@@ -1,17 +1,21 @@
 package testutils
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	// Used as driver for the db.
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/require"
+	"github.com/ubuntu/aad-auth/internal/cache"
 )
 
 // LoadAndUpdateFromGoldenDump loads the specified database from golden file in testdata/.
@@ -63,6 +67,11 @@ func ReadDumpAsTables(t *testing.T, r io.Reader) (map[string]Table, error) {
 
 	for _, table := range strings.Split(string(data), "\n\n") {
 		lines := strings.Split(table, "\n")
+		// Handles the last line of the dump file
+		if len(lines) == 1 {
+			break
+		}
+
 		require.GreaterOrEqual(t, len(lines), 3, "%q should contain 3 lines at least: name/row names/data", lines)
 
 		// Each group of data is one table with its content.
@@ -81,7 +90,6 @@ func ReadDumpAsTables(t *testing.T, r io.Reader) (map[string]Table, error) {
 			}
 			table.Rows = append(table.Rows, row)
 		}
-
 		tables[name] = table
 	}
 
@@ -114,13 +122,7 @@ func dbToCsv(t *testing.T, db *sql.DB, w io.Writer, usePredicatableFieldValues b
 
 	// Iterates through each table and dumps their data.
 	var tableName string
-	var separateTables bool
 	for query.Next() {
-		if separateTables {
-			_, err = w.Write([]byte("\n"))
-			require.NoError(t, err, "There should be a line break between tables")
-		}
-
 		err = query.Scan(&tableName)
 		require.NoError(t, err, "Query result should be scanned")
 
@@ -130,7 +132,8 @@ func dbToCsv(t *testing.T, db *sql.DB, w io.Writer, usePredicatableFieldValues b
 		err = dumpTable(t, db, tableName, w, usePredicatableFieldValues)
 		require.NoError(t, err, "Failed to dump table %s", tableName)
 
-		separateTables = true
+		_, err = w.Write([]byte("\n"))
+		require.NoError(t, err, "There should be a line break after the table")
 	}
 
 	return nil
@@ -196,6 +199,82 @@ func predicatableFieldValues(name string, data, cols []string) {
 				data[i] = "4242"
 				break
 			}
+		}
+	}
+}
+
+// PrepareDBsForTests initializes a cache in the specified directory and load it with the specified dump.
+func PrepareDBsForTests(t *testing.T, cacheDir, initialCache string, options ...cache.Option) {
+	t.Helper()
+
+	// Gets the path to the testutils package.
+	_, p, _, _ := runtime.Caller(0)
+	testutilsPath := filepath.Dir(p)
+
+	c := NewCacheForTests(t, cacheDir, options...)
+	err := c.Close(context.Background())
+	require.NoError(t, err, "Cache must be closed to enable the dump loading.")
+
+	for _, db := range []string{"passwd.db", "shadow.db"} {
+		loadDumpIntoDB(t, filepath.Join(testutilsPath, "cache_dumps", initialCache, db+".dump"), filepath.Join(cacheDir, db))
+	}
+}
+
+// NewCacheForTests returns a cache that is closed automatically, with permissions set to current user.
+func NewCacheForTests(t *testing.T, cacheDir string, options ...cache.Option) (c *cache.Cache) {
+	t.Helper()
+
+	uid, gid := GetCurrentUIDGID(t)
+	opts := append([]cache.Option{}, cache.WithCacheDir(cacheDir),
+		cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid), cache.WithTeardownDuration(0))
+
+	opts = append(opts, options...)
+
+	c, err := cache.New(context.Background(), opts...)
+	require.NoError(t, err, "Setup: should be able to create a cache")
+	t.Cleanup(func() { c.Close(context.Background()) })
+
+	return c
+}
+
+// loadDumpIntoDB reads the specified dump file and inserts its contents into the database.
+func loadDumpIntoDB(t *testing.T, dumpPath, dbPath string) {
+	t.Helper()
+
+	f, err := os.Open(dumpPath)
+	require.NoError(t, err, "Expected to open dump file %s.", dumpPath)
+	defer f.Close()
+
+	dump, err := ReadDumpAsTables(t, f)
+	require.NoError(t, err, "Expected to read dump file %s.", dumpPath)
+	require.NoError(t, f.Close(), "File should be closed correctly.")
+
+	db, err := sql.Open("sqlite3", dbPath)
+	require.NoError(t, err, "Expected to open database %s.", dbPath)
+	defer db.Close()
+
+	for name, table := range dump {
+		st := fmt.Sprintf("INSERT INTO %s VALUES (%s)", name, "%s")
+
+		for _, row := range table.Rows {
+			values := make([]any, len(row))
+			var s string
+			// Looping through the columns to ensure that the values will be ordered as supposed to.
+			for i, col := range table.Cols {
+				values[i] = row[col]
+				if col == "last_online_auth" && values[i] == "RECENT_TIME" {
+					// RECENT_TIME ensures that the values that will be inserted in the db will be adjusted based on the time the test was run.
+					// This way, we don't need to always initialize caches that don't clean old users from the database, since the last_online_auth
+					// for users will be updated when inserted into the db.
+					values[i] = time.Now().Add(-time.Hour * 48).Unix()
+				}
+				s += "?,"
+			}
+
+			// Formats the statement removing the last trailing comma from the values string.
+			rowSt := fmt.Sprintf(st, s[:len(s)-1])
+			_, err = db.Exec(rowSt, values...)
+			require.NoError(t, err, "Expected to insert %#v into the db", row)
 		}
 	}
 }

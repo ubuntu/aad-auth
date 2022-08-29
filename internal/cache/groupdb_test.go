@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/aad-auth/internal/cache"
+	"github.com/ubuntu/aad-auth/internal/testutils"
 )
 
 func TestGetGroupByName(t *testing.T) {
@@ -28,9 +29,8 @@ func TestGetGroupByName(t *testing.T) {
 			t.Parallel()
 
 			cacheDir := t.TempDir()
-			insertUsersInDb(t, cacheDir)
-
-			c := newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
+			testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
+			c := testutils.NewCacheForTests(t, cacheDir)
 
 			g, err := c.GetGroupByName(context.Background(), tc.name)
 			if tc.wantErr {
@@ -71,9 +71,9 @@ func TestGetGroupByGID(t *testing.T) {
 			t.Parallel()
 
 			cacheDir := t.TempDir()
-			insertUsersInDb(t, cacheDir)
+			testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
 
-			c := newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
+			c := testutils.NewCacheForTests(t, cacheDir)
 
 			g, err := c.GetGroupByGID(context.Background(), tc.gid)
 			if tc.wantErr {
@@ -111,9 +111,9 @@ func TestNextGroupEntry(t *testing.T) {
 	}
 
 	cacheDir := t.TempDir()
-	insertUsersInDb(t, cacheDir)
+	testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
 
-	c := newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
+	c := testutils.NewCacheForTests(t, cacheDir)
 
 	// Iterate over all entries
 	numIteration := len(wanted)
@@ -134,7 +134,7 @@ func TestNextGroupEntry(t *testing.T) {
 func TestNextGroupEntryNoGroup(t *testing.T) {
 	t.Parallel()
 
-	c := newCacheForTests(t, t.TempDir(), cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
+	c := testutils.NewCacheForTests(t, t.TempDir())
 	g, err := c.NextGroupEntry(context.Background())
 	require.ErrorIs(t, err, cache.ErrNoEnt, "first and final iteration should return ENOENT, but we got %v", g)
 }
@@ -143,9 +143,9 @@ func TestNextGroupCloseBeforeIterationEnds(t *testing.T) {
 	t.Parallel()
 
 	cacheDir := t.TempDir()
-	insertUsersInDb(t, cacheDir)
+	testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
 
-	c := newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
+	c := testutils.NewCacheForTests(t, cacheDir)
 
 	_, err := c.NextGroupEntry(context.Background())
 	require.NoError(t, err, "NextGroupEntry should initiate and returns values without any error")

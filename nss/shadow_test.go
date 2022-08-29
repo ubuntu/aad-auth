@@ -2,7 +2,6 @@ package main
 
 import (
 	"os/exec"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -54,7 +53,7 @@ func TestNssGetShadowByName(t *testing.T) {
 				tc.cacheDB = "users_in_db"
 			}
 			if tc.cacheDB != "-" {
-				testutils.CopyDBAndFixPermissions(t, filepath.Join("testdata", tc.cacheDB), cacheDir)
+				testutils.PrepareDBsForTests(t, cacheDir, tc.cacheDB)
 			}
 
 			if tc.rootUID == 0 {
@@ -112,7 +111,7 @@ func TestNssGetShadow(t *testing.T) {
 				tc.cacheDB = "users_in_db"
 			}
 			if tc.cacheDB != "-" {
-				testutils.CopyDBAndFixPermissions(t, filepath.Join("testdata", tc.cacheDB), cacheDir)
+				testutils.PrepareDBsForTests(t, cacheDir, tc.cacheDB)
 			}
 
 			if tc.rootUID == 0 {
