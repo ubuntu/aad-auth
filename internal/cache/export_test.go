@@ -45,11 +45,6 @@ func (c *Cache) WaitForCacheClosed() {
 	}
 }
 
-// SetShadowMode changes the internal recorded state without changing the created files itself.
-func (c *Cache) SetShadowMode(shadowMode int) {
-	c.shadowMode = shadowMode
-}
-
 func (c *Cache) ShadowMode() int {
 	return c.shadowMode
 }
