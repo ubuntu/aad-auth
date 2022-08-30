@@ -28,7 +28,7 @@ func _nss_aad_getgrnam_r(name *C.char, grp *C.struct_group, buf *C.char, buflen 
 	logger.Debug(ctx, "_nss_aad_getgrname_r called for %q", n)
 	n = user.NormalizeName(n)
 
-	p, err := group.NewByName(ctx, n)
+	p, err := group.NewByName(ctx, n, opts...)
 	if err != nil {
 		return errToCStatus(ctx, err, errnop)
 	}
@@ -45,7 +45,7 @@ func _nss_aad_getgrgid_r(gid C.gid_t, grp *C.struct_group, buf *C.char, buflen C
 	defer logger.CloseLoggerFromContext(ctx)
 	logger.Debug(ctx, "_nss_aad_getgrgid_r called for %d", gid)
 
-	g, err := group.NewByGID(ctx, uint(gid))
+	g, err := group.NewByGID(ctx, uint(gid), opts...)
 	if err != nil {
 		return errToCStatus(ctx, err, errnop)
 	}
@@ -62,7 +62,7 @@ func _nss_aad_setgrent(stayopen C.int) C.nss_status {
 	defer logger.CloseLoggerFromContext(ctx)
 	logger.Debug(ctx, "_nss_aad_setgrent called")
 
-	err := group.StartEntryIteration(ctx)
+	err := group.StartEntryIteration(ctx, opts...)
 	if err != nil {
 		return errToCStatus(ctx, err, nil)
 	}

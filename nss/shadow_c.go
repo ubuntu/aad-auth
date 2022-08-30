@@ -28,7 +28,7 @@ func _nss_aad_getspnam_r(name *C.char, spwd *C.struct_spwd, buf *C.char, buflen 
 	logger.Debug(ctx, "_nss_aad_getspnam_r called for %q", n)
 	n = user.NormalizeName(n)
 
-	sp, err := shadow.NewByName(ctx, n)
+	sp, err := shadow.NewByName(ctx, n, opts...)
 	if err != nil {
 		return errToCStatus(ctx, err, errnop)
 	}
@@ -45,7 +45,7 @@ func _nss_aad_setspent() C.nss_status {
 	defer logger.CloseLoggerFromContext(ctx)
 	logger.Debug(ctx, "_nss_aad_setspent called")
 
-	err := shadow.StartEntryIteration(ctx)
+	err := shadow.StartEntryIteration(ctx, opts...)
 	if err != nil {
 		return errToCStatus(ctx, err, nil)
 	}

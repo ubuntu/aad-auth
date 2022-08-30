@@ -30,7 +30,7 @@ func _nss_aad_getpwnam_r(name *C.char, pwd *C.struct_passwd, buf *C.char, buflen
 	logger.Debug(ctx, "_nss_aad_getpwnam_r called for %q", n)
 	n = user.NormalizeName(n)
 
-	p, err := passwd.NewByName(ctx, n)
+	p, err := passwd.NewByName(ctx, n, opts...)
 	if err != nil {
 		return errToCStatus(ctx, err, errnop)
 	}
@@ -47,7 +47,7 @@ func _nss_aad_getpwuid_r(uid C.uid_t, pwd *C.struct_passwd, buf *C.char, buflen 
 	defer logger.CloseLoggerFromContext(ctx)
 	logger.Debug(ctx, "_nss_aad_getpwuid_r called for %d", uid)
 
-	p, err := passwd.NewByUID(ctx, uint(uid))
+	p, err := passwd.NewByUID(ctx, uint(uid), opts...)
 	if err != nil {
 		return errToCStatus(ctx, err, errnop)
 	}
@@ -64,7 +64,7 @@ func _nss_aad_setpwent(stayopen C.int) C.nss_status {
 	defer logger.CloseLoggerFromContext(ctx)
 	logger.Debug(ctx, "_nss_aad_setpwent called")
 
-	err := passwd.StartEntryIteration(ctx)
+	err := passwd.StartEntryIteration(ctx, opts...)
 	if err != nil {
 		return errToCStatus(ctx, err, nil)
 	}
