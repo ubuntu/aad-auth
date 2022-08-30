@@ -21,16 +21,8 @@ type Passwd struct {
 	shell  string /* shell program */
 }
 
-var testopts = []cache.Option{}
-
-// setCacheOption set opts everytime we open a cache.
-// This is not compatible with parallel testing as it needs to change a global state.
-func setCacheOption(opts ...cache.Option) {
-	testopts = opts
-}
-
 // NewByName returns a passwd entry from a name.
-func NewByName(ctx context.Context, name string) (p Passwd, err error) {
+func NewByName(ctx context.Context, name string, cacheOpts ...cache.Option) (p Passwd, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("failed to get passwd entry from name %q: %w", name, err)
@@ -39,7 +31,7 @@ func NewByName(ctx context.Context, name string) (p Passwd, err error) {
 
 	logger.Debug(ctx, "Requesting a passwd entry matching name %q", name)
 
-	c, err := cache.New(ctx, testopts...)
+	c, err := cache.New(ctx, cacheOpts...)
 	if err != nil {
 		return Passwd{}, nss.ConvertErr(err)
 	}
@@ -62,7 +54,7 @@ func NewByName(ctx context.Context, name string) (p Passwd, err error) {
 }
 
 // NewByUID returns a passwd entry from an UID.
-func NewByUID(ctx context.Context, uid uint) (p Passwd, err error) {
+func NewByUID(ctx context.Context, uid uint, cacheOpts ...cache.Option) (p Passwd, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("failed to get passwd entry from UID %d: %w", uid, err)
@@ -71,7 +63,7 @@ func NewByUID(ctx context.Context, uid uint) (p Passwd, err error) {
 
 	logger.Debug(ctx, "Requesting a passwd entry matching UID %d", uid)
 
-	c, err := cache.New(ctx, testopts...)
+	c, err := cache.New(ctx, cacheOpts...)
 	if err != nil {
 		return Passwd{}, nss.ConvertErr(err)
 	}
@@ -97,12 +89,12 @@ var passwdIterationCache *cache.Cache
 
 // StartEntryIteration open a new cache for iteration.
 // This needs to be called prior to calling NextEntry and be closed with EndEntryIteration.
-func StartEntryIteration(ctx context.Context) error {
+func StartEntryIteration(ctx context.Context, cacheOpts ...cache.Option) error {
 	if passwdIterationCache != nil {
 		return nss.ConvertErr(errors.New("passwd entry iteration already in progress. End it before starting a new one"))
 	}
 
-	c, err := cache.New(ctx, testopts...)
+	c, err := cache.New(ctx, cacheOpts...)
 	if err != nil {
 		return nss.ConvertErr(err)
 	}
