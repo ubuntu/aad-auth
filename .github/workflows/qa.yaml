@@ -54,7 +54,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo DEBIAN_FRONTEND=noninteractive apt update
-          sudo DEBIAN_FRONTEND=noninteractive apt install -y gcc libpam-dev curl
+          sudo DEBIAN_FRONTEND=noninteractive apt install -y gcc libpam-dev curl gettext
       - name: Run tests
         run: go test -coverpkg=./... -coverprofile=/tmp/coverage.out -covermode=count ./...
       - name: Run tests (with race detector)

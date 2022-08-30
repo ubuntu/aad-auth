@@ -41,3 +41,6 @@ override_dh_auto_install:
 	mkdir -p debian/tmp/usr/lib/$(DEB_HOST_GNU_TYPE)/security
 	cp pam_aad.so debian/tmp/usr/lib/$(DEB_HOST_GNU_TYPE)/security
 	cp libnss_aad.so.2 debian/tmp/usr/lib/$(DEB_HOST_GNU_TYPE)
+
+	# Generate and install translations
+	GENERATE_ONLY_INSTALL_TO_DESTDIR=$(CURDIR)/debian/tmp go generate -x ./internal/i18n

@@ -1,0 +1,85 @@
+# French translations for aad-auth package.
+# Copyright (C) 2022 THE aad-auth'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the aad-auth package.
+# Automatically generated, 2022.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: aad-auth\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2022-08-29 12:01+0300\n"
+"PO-Revision-Date: 2022-08-29 12:01+0300\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=ASCII\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: internal/pam/pam.go:89 internal/pam/pam.go:100 internal/pam/pam.go:108
+msgid "%w. Denying access."
+msgstr ""
+
+#: internal/pam/pam.go:98
+msgid ""
+"Machine is offline and cached credentials expired. Please try again when the "
+"machine is online."
+msgstr ""
+
+#: internal/pam/pam.go:63
+msgid "No valid configuration found: %v"
+msgstr ""
+
+#: internal/pam/pam.go:83
+msgid "Unhandled error of type: %v. Denying access."
+msgstr ""
+
+#: internal/cache/cache.go:149
+msgid "can't open/create cache: %w"
+msgstr ""
+
+#: internal/cache/passwddb.go:95
+msgid "error when getting uid %d from cache: %w"
+msgstr ""
+
+#: internal/cache/passwddb.go:59
+msgid "error when getting user %q from cache: %w"
+msgstr ""
+
+#: internal/cache/passwddb.go:142
+msgid "failed to close passwd iterator in db: %w"
+msgstr ""
+
+#: internal/cache/cache.go:196
+msgid "failed to find group id for group shadow: %w"
+msgstr ""
+
+#: internal/cache/passwddb.go:106
+msgid "failed to read passwd entry in db: %w"
+msgstr ""
+
+#: internal/cache/cache.go:200
+msgid "failed to read shadow group id: %w"
+msgstr ""
+
+#: internal/cache/passwddb.go:171
+msgid "failed to verify that %d is unique: %w"
+msgstr ""
+
+#: pam/utils_c.go:70
+msgid "no password found"
+msgstr ""
+
+#: pam/utils_c.go:61
+msgid "no user found"
+msgstr ""
+
+#: pam/pam_c.go:61
+#, c-format
+msgid "unknown option: %s\n"
+msgstr ""
+
+#: internal/cache/passwddb.go:176
+msgid "user already exists in cache"
+msgstr ""

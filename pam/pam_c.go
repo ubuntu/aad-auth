@@ -17,6 +17,8 @@ import (
 	"strings"
 
 	"github.com/ubuntu/aad-auth/internal/cache"
+	"github.com/ubuntu/aad-auth/internal/consts"
+	"github.com/ubuntu/aad-auth/internal/i18n"
 	"github.com/ubuntu/aad-auth/internal/logger"
 	"github.com/ubuntu/aad-auth/internal/pam"
 )
@@ -34,6 +36,9 @@ var (
 
 //export pam_sm_authenticate
 func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char) C.int {
+	// Initialize localization
+	i18n.InitI18nDomain(consts.TEXTDOMAIN)
+
 	// Attach logger and info handler.
 	ctx := pam.CtxWithPamh(context.Background(), pam.Handle(pamh))
 	pamLogger := pam.NewLogger(pam.Handle(pamh), pam.LogInfo)
@@ -53,7 +58,7 @@ func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 			if supportedOption(&pamLogger, opt, optarg) {
 				continue
 			}
-			pamLogger.Warn("unknown option: %s\n", opt)
+			pamLogger.Warn(i18n.G("unknown option: %s\n"), opt)
 		}
 	}
 	if !logsOnStderr {
@@ -63,12 +68,12 @@ func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 
 	username, err := getUser(pamh)
 	if err != nil {
-		pamLogger.Err("%v", err)
+		pamLogger.Err(err.Error())
 		return C.PAM_SYSTEM_ERR
 	}
 	password, err := getPassword(pamh)
 	if err != nil {
-		pamLogger.Err("%v", err)
+		pamLogger.Err(err.Error())
 		return C.PAM_SYSTEM_ERR
 	}
 

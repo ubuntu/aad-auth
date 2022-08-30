@@ -21,6 +21,8 @@ Package: libpam-aad
 Architecture: any
 Built-Using: ${misc:Built-Using},
 Depends: ${shlibs:Depends},
+Depends: aad-common,
+         ${shlibs:Depends},
          ${misc:Depends},
 Description: ${source:Synopsis} module for PAM
  ${source:Extended-Description}
@@ -31,8 +33,19 @@ Package: libnss-aad
 Architecture: any
 Built-Using: ${misc:Built-Using},
 Depends: ${shlibs:Depends},
+Depends: aad-common,
+         ${shlibs:Depends},
          ${misc:Depends},
 Description: ${source:Synopsis} module for NSS
  ${source:Extended-Description}
  .
  This package contains the NSS module.
+
+Package: aad-common
+Architecture: all
+Enhances: libpam-aad, libnss-aad
+Depends: ${misc:Depends}
+Description: ${source:Synopsis} common files
+ ${source:Extended-Description}
+ .
+ This package contains translation files shared between the other AAD packages.

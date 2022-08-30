@@ -11,7 +11,10 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-require github.com/msteinert/pam v1.0.0
+require (
+	github.com/msteinert/pam v1.0.0
+	github.com/snapcore/go-gettext v0.0.0-20201130093759-38740d1bd3d2
+)
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect

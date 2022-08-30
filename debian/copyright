@@ -29,6 +29,10 @@ Files: vendor/github.com/davecgh/*
 Copyright: 2012-2016 Dave Collins <dave@davec.name>
 License: ISC
 
+Files: vendor/github.com/snapcore/go-gettext/*
+Copyright: 2016 Jonas Obrist
+License: BSD-3
+
 Files: vendor/github.com/go-ini/*
 Copyright: 2019 Unknwon
 License: Apache-2.0

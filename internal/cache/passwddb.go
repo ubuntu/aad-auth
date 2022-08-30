@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ubuntu/aad-auth/internal/i18n"
 	"github.com/ubuntu/aad-auth/internal/logger"
 )
 
@@ -55,7 +56,7 @@ WHERE login = ?
 	row := c.db.QueryRow(query, username)
 	u, err := newUserFromScanner(row)
 	if err != nil {
-		return u, fmt.Errorf("error when getting user %q from cache: %w", username, err)
+		return u, fmt.Errorf(i18n.G("error when getting user %q from cache: %w"), username, err)
 	}
 
 	return u, nil
@@ -91,7 +92,7 @@ WHERE p.uid = ?
 	row := c.db.QueryRow(query, uid)
 	u, err := newUserFromScanner(row)
 	if err != nil {
-		return u, fmt.Errorf("error when getting uid %d from cache: %w", uid, err)
+		return u, fmt.Errorf(i18n.G("error when getting uid %d from cache: %w"), uid, err)
 	}
 
 	return u, nil
@@ -102,7 +103,7 @@ WHERE p.uid = ?
 func (c *Cache) NextPasswdEntry(ctx context.Context) (u UserRecord, err error) {
 	defer func() {
 		if err != nil && !errors.Is(err, ErrNoEnt) {
-			err = fmt.Errorf("failed to read passwd entry in db: %w", err)
+			err = fmt.Errorf(i18n.G("failed to read passwd entry in db: %w"), err)
 		}
 	}()
 	logger.Debug(ctx, "request next passwd entry in db")
@@ -138,7 +139,7 @@ func (c *Cache) ClosePasswdIterator(ctx context.Context) error {
 
 	if err := c.cursorPasswd.Close(); err != nil {
 		c.cursorPasswd = nil
-		return fmt.Errorf("failed to close passwd iterator in db: %w", err)
+		return fmt.Errorf(i18n.G("failed to close passwd iterator in db: %w"), err)
 	}
 	c.cursorPasswd = nil
 	return nil
@@ -167,12 +168,12 @@ func uidOrGidExists(db *sql.DB, id uint32, username string) (bool, error) {
 	if errors.Is(err, ErrNoEnt) {
 		return false, nil
 	} else if err != nil {
-		return true, fmt.Errorf("failed to verify that %d is unique: %w", id, err)
+		return true, fmt.Errorf(i18n.G("failed to verify that %d is unique: %w"), id, err)
 	}
 
 	// We found one entry, check db inconsistency
 	if u.Name == username {
-		return true, fmt.Errorf("user already exists in cache")
+		return true, fmt.Errorf(i18n.G("user already exists in cache"))
 	}
 
 	return true, nil

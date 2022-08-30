@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ubuntu/aad-auth/internal/i18n"
 	"github.com/ubuntu/aad-auth/internal/logger"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -145,7 +146,7 @@ var (
 func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("can't open/create cache: %w", err)
+			err = fmt.Errorf(i18n.G("can't open/create cache: %w"), err)
 		}
 	}()
 
@@ -192,11 +193,11 @@ func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 	if o.shadowGID < 0 {
 		shadowGrp, err := user.LookupGroup("shadow")
 		if err != nil {
-			return nil, fmt.Errorf("failed to find group id for group shadow: %w", err)
+			return nil, fmt.Errorf(i18n.G("failed to find group id for group shadow: %w"), err)
 		}
 		o.shadowGID, err = strconv.Atoi(shadowGrp.Gid)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read shadow group id: %w", err)
+			return nil, fmt.Errorf(i18n.G("failed to read shadow group id: %w"), err)
 		}
 	}
 

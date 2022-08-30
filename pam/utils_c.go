@@ -38,6 +38,8 @@ import "C"
 import (
 	"fmt"
 	"unsafe"
+
+	"github.com/ubuntu/aad-auth/internal/i18n"
 )
 
 // pamHandle allows to pass C.pam_handle_t to this package.
@@ -56,7 +58,7 @@ func sliceFromArgv(argc C.int, argv **C.char) []string {
 func getUser(pamh *C.pam_handle_t) (string, error) {
 	cUsername := C.get_user(pamh)
 	if cUsername == nil {
-		return "", fmt.Errorf("no user found")
+		return "", fmt.Errorf(i18n.G("no user found"))
 	}
 	defer C.free(unsafe.Pointer(cUsername))
 	return C.GoString(cUsername), nil
@@ -65,7 +67,7 @@ func getUser(pamh *C.pam_handle_t) (string, error) {
 func getPassword(pamh *C.pam_handle_t) (string, error) {
 	cPasswd := C.get_password(pamh)
 	if cPasswd == nil {
-		return "", fmt.Errorf("no password found")
+		return "", fmt.Errorf(i18n.G("no password found"))
 	}
 	defer C.free(unsafe.Pointer(cPasswd))
 	return C.GoString(cPasswd), nil
