@@ -279,11 +279,12 @@ func TestUpdate(t *testing.T) {
 
 			// First, try to get  user
 			cacheDir := t.TempDir()
-			c := testutils.NewCacheForTests(t, cacheDir)
 
+			opts := []cache.Option{}
 			if tc.shadowMode != nil {
-				c.SetShadowMode(*tc.shadowMode)
+				opts = append(opts, cache.WithShadowMode(*tc.shadowMode))
 			}
+			c := testutils.NewCacheForTests(t, cacheDir, opts...)
 
 			var lastUID int64
 			for _, n := range tc.userNames {
@@ -317,8 +318,7 @@ func TestUpdate(t *testing.T) {
 				// Close and reload a new cache object to ensure we do reload everything from files
 				c.Close(context.Background())
 				c.WaitForCacheClosed()
-				c = testutils.NewCacheForTests(t, cacheDir)
-				c.SetShadowMode(*tc.doRefreshWithShadowMode)
+				c = testutils.NewCacheForTests(t, cacheDir, cache.WithShadowMode(*tc.doRefreshWithShadowMode))
 
 				// we need one second as we are storing an unix timestamp for last online auth
 				time.Sleep(time.Second)
@@ -351,14 +351,14 @@ func TestCanAuthenticate(t *testing.T) {
 
 		wantErr bool
 	}{
-		"can authenticate one user":                     {userPasswords: map[string]string{"first user": "my password"}},
-		"handle separately multiple users and password": {userPasswords: map[string]string{"first user": "my password", "second user": "other password"}},
-		"can authenticate even with shadow file RO":     {userPasswords: map[string]string{"first user": "my password"}, shadowMode: &cache.ShadowROMode},
+		"can authenticate one user":                     {userPasswords: map[string]string{"myuser@domain.com": "my password"}},
+		"handle separately multiple users and password": {userPasswords: map[string]string{"myuser@domain.com": "my password", "otheruser@domain.com": "other password"}},
+		"can authenticate even with shadow file RO":     {userPasswords: map[string]string{"myuser@domain.com": "my password"}, shadowMode: &cache.ShadowROMode},
 
 		// error cases
-		"error on wrong password":                         {userPasswords: map[string]string{"first user": "wrong password"}, wantErr: true},
+		"error on wrong password":                         {userPasswords: map[string]string{"myuser@domain.com": "wrong password"}, wantErr: true},
 		"error on wrong user":                             {userPasswords: map[string]string{"does not exist user": "my password"}, wantErr: true},
-		"error on checking when can’t access shadow file": {userPasswords: map[string]string{"first user": "my password"}, shadowMode: &cache.ShadowNotAvailableMode, wantErr: true},
+		"error on checking when can’t access shadow file": {userPasswords: map[string]string{"myuser@domain.com": "my password"}, shadowMode: &cache.ShadowNotAvailableMode, wantErr: true},
 		"do not let too old unpurged accounts to log in ": {userPasswords: map[string]string{"veryolduser@domain.com": "my password"}, useoldaccounts: true, wantErr: true},
 	}
 	for name, tc := range tests {
@@ -368,24 +368,19 @@ func TestCanAuthenticate(t *testing.T) {
 
 			cacheDir := t.TempDir()
 
-			var c *cache.Cache
-			if !tc.useoldaccounts {
-				// create cache and users
-				c = testutils.NewCacheForTests(t, cacheDir)
-				err := c.Update(context.Background(), "first user", "my password", "/home/%f", "/bin/bash")
-				require.NoError(t, err, "Setup: should be able to create first user")
-				err = c.Update(context.Background(), "second user", "other password", "/home/%f", "/bin/bash")
-				require.NoError(t, err, "Setup: should be able to create second user")
-			} else {
-				// create a database and populate it with old users from dump files
-				testutils.PrepareDBsForTests(t, cacheDir, "db_with_old_users", cache.WithOfflineCredentialsExpiration(0))
-				c = testutils.NewCacheForTests(t, cacheDir, cache.WithOfflineCredentialsExpiration(0))
-			}
-
+			opts := []cache.Option{}
 			if tc.shadowMode != nil {
-				c.SetShadowMode(*tc.shadowMode)
+				opts = append(opts, cache.WithShadowMode(*tc.shadowMode))
 			}
 
+			initialCache := "users_in_db"
+			if tc.useoldaccounts {
+				opts = append(opts, cache.WithOfflineCredentialsExpiration(0))
+				initialCache = "db_with_old_users"
+			}
+			testutils.PrepareDBsForTests(t, cacheDir, initialCache, opts...)
+
+			c := testutils.NewCacheForTests(t, cacheDir, opts...)
 			for username, password := range tc.userPasswords {
 				err := c.CanAuthenticate(context.Background(), username, password)
 				if tc.wantErr {
