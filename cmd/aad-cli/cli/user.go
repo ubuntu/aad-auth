@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"os/user"
 	"strings"
@@ -12,7 +13,7 @@ import (
 
 func (a *App) installUser() {
 	cmd := &cobra.Command{
-		Use:   "user <key> <value>",
+		Use:   "user [key] [value]",
 		Short: "Manage local Azure AD user information",
 		Long: fmt.Sprintf(`Manage local Azure AD user information
 
@@ -36,65 +37,20 @@ Currently the only modifiable attributes are: %s.`, strings.Join(cache.PasswdUpd
 			// We already have our 2 args: no more arg completion
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		},
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			var err error
-			a.cache, err = a.fetchCache()
-			if err != nil {
-				return err
-			}
-
-			return nil
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var err error
-			var key string
-			var value any
-
-			switch len(args) {
-			case 0:
-				// Return current user information or all user names if explicitly requested.
-				if a.allusers {
-					var users []string
-					users, err = a.cache.GetAllUserNames(a.ctx)
-					value = strings.Join(users, "\n")
-				} else {
-					var user cache.UserRecord
-					user, err = a.cache.GetUserByName(a.ctx, a.username)
-					value, _ = user.IniString()
-				}
-			case 1:
-				// Return the value for the given key
-				key = args[0]
-				if key == "shadow_password" {
-					if !a.cache.ShadowReadable() {
-						return fmt.Errorf("You do not have permission to read the shadow database")
-					}
-					var user cache.UserRecord
-					user, err = a.cache.GetUserByName(a.ctx, a.username)
-					value = user.ShadowPasswd
-					break
-				}
-
-				value, err = a.cache.QueryPasswdAttribute(a.ctx, a.username, key)
-			case 2:
-				// Set the value for the given key and exit
-				key, value = args[0], args[1]
-				if err := a.cache.UpdateUserAttribute(a.ctx, a.username, key, value); err != nil {
-					return err
-				}
-				return nil
-			}
-
+			c, err := a.getCache()
 			if err != nil {
 				return err
 			}
 
-			fmt.Println(strings.TrimSpace(fmt.Sprint(value)))
-			return nil
+			username, _ := cmd.Flags().GetString("name")
+			allUsers, _ := cmd.Flags().GetBool("all")
+
+			return runUser(a.ctx, args, c, username, allUsers)
 		},
 	}
-	cmd.Flags().StringVarP(&a.username, "name", "n", getDefaultUser(), "username to operate on")
-	cmd.Flags().BoolVarP(&a.allusers, "all", "a", false, "list all users")
+	cmd.Flags().StringP("name", "n", getDefaultUser(), "username to operate on")
+	cmd.Flags().BoolP("all", "a", false, "list all users")
 	cmd.MarkFlagsMutuallyExclusive("name", "all")
 
 	// Register completion for the --name flag
@@ -109,7 +65,7 @@ Currently the only modifiable attributes are: %s.`, strings.Join(cache.PasswdUpd
 
 // completeWithAvailableUsers returns a list of users available in the local cache.
 func (a App) completeWithAvailableUsers() ([]string, cobra.ShellCompDirective) {
-	c, err := a.fetchCache()
+	c, err := a.getCache()
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
@@ -123,9 +79,9 @@ func (a App) completeWithAvailableUsers() ([]string, cobra.ShellCompDirective) {
 	return users, cobra.ShellCompDirectiveNoFileComp
 }
 
-// fetchCache returns the cache, either from the options field if overridden or
+// getCache returns the cache, either from the options field if overridden or
 // a newly created one.
-func (a *App) fetchCache() (*cache.Cache, error) {
+func (a *App) getCache() (*cache.Cache, error) {
 	if a.options.cache != nil {
 		return a.options.cache, nil
 	}
@@ -141,4 +97,53 @@ func getDefaultUser() string {
 	}
 
 	return u.Username
+}
+
+// runUser executes a specific user action based on the arguments passed to the command.
+func runUser(ctx context.Context, args []string, c *cache.Cache, username string, allUsers bool) error {
+	var err error
+	var key string
+	var value any
+
+	switch len(args) {
+	case 0:
+		// Return current user information or all user names if explicitly requested.
+		if allUsers {
+			var users []string
+			users, err = c.GetAllUserNames(ctx)
+			value = strings.Join(users, "\n")
+		} else {
+			var user cache.UserRecord
+			user, err = c.GetUserByName(ctx, username)
+			value, _ = user.IniString()
+		}
+	case 1:
+		// Return the value for the given key
+		key = args[0]
+		if key == "shadow_password" {
+			if !c.ShadowReadable() {
+				return fmt.Errorf("You do not have permission to read the shadow database")
+			}
+			var user cache.UserRecord
+			user, err = c.GetUserByName(ctx, username)
+			value = user.ShadowPasswd
+			break
+		}
+
+		value, err = c.QueryPasswdAttribute(ctx, username, key)
+	case 2:
+		// Set the value for the given key and exit
+		key, value = args[0], args[1]
+		if err := c.UpdateUserAttribute(ctx, username, key, value); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(strings.TrimSpace(fmt.Sprint(value)))
+	return nil
 }

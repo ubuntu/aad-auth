@@ -43,21 +43,6 @@ func (u UserRecord) IniString() (string, error) {
 	return buf.String(), nil
 }
 
-// KeysHash returns the object represented as a hash with DB column names as keys.
-func (u UserRecord) KeysHash() map[string]interface{} {
-	return map[string]interface{}{
-		"login":            u.Name,
-		"password":         u.Passwd,
-		"uid":              u.UID,
-		"gid":              u.GID,
-		"gecos":            u.Gecos,
-		"home":             u.Home,
-		"shell":            u.Shell,
-		"last_online_auth": u.LastOnlineAuth.Unix(),
-		"shadow_password":  u.ShadowPasswd,
-	}
-}
-
 // PasswdQueryAttributes returns a list of attributes that can be queried in the
 // passwd table.
 var PasswdQueryAttributes = []string{
@@ -253,16 +238,4 @@ func uidOrGidExists(db *sql.DB, id uint32, username string) (bool, error) {
 	}
 
 	return true, nil
-}
-
-// loginExists checks if username exists in passwd.
-func loginExists(db *sql.DB, login string) (bool, error) {
-	var userExists bool
-
-	row := db.QueryRow("SELECT EXISTS(SELECT 1 FROM passwd where login = ?)", login)
-	if err := row.Scan(&userExists); err != nil {
-		return userExists, fmt.Errorf("failed to check if %q exists: %w", login, err)
-	}
-
-	return userExists, nil
 }

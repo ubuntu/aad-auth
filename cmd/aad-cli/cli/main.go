@@ -15,14 +15,6 @@ import (
 type App struct {
 	rootCmd cobra.Command
 	ctx     context.Context
-	domain  string
-	cache   *cache.Cache
-
-	// CLI flags
-	verbosity  int
-	username   string
-	allusers   bool
-	editConfig bool
 
 	options options
 }
@@ -59,7 +51,8 @@ func New(opts ...option) *App {
 			cmd.SilenceUsage = true
 
 			// Set logger parameters and attach to the context
-			logger.SetVerboseMode(a.verbosity)
+			verbosity, _ := cmd.Flags().GetCount("verbose")
+			logger.SetVerboseMode(verbosity)
 			logrus.SetFormatter(&logger.LogrusFormatter{})
 			a.ctx = logger.CtxWithLogger(a.ctx, logger.LogrusLogger{FieldLogger: logrus.StandardLogger()})
 
@@ -68,7 +61,7 @@ func New(opts ...option) *App {
 		SilenceErrors: true,
 	}
 
-	a.rootCmd.PersistentFlags().CountVarP(&a.verbosity, "verbose", "v", "issue INFO (-v), DEBUG (-vv) or DEBUG with caller (-vvv) output")
+	a.rootCmd.PersistentFlags().CountP("verbose", "v", "issue INFO (-v), DEBUG (-vv) or DEBUG with caller (-vvv) output")
 
 	a.installUser()
 	a.installConfig()

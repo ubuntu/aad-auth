@@ -175,6 +175,18 @@ func (c *Cache) insertUser(ctx context.Context, newUser UserRecord) (err error) 
 	return tx.Commit()
 }
 
+// userExists checks if username exists in passwd.
+func userExists(db *sql.DB, login string) (bool, error) {
+	var userExists bool
+
+	row := db.QueryRow("SELECT EXISTS(SELECT 1 FROM passwd where login = ?)", login)
+	if err := row.Scan(&userExists); err != nil {
+		return userExists, fmt.Errorf("failed to check if %q exists: %w", login, err)
+	}
+
+	return userExists, nil
+}
+
 // updateOnlineAuthAndPassword updates password and last_online_auth.
 func (c *Cache) updateOnlineAuthAndPassword(ctx context.Context, uid int64, username, shadowPasswd string) (err error) {
 	defer func() {
@@ -259,7 +271,7 @@ func (c *Cache) UpdateUserAttribute(ctx context.Context, login, attr string, val
 
 	logger.Debug(ctx, "Updating %s for user %s", attr, login)
 
-	if b, err := loginExists(c.db, login); !b {
+	if b, err := userExists(c.db, login); !b {
 		return errors.New("user does not exist")
 	} else if err != nil {
 		return err
@@ -294,7 +306,7 @@ func (c *Cache) QueryPasswdAttribute(ctx context.Context, login, attr string) (v
 
 	logger.Debug(ctx, "Querying %s for user %s", attr, login)
 
-	if b, err := loginExists(c.db, login); !b {
+	if b, err := userExists(c.db, login); !b {
 		return "", errors.New("user does not exist")
 	} else if err != nil {
 		return "", err

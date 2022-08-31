@@ -2,6 +2,8 @@ package cache_test
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -421,12 +423,13 @@ func TestUpdateUserAttribute(t *testing.T) {
 			t.Parallel()
 
 			if tc.username == "" {
-				tc.username = "veryolduser@domain.com"
+				tc.username = "futureuser@domain.com"
 			}
 
 			cacheDir := t.TempDir()
-			testutils.CopyDBAndFixPermissions(t, "testdata/db_with_old_users", cacheDir)
-			c := newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
+			cacheDB := "db_with_old_users"
+			testutils.PrepareDBsForTests(t, cacheDir, cacheDB)
+			c := testutils.NewCacheForTests(t, cacheDir)
 
 			err := c.UpdateUserAttribute(context.Background(), tc.username, tc.attribute, tc.value)
 			if tc.wantErr {
@@ -437,9 +440,12 @@ func TestUpdateUserAttribute(t *testing.T) {
 
 			user, err := c.GetUserByName(context.Background(), tc.username)
 			require.NoError(t, err, "Setup: GetUserByName should not have returned an error but has")
-			got := user.KeysHash()
+			got, err := user.IniString()
+			require.NoError(t, err, "Setup: failed to get user representation as ini")
+			got = testutils.TimestampToUnix(t, got, user.LastOnlineAuth)
 
-			require.Equal(t, tc.value, got[tc.attribute], "UpdateUserAttribute should have updated the user attribute")
+			want := testutils.LoadWithUpdateFromGolden(t, got)
+			require.Equal(t, want, got, "expected output to match golden file")
 		})
 	}
 }
@@ -472,12 +478,13 @@ func TestQueryPasswdAttribute(t *testing.T) {
 			t.Parallel()
 
 			if tc.username == "" {
-				tc.username = "veryolduser@domain.com"
+				tc.username = "futureuser@domain.com"
 			}
 
 			cacheDir := t.TempDir()
-			testutils.CopyDBAndFixPermissions(t, "testdata/db_with_old_users", cacheDir)
-			c := newCacheForTests(t, cacheDir, cache.WithTeardownDuration(0), cache.WithOfflineCredentialsExpiration(0))
+			cacheDB := "db_with_old_users"
+			testutils.PrepareDBsForTests(t, cacheDir, cacheDB)
+			c := testutils.NewCacheForTests(t, cacheDir)
 
 			value, err := c.QueryPasswdAttribute(context.Background(), tc.username, tc.attribute)
 			if tc.wantErr {
@@ -486,11 +493,16 @@ func TestQueryPasswdAttribute(t *testing.T) {
 			}
 			assert.NoError(t, err, "QueryPasswdAttribute should not have returned an error but has")
 
-			user, err := c.GetUserByName(context.Background(), tc.username)
-			require.NoError(t, err, "Setup: GetUserByName should not have returned an error but has")
-
-			got := user.KeysHash()
-			require.Equal(t, value, got[tc.attribute], "QueryPasswdAttribute should return the correct value")
+			got := fmt.Sprintf("%#v\n", value)
+			want := testutils.LoadWithUpdateFromGolden(t, got)
+			require.Equal(t, want, got, "expected output to match golden file")
 		})
 	}
+}
+
+func TestMain(m *testing.M) {
+	testutils.InstallUpdateFlag()
+	flag.Parse()
+
+	m.Run()
 }

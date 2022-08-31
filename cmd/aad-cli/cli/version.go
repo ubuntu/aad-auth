@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 
@@ -14,21 +15,21 @@ func (a *App) installVersion() {
 		Use:   "version",
 		Short: "Returns the version of aad-cli and the PAM/NSS libraries if available",
 		Args:  cobra.NoArgs,
-		Run:   func(cmd *cobra.Command, args []string) { a.printVersion() },
+		Run:   func(cmd *cobra.Command, args []string) { printVersion(a.ctx, a.options.dpkgQueryCmd) },
 	}
 	a.rootCmd.AddCommand(cmd)
 }
 
 // printVersion prints the CLI version together with PAM/NSS information if
 // applicable.
-func (a App) printVersion() {
+func printVersion(ctx context.Context, dpkgQueryCmd string) {
 	fmt.Println("aad-cli\t\t" + consts.Version)
-	a.printLibraryVersions()
+	printLibraryVersions(ctx, dpkgQueryCmd)
 }
 
 // printLibraryVersions queries dpkg for the PAM/NSS library versions and prints them.
 // Otherwise, a "not found" message is printed.
-func (a App) printLibraryVersions() {
+func printLibraryVersions(ctx context.Context, dpkgQueryCmd string) {
 	queryArgs := []string{"-W", "--showformat", "${Version}"}
 	packages := []string{"libpam-aad", "libnss-aad"}
 
@@ -36,11 +37,11 @@ func (a App) printLibraryVersions() {
 		pkgQuery := append(queryArgs, pkg)
 
 		//#nosec:G204 - process name can only be changed in tests
-		c, err := exec.Command(a.options.dpkgQueryCmd, pkgQuery...).Output()
+		c, err := exec.Command(dpkgQueryCmd, pkgQuery...).Output()
 		fmt.Printf("%s\t", pkg)
 		if err != nil {
 			fmt.Printf("not installed\n")
-			logger.Debug(a.ctx, "got dpkg-query error: %v", err)
+			logger.Debug(ctx, "got %s error: %v", dpkgQueryCmd, err)
 			continue
 		}
 		fmt.Printf("%s\n", c)

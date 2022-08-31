@@ -2,9 +2,9 @@ package cli_test
 
 import (
 	"bytes"
-	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -33,7 +33,7 @@ func TestVersion(t *testing.T) {
 			require.NoError(t, err, "Version should not fail")
 			got = sanitizeDevVersion(got)
 
-			want := testutils.SaveAndLoadFromGolden(t, got)
+			want := testutils.LoadWithUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "Should get expected version output")
 		})
 	}
@@ -42,7 +42,7 @@ func TestVersion(t *testing.T) {
 func newQueryMockCmd(t *testing.T, installedPkgs []string) string {
 	t.Helper()
 
-	tmpfile, err := os.CreateTemp(t.TempDir(), "dpkg-query.*.sh")
+	tmpfile, err := os.Create(filepath.Join(t.TempDir(), "dpkg-query.sh"))
 	require.NoError(t, err, "Setup: failed to create temporary file")
 	defer tmpfile.Close()
 
@@ -70,11 +70,4 @@ for pkgname; do :; done
 
 func sanitizeDevVersion(s string) string {
 	return strings.ReplaceAll(s, consts.Version, "dev")
-}
-
-func TestMain(m *testing.M) {
-	testutils.InstallUpdateFlag()
-	flag.Parse()
-
-	m.Run()
 }

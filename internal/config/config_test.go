@@ -148,7 +148,7 @@ func TestLoadConfig(t *testing.T) {
 			require.NoError(t, err, "LoadConfig failed when it shouldn't")
 
 			goldenPath := filepath.Join(testFilesPath, "golden", def)
-			want := testutils.LoadAndUpdateYAMLFromGolden(t, got, testutils.WithGoldPath(goldenPath))
+			want := testutils.LoadYAMLWithUpdateFromGolden(t, got, testutils.WithGoldPath(goldenPath))
 			require.Equal(t, want, got, "Got config and expected config are different")
 		})
 	}

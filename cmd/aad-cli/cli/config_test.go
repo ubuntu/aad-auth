@@ -21,8 +21,10 @@ func TestConfigPrint(t *testing.T) {
 
 		wantErr bool
 	}{
-		"default domain": {},
-		"custom domain":  {domain: "example.com"},
+		"default domain":               {},
+		"custom domain":                {domain: "example.com"},
+		"some optional fields missing": {configFile: "missing-optional-fields.conf"},
+		"required entries only present in default domain": {domain: "example.com", configFile: "required-present-in-default-domain.conf"},
 
 		// error cases
 		"missing required entries": {configFile: "missing-required.conf", wantErr: true},
@@ -53,7 +55,7 @@ func TestConfigPrint(t *testing.T) {
 			}
 			require.NoError(t, err, "expected command to succeed")
 
-			want := testutils.SaveAndLoadFromGolden(t, got)
+			want := testutils.LoadWithUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "expected output to match golden file")
 		})
 	}
@@ -65,19 +67,24 @@ func TestConfigEdit(t *testing.T) {
 	malformedConfig := "aaaaaaaaaaaaa"
 
 	tests := map[string]struct {
-		configFile string
-		newConfig  string
+		configFile       string
+		newConfigContent string
 
 		wantErr       bool
 		wantEditorErr bool
 	}{
-		"loads the previous config":                            {},
-		"loads the config template if previous is not present": {configFile: "nonexistent.conf", newConfig: requiredConfig},
+		"loads the previous config": {},
+
+		// This test asserts that the config template is loaded when executing the command with an absent config file
+		// (see TEMPORARY CONFIG CONTENTS in the editor mock).
+		// To avoid getting an error on save, we have to pass in a valid config
+		// since the template is commented out, hence the need for newConfigContent.
+		"loads the config template if previous is not present": {configFile: "nonexistent.conf", newConfigContent: requiredConfig},
 
 		// error cases
 		"editor returns an error":         {wantEditorErr: true, wantErr: true},
-		"cfg validation returns an error": {newConfig: badConfig, wantErr: true},
-		"cfg loading returns an error":    {newConfig: malformedConfig, wantErr: true},
+		"cfg validation returns an error": {newConfigContent: badConfig, wantErr: true},
+		"cfg loading returns an error":    {newConfigContent: malformedConfig, wantErr: true},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -90,7 +97,7 @@ func TestConfigEdit(t *testing.T) {
 			// Copy the config file to a temporary location, so that changes do
 			// not persist across tests.
 			tc.configFile = copyToTempPath(t, tc.configFile)
-			editorMock := newEditorMock(t, tc.configFile, tc.newConfig, tc.wantEditorErr)
+			editorMock := newEditorMock(t, tc.configFile, tc.newConfigContent, tc.wantEditorErr)
 
 			c := cli.New(cli.WithConfigFile(tc.configFile), cli.WithEditor(editorMock))
 			got, err := testutils.RunApp(t, c, "config", "-e")
@@ -105,7 +112,7 @@ func TestConfigEdit(t *testing.T) {
 			require.NoFileExists(t, tempConfigPath, "expected temporary config file not to be present")
 
 			got = sanitizeTempPaths(t, got)
-			want := testutils.SaveAndLoadFromGolden(t, got)
+			want := testutils.LoadWithUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "expected output to match golden file")
 		})
 	}
@@ -197,7 +204,7 @@ func copyToTempPath(t *testing.T, file string) string {
 	}
 	defer r.Close()
 
-	w, err := os.CreateTemp(tempdir, "aad.*.conf")
+	w, err := os.Create(filepath.Join(tempdir, "aad.conf"))
 	require.NoError(t, err, "Setup: failed to create temporary file")
 	defer w.Close()
 
@@ -223,10 +230,10 @@ func tempConfigPathFromOutput(t *testing.T, output string) string {
 }
 
 // sanitizesTempPaths replaces temporary config paths in the given string with a
-// nondeterministic placeholder.
+// deterministic placeholder.
 func sanitizeTempPaths(t *testing.T, output string) string {
 	t.Helper()
 
-	tmpPaths := regexp.MustCompile(`/tmp/[^\n]*\.conf`)
+	tmpPaths := regexp.MustCompile(`/tmp/.*\.conf[^\s]*`)
 	return tmpPaths.ReplaceAllString(output, "/tmp/aad.conf")
 }

@@ -1,0 +1,6 @@
+[example.com]
+tenant_id                      = default_tenant_id
+app_id                         = default_app_id
+offline_credentials_expiration = 30
+homedir                        = /home/example.com/%u
+shell                          = /bin/zsh

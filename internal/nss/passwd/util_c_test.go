@@ -40,7 +40,7 @@ func TestToCpasswd(t *testing.T) {
 			require.NoError(t, err, "ToCpasswd should have not returned an error but hasn’t")
 
 			pwdGot := got.ToPublicCPasswd()
-			want := testutils.LoadAndUpdateYAMLFromGolden(t, pwdGot)
+			want := testutils.LoadYAMLWithUpdateFromGolden(t, pwdGot)
 
 			require.Equal(t, want, pwdGot, "Should have C pwd with expected fields content")
 		})

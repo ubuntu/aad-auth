@@ -50,7 +50,7 @@ func TestNewByName(t *testing.T) {
 			}
 			require.NoError(t, err, "NewByName should not have returned an error and has")
 
-			want := testutils.LoadAndUpdateYAMLFromGolden(t, got)
+			want := testutils.LoadYAMLWithUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "Passwd object is the expected one")
 		})
 	}
@@ -94,7 +94,7 @@ func TestNewByUID(t *testing.T) {
 			}
 			require.NoError(t, err, "NewByUID should not have returned an error and has")
 
-			want := testutils.LoadAndUpdateYAMLFromGolden(t, got)
+			want := testutils.LoadYAMLWithUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "Passwd object is the expected one")
 		})
 	}
@@ -149,7 +149,7 @@ func TestNextEntry(t *testing.T) {
 				return // no need to deserialize anything
 			}
 
-			want := testutils.LoadAndUpdateYAMLFromGolden(t, got)
+			want := testutils.LoadYAMLWithUpdateFromGolden(t, got)
 			if len(want) == 0 {
 				want = nil
 			}
@@ -240,7 +240,7 @@ func TestRestartIterationWithoutEndingPreviousOne(t *testing.T) {
 	_, err = passwd.NextEntry(context.Background())
 	require.ErrorIs(t, err, nss.ErrNotFoundENoEnt, "Should return ENOENT once there is no more users")
 
-	want := testutils.LoadAndUpdateYAMLFromGolden(t, got)
+	want := testutils.LoadYAMLWithUpdateFromGolden(t, got)
 	if len(want) == 0 {
 		want = nil
 	}
