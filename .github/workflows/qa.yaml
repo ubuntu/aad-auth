@@ -39,7 +39,7 @@ jobs:
           go build -ldflags='-s -w' -buildmode=c-shared -o pam_aad.so ./pam
 
           # Build NSS library
-          go build -ldflags='-s -w' -buildmode=c-shared -o libnss_aad.so.2 ./nss
+          go build -ldflags='-s -w' -buildmode=c-shared -o libnss_aad.so.2 ./nss/integration_tests
         if: ${{ always() }}
 
   tests:
