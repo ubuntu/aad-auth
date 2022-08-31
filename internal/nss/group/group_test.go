@@ -14,6 +14,8 @@ import (
 
 //nolint:dupl // TestNewByName and TestNewByGID have similar code that triggers dupl, despite being different.
 func TestNewByName(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		name         string
 		failingCache bool
@@ -30,6 +32,8 @@ func TestNewByName(t *testing.T) {
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			cacheDir := t.TempDir()
 			testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
 
@@ -38,9 +42,8 @@ func TestNewByName(t *testing.T) {
 			if tc.failingCache {
 				opts = append(opts, cache.WithRootUID(4242))
 			}
-			group.SetCacheOption(opts...)
 
-			got, err := group.NewByName(context.Background(), tc.name)
+			got, err := group.NewByName(context.Background(), tc.name, opts...)
 			if tc.wantErrType != nil {
 				require.Error(t, err, "NewByName should have returned an error and hasn’t")
 				require.ErrorIs(t, err, tc.wantErrType, "NewByName has not returned expected error type")
@@ -56,6 +59,8 @@ func TestNewByName(t *testing.T) {
 
 //nolint:dupl // TestNewByName and TestNewByGID have similar code that triggers dupl, despite being different.
 func TestNewByGID(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		gid          uint
 		failingCache bool
@@ -71,6 +76,8 @@ func TestNewByGID(t *testing.T) {
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			cacheDir := t.TempDir()
 			testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
 
@@ -79,9 +86,8 @@ func TestNewByGID(t *testing.T) {
 			if tc.failingCache {
 				opts = append(opts, cache.WithRootUID(4242))
 			}
-			group.SetCacheOption(opts...)
 
-			got, err := group.NewByGID(context.Background(), tc.gid)
+			got, err := group.NewByGID(context.Background(), tc.gid, opts...)
 			if tc.wantErrType != nil {
 				require.Error(t, err, "NewByGID should have returned an error and hasn’t")
 				require.ErrorIs(t, err, tc.wantErrType, "NewByGID has not returned expected error type")
@@ -120,10 +126,9 @@ func TestNextEntry(t *testing.T) {
 
 			uid, gid := testutils.GetCurrentUIDGID(t)
 			opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid)}
-			group.SetCacheOption(opts...)
 
 			if !tc.noIterationInit {
-				err := group.StartEntryIteration(context.Background())
+				err := group.StartEntryIteration(context.Background(), opts...)
 				require.NoError(t, err, "StartEntryIteration should succeed")
 				defer group.EndEntryIteration(context.Background())
 			}
@@ -176,10 +181,9 @@ func TestStartEndEntryIteration(t *testing.T) {
 
 			uid, gid := testutils.GetCurrentUIDGID(t)
 			opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid)}
-			group.SetCacheOption(opts...)
 
 			if tc.alreadyIterationInProgress {
-				err := group.StartEntryIteration(context.Background())
+				err := group.StartEntryIteration(context.Background(), opts...)
 				require.NoError(t, err, "Setup: first startEntryIteration should have failed by hasn’t")
 				defer group.EndEntryIteration(context.Background())
 			}
@@ -187,10 +191,9 @@ func TestStartEndEntryIteration(t *testing.T) {
 			if tc.cacheOpenError {
 				opts = append(opts, cache.WithRootUID(4242))
 			}
-			group.SetCacheOption(opts...)
 
 			if !tc.noStartIteration {
-				err := group.StartEntryIteration(context.Background())
+				err := group.StartEntryIteration(context.Background(), opts...)
 				if tc.wantStartIterationErr {
 					require.Error(t, err, "StartEntryIteration should have failed by hasn’t")
 					require.ErrorIs(t, err, nss.ErrUnavailableENoEnt, "Error should be of type Unavailable")
@@ -211,10 +214,9 @@ func TestRestartIterationWithoutEndingPreviousOne(t *testing.T) {
 
 	uid, gid := testutils.GetCurrentUIDGID(t)
 	opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid)}
-	group.SetCacheOption(opts...)
 
 	// First iteration group
-	err := group.StartEntryIteration(context.Background())
+	err := group.StartEntryIteration(context.Background(), opts...)
 	require.NoError(t, err, "StartEntryIteration should succeed")
 	defer group.EndEntryIteration(context.Background()) // in case of an error in the middle of the test. No-op otherwise
 
@@ -226,7 +228,7 @@ func TestRestartIterationWithoutEndingPreviousOne(t *testing.T) {
 	require.NoError(t, err, "EndEntryIteration while iterating should work")
 
 	// Second iteration group
-	err = group.StartEntryIteration(context.Background())
+	err = group.StartEntryIteration(context.Background(), opts...)
 	require.NoError(t, err, "restart a second entry iteration should succeed")
 	defer group.EndEntryIteration(context.Background())
 

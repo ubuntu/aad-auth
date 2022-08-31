@@ -14,6 +14,8 @@ import (
 
 //nolint:dupl // TestNewByName and TestNewByGID have similar code that triggers dupl, despite being different.
 func TestNewByName(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		name         string
 		failingCache bool
@@ -29,6 +31,8 @@ func TestNewByName(t *testing.T) {
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			cacheDir := t.TempDir()
 			testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
 
@@ -37,9 +41,8 @@ func TestNewByName(t *testing.T) {
 			if tc.failingCache {
 				opts = append(opts, cache.WithRootUID(4242))
 			}
-			passwd.SetCacheOption(opts...)
 
-			got, err := passwd.NewByName(context.Background(), tc.name)
+			got, err := passwd.NewByName(context.Background(), tc.name, opts...)
 			if tc.wantErrType != nil {
 				require.Error(t, err, "NewByName should have returned an error and hasn’t")
 				require.ErrorIs(t, err, tc.wantErrType, "NewByName has not returned expected error type")
@@ -55,6 +58,8 @@ func TestNewByName(t *testing.T) {
 
 //nolint:dupl // TestNewByName and TestNewByUID have similar code that triggers dupl, despite being different.
 func TestNewByUID(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		uid          uint
 		failingCache bool
@@ -70,6 +75,8 @@ func TestNewByUID(t *testing.T) {
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			cacheDir := t.TempDir()
 			testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
 
@@ -78,9 +85,8 @@ func TestNewByUID(t *testing.T) {
 			if tc.failingCache {
 				opts = append(opts, cache.WithRootUID(4242))
 			}
-			passwd.SetCacheOption(opts...)
 
-			got, err := passwd.NewByUID(context.Background(), tc.uid)
+			got, err := passwd.NewByUID(context.Background(), tc.uid, opts...)
 			if tc.wantErrType != nil {
 				require.Error(t, err, "NewByUID should have returned an error and hasn’t")
 				require.ErrorIs(t, err, tc.wantErrType, "NewByUID has not returned expected error type")
@@ -119,10 +125,9 @@ func TestNextEntry(t *testing.T) {
 
 			uid, gid := testutils.GetCurrentUIDGID(t)
 			opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid)}
-			passwd.SetCacheOption(opts...)
 
 			if !tc.noIterationInit {
-				err := passwd.StartEntryIteration(context.Background())
+				err := passwd.StartEntryIteration(context.Background(), opts...)
 				require.NoError(t, err, "StartEntryIteration should succeed")
 				defer passwd.EndEntryIteration(context.Background())
 			}
@@ -175,10 +180,9 @@ func TestStartEndEntryIteration(t *testing.T) {
 
 			uid, gid := testutils.GetCurrentUIDGID(t)
 			opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid)}
-			passwd.SetCacheOption(opts...)
 
 			if tc.alreadyIterationInProgress {
-				err := passwd.StartEntryIteration(context.Background())
+				err := passwd.StartEntryIteration(context.Background(), opts...)
 				require.NoError(t, err, "Setup: first startEntryIteration should have failed by hasn’t")
 				defer passwd.EndEntryIteration(context.Background())
 			}
@@ -186,10 +190,9 @@ func TestStartEndEntryIteration(t *testing.T) {
 			if tc.cacheOpenError {
 				opts = append(opts, cache.WithRootUID(4242))
 			}
-			passwd.SetCacheOption(opts...)
 
 			if !tc.noStartIteration {
-				err := passwd.StartEntryIteration(context.Background())
+				err := passwd.StartEntryIteration(context.Background(), opts...)
 				if tc.wantStartIterationErr {
 					require.Error(t, err, "StartEntryIteration should have failed by hasn’t")
 					require.ErrorIs(t, err, nss.ErrUnavailableENoEnt, "Error should be of type Unavailable")
@@ -210,10 +213,9 @@ func TestRestartIterationWithoutEndingPreviousOne(t *testing.T) {
 
 	uid, gid := testutils.GetCurrentUIDGID(t)
 	opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid)}
-	passwd.SetCacheOption(opts...)
 
 	// First iteration group
-	err := passwd.StartEntryIteration(context.Background())
+	err := passwd.StartEntryIteration(context.Background(), opts...)
 	require.NoError(t, err, "StartEntryIteration should succeed")
 	defer passwd.EndEntryIteration(context.Background()) // in case of an error in the middle of the test. No-op otherwise
 
@@ -225,7 +227,7 @@ func TestRestartIterationWithoutEndingPreviousOne(t *testing.T) {
 	require.NoError(t, err, "EndEntryIteration while iterating should work")
 
 	// Second iteration group
-	err = passwd.StartEntryIteration(context.Background())
+	err = passwd.StartEntryIteration(context.Background(), opts...)
 	require.NoError(t, err, "restart a second entry iteration should succeed")
 	defer passwd.EndEntryIteration(context.Background())
 

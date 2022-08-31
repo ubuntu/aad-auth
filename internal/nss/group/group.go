@@ -18,16 +18,8 @@ type Group struct {
 	members []string /* Members of the group */
 }
 
-var testopts = []cache.Option{}
-
-// setCacheOption set opts everytime we open a cache.
-// This is not compatible with parallel testing as it needs to change a global state.
-func setCacheOption(opts ...cache.Option) {
-	testopts = opts
-}
-
 // NewByName returns a passwd entry from a name.
-func NewByName(ctx context.Context, name string) (g Group, err error) {
+func NewByName(ctx context.Context, name string, cacheOpts ...cache.Option) (g Group, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("failed to get group entry from name %q: %w", name, err)
@@ -41,7 +33,7 @@ func NewByName(ctx context.Context, name string) (g Group, err error) {
 		return Group{}, nss.ErrNotFoundENoEnt
 	}
 
-	c, err := cache.New(ctx, testopts...)
+	c, err := cache.New(ctx, cacheOpts...)
 	if err != nil {
 		return Group{}, nss.ConvertErr(err)
 	}
@@ -61,7 +53,7 @@ func NewByName(ctx context.Context, name string) (g Group, err error) {
 }
 
 // NewByGID returns a group entry from a GID.
-func NewByGID(ctx context.Context, gid uint) (g Group, err error) {
+func NewByGID(ctx context.Context, gid uint, cacheOpts ...cache.Option) (g Group, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("failed to get group entry from GID %d: %w", gid, err)
@@ -70,7 +62,7 @@ func NewByGID(ctx context.Context, gid uint) (g Group, err error) {
 
 	logger.Debug(ctx, "Requesting an group entry matching GID %d", gid)
 
-	c, err := cache.New(ctx, testopts...)
+	c, err := cache.New(ctx, cacheOpts...)
 	if err != nil {
 		return Group{}, nss.ConvertErr(err)
 	}
@@ -93,12 +85,12 @@ var groupIterationCache *cache.Cache
 
 // StartEntryIteration open a new cache for iteration.
 // This needs to be called prior to calling NextEntry and be closed with EndEntryIteration.
-func StartEntryIteration(ctx context.Context) error {
+func StartEntryIteration(ctx context.Context, cacheOpts ...cache.Option) error {
 	if groupIterationCache != nil {
 		return nss.ConvertErr(errors.New("group entry iteration already in progress. End it before starting a new one"))
 	}
 
-	c, err := cache.New(ctx, testopts...)
+	c, err := cache.New(ctx, cacheOpts...)
 	if err != nil {
 		return nss.ConvertErr(err)
 	}

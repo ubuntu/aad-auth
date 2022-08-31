@@ -13,6 +13,8 @@ import (
 )
 
 func TestNewByName(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		name         string
 		failingCache bool
@@ -28,6 +30,8 @@ func TestNewByName(t *testing.T) {
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			cacheDir := t.TempDir()
 			testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
 
@@ -36,9 +40,8 @@ func TestNewByName(t *testing.T) {
 			if tc.failingCache {
 				opts = append(opts, cache.WithRootUID(4242))
 			}
-			shadow.SetCacheOption(opts...)
 
-			got, err := shadow.NewByName(context.Background(), tc.name)
+			got, err := shadow.NewByName(context.Background(), tc.name, opts...)
 			if tc.wantErrType != nil {
 				require.Error(t, err, "NewByName should have returned an error and hasn’t")
 				require.ErrorIs(t, err, tc.wantErrType, "NewByName has not returned expected error type")
@@ -77,10 +80,9 @@ func TestNextEntry(t *testing.T) {
 
 			uid, gid := testutils.GetCurrentUIDGID(t)
 			opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid)}
-			shadow.SetCacheOption(opts...)
 
 			if !tc.noIterationInit {
-				err := shadow.StartEntryIteration(context.Background())
+				err := shadow.StartEntryIteration(context.Background(), opts...)
 				require.NoError(t, err, "StartEntryIteration should succeed")
 				defer shadow.EndEntryIteration(context.Background())
 			}
@@ -133,10 +135,9 @@ func TestStartEndEntryIteration(t *testing.T) {
 
 			uid, gid := testutils.GetCurrentUIDGID(t)
 			opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid)}
-			shadow.SetCacheOption(opts...)
 
 			if tc.alreadyIterationInProgress {
-				err := shadow.StartEntryIteration(context.Background())
+				err := shadow.StartEntryIteration(context.Background(), opts...)
 				require.NoError(t, err, "Setup: first startEntryIteration should have failed by hasn’t")
 				defer shadow.EndEntryIteration(context.Background())
 			}
@@ -144,10 +145,9 @@ func TestStartEndEntryIteration(t *testing.T) {
 			if tc.cacheOpenError {
 				opts = append(opts, cache.WithRootUID(4242))
 			}
-			shadow.SetCacheOption(opts...)
 
 			if !tc.noStartIteration {
-				err := shadow.StartEntryIteration(context.Background())
+				err := shadow.StartEntryIteration(context.Background(), opts...)
 				if tc.wantStartIterationErr {
 					require.Error(t, err, "StartEntryIteration should have failed by hasn’t")
 					require.ErrorIs(t, err, nss.ErrUnavailableENoEnt, "Error should be of type Unavailable")
@@ -168,10 +168,9 @@ func TestRestartIterationWithoutEndingPreviousOne(t *testing.T) {
 
 	uid, gid := testutils.GetCurrentUIDGID(t)
 	opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid)}
-	shadow.SetCacheOption(opts...)
 
 	// First iteration group
-	err := shadow.StartEntryIteration(context.Background())
+	err := shadow.StartEntryIteration(context.Background(), opts...)
 	require.NoError(t, err, "StartEntryIteration should succeed")
 	defer shadow.EndEntryIteration(context.Background()) // in case of an error in the middle of the test. No-op otherwise
 
@@ -183,7 +182,7 @@ func TestRestartIterationWithoutEndingPreviousOne(t *testing.T) {
 	require.NoError(t, err, "EndEntryIteration while iterating should work")
 
 	// Second iteration group
-	err = shadow.StartEntryIteration(context.Background())
+	err = shadow.StartEntryIteration(context.Background(), opts...)
 	require.NoError(t, err, "restart a second entry iteration should succeed")
 	defer shadow.EndEntryIteration(context.Background())
 

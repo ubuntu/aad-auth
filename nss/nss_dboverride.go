@@ -8,9 +8,6 @@ import (
 	"strconv"
 
 	"github.com/ubuntu/aad-auth/internal/cache"
-	"github.com/ubuntu/aad-auth/internal/nss/group"
-	"github.com/ubuntu/aad-auth/internal/nss/passwd"
-	"github.com/ubuntu/aad-auth/internal/nss/shadow"
 )
 
 /*
@@ -30,8 +27,6 @@ import "C"
 
 // initialize via env variables in mock test
 func init() {
-	var opts []cache.Option
-
 	uidEnv := os.Getenv("NSS_AAD_ROOT_UID")
 	if uidEnv != "" {
 		uid, err := strconv.Atoi(uidEnv)
@@ -66,8 +61,4 @@ func init() {
 		}
 		opts = append(opts, cache.WithShadowMode(mode))
 	}
-
-	passwd.SetCacheOption(opts...)
-	group.SetCacheOption(opts...)
-	shadow.SetCacheOption(opts...)
 }
