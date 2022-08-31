@@ -20,7 +20,6 @@ Description: Azure Active Directory Authentication
 Package: libpam-aad
 Architecture: any
 Built-Using: ${misc:Built-Using},
-Depends: ${shlibs:Depends},
 Depends: aad-common,
          ${shlibs:Depends},
          ${misc:Depends},
@@ -32,7 +31,6 @@ Description: ${source:Synopsis} module for PAM
 Package: libnss-aad
 Architecture: any
 Built-Using: ${misc:Built-Using},
-Depends: ${shlibs:Depends},
 Depends: aad-common,
          ${shlibs:Depends},
          ${misc:Depends},
