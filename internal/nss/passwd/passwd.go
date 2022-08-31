@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/ubuntu/aad-auth/internal/cache"
 	"github.com/ubuntu/aad-auth/internal/logger"
@@ -19,6 +21,21 @@ type Passwd struct {
 	gecos  string /* user information */
 	dir    string /* home directory */
 	shell  string /* shell program */
+}
+
+// String creates a string with Passwd values.
+func (p Passwd) String() string {
+	v := []string{
+		p.name,
+		p.passwd,
+		strconv.FormatUint(uint64(p.uid), 10),
+		strconv.FormatUint(uint64(p.gid), 10),
+		p.gecos,
+		p.dir,
+		p.shell,
+	}
+
+	return strings.Join(v, ":")
 }
 
 // NewByName returns a passwd entry from a name.
