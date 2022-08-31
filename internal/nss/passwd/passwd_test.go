@@ -101,8 +101,6 @@ func TestNewByUID(t *testing.T) {
 }
 
 func TestNextEntry(t *testing.T) {
-	t.Parallel()
-
 	tests := map[string]struct {
 		numNextIteration int
 		hasNoUser        bool
@@ -120,8 +118,6 @@ func TestNextEntry(t *testing.T) {
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
 			cacheDir := t.TempDir()
 			if !tc.hasNoUser {
 				testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
@@ -163,8 +159,6 @@ func TestNextEntry(t *testing.T) {
 }
 
 func TestStartEndEntryIteration(t *testing.T) {
-	t.Parallel()
-
 	tests := map[string]struct {
 		alreadyIterationInProgress bool
 		noStartIteration           bool
@@ -182,8 +176,6 @@ func TestStartEndEntryIteration(t *testing.T) {
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
 			cacheDir := t.TempDir()
 
 			uid, gid := testutils.GetCurrentUIDGID(t)
@@ -216,8 +208,6 @@ func TestStartEndEntryIteration(t *testing.T) {
 }
 
 func TestRestartIterationWithoutEndingPreviousOne(t *testing.T) {
-	t.Parallel()
-
 	cacheDir := t.TempDir()
 	testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
 
