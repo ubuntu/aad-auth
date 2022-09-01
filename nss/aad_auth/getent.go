@@ -74,7 +74,7 @@ func getEntryByID(ctx context.Context, dbName string, id uint, cacheOpts ...cach
 	case "group":
 		e, err = group.NewByGID(ctx, id, cacheOpts...)
 	case "shadow":
-		return nil, fmt.Errorf("Shadow db does not support getting entries by ID")
+		return nil, nss.ErrNotFoundENoEnt
 	}
 
 	if err != nil {
