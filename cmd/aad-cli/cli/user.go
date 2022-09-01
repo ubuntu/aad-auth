@@ -3,12 +3,16 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
 	"os/user"
 	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/ubuntu/aad-auth/internal/cache"
 	"github.com/ubuntu/aad-auth/internal/logger"
+	"golang.org/x/exp/slices"
+	"golang.org/x/sys/unix"
 )
 
 func (a *App) installUser() {
@@ -37,6 +41,12 @@ Currently the only modifiable attributes are: %s.`, strings.Join(cache.PasswdUpd
 			// We already have our 2 args: no more arg completion
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		},
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if cmd.Flags().Changed("move-home") && (len(args) < 2 || !slices.Contains(args, "home")) {
+				return fmt.Errorf("move-home can only be used when modifying home attribute")
+			}
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := a.getCache()
 			if err != nil {
@@ -45,13 +55,16 @@ Currently the only modifiable attributes are: %s.`, strings.Join(cache.PasswdUpd
 
 			username, _ := cmd.Flags().GetString("name")
 			allUsers, _ := cmd.Flags().GetBool("all")
+			moveHome, _ := cmd.Flags().GetBool("move-home")
 
-			return runUser(a.ctx, args, c, username, allUsers)
+			return runUser(a.ctx, args, c, username, allUsers, moveHome)
 		},
 	}
 	cmd.Flags().StringP("name", "n", getDefaultUser(), "username to operate on")
 	cmd.Flags().BoolP("all", "a", false, "list all users")
+	cmd.Flags().BoolP("move-home", "m", false, "if updating hoem, move the content of the home directory to the new location")
 	cmd.MarkFlagsMutuallyExclusive("name", "all")
+	cmd.MarkFlagsMutuallyExclusive("move-home", "all")
 
 	// Register completion for the --name flag
 	if err := cmd.RegisterFlagCompletionFunc("name", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
@@ -100,7 +113,7 @@ func getDefaultUser() string {
 }
 
 // runUser executes a specific user action based on the arguments passed to the command.
-func runUser(ctx context.Context, args []string, c *cache.Cache, username string, allUsers bool) error {
+func runUser(ctx context.Context, args []string, c *cache.Cache, username string, allUsers bool, moveHome bool) error {
 	var err error
 	var key string
 	var value any
@@ -134,7 +147,7 @@ func runUser(ctx context.Context, args []string, c *cache.Cache, username string
 	case 2:
 		// Set the value for the given key and exit
 		key, value = args[0], args[1]
-		if err := c.UpdateUserAttribute(ctx, username, key, value); err != nil {
+		if err := updateUserAttribute(ctx, c, username, key, value, moveHome); err != nil {
 			return err
 		}
 		return nil
@@ -145,5 +158,63 @@ func runUser(ctx context.Context, args []string, c *cache.Cache, username string
 	}
 
 	fmt.Println(strings.TrimSpace(fmt.Sprint(value)))
+	return nil
+}
+
+// updateUserAttribute updates the given attribute for an user to the specified value.
+// For some attributes such as home, additional actions are performed.
+func updateUserAttribute(ctx context.Context, c *cache.Cache, username, key string, value any, moveHome bool) error {
+	prevValue, err := c.QueryPasswdAttribute(ctx, username, key)
+	if err != nil {
+		return err
+	}
+
+	if prevValue == value {
+		logger.Debug(ctx, "No change to %q for %s", key, username)
+		return nil
+	}
+
+	if err := c.UpdateUserAttribute(ctx, username, key, value); err != nil {
+		return err
+	}
+
+	// Take additional actions based on the key that was updated
+	if key == "home" && moveHome {
+		// Update the home directory if it changed
+		if err := moveUserHome(ctx, username, fmt.Sprintf("%v", prevValue), fmt.Sprintf("%v", value)); err != nil {
+			return fmt.Errorf("Unable to move home directory for %s: %w", username, err)
+		}
+	}
+	return nil
+}
+
+// moveUserHome moves the home directory of an user from the previous location to the new one.
+func moveUserHome(ctx context.Context, username, prevValue, value string) error {
+	// Does the target directory exist?
+	if unix.Access(value, unix.F_OK) == nil {
+		return fmt.Errorf("directory %q already exists", value)
+	}
+
+	homeInfo, err := os.Stat(prevValue)
+	if err != nil {
+		return err
+	}
+	if !homeInfo.IsDir() {
+		return fmt.Errorf("%q was not a directory, it is not removed and no home directories area created", prevValue)
+	}
+
+	// Try renaming first
+	if err := os.Rename(prevValue, value); err == nil {
+		logger.Debug(ctx, "Moved %q to %q", prevValue, value)
+		return nil
+	}
+
+	// Try renaming with mv to account for cross-device links
+	logger.Debug(ctx, "Unable to rename %q to %q. Trying with mv", prevValue, value)
+	if err := exec.Command("mv", prevValue, value).Run(); err != nil {
+		return err
+	}
+
+	logger.Debug(ctx, "Moved home directory for %s from %q to %q", username, prevValue, value)
 	return nil
 }

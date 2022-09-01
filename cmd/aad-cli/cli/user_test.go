@@ -2,6 +2,8 @@ package cli_test
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -159,16 +161,115 @@ func TestUserSetAttribute(t *testing.T) {
 	}
 }
 
+func TestUserMoveHomeDirectory(t *testing.T) {
+	tests := map[string]struct {
+		prevHomeDir string
+		newHomeDir  string
+
+		wantErr bool
+	}{
+		"move home directory": {prevHomeDir: "oldhome", newHomeDir: "newhome"},
+
+		// Error cases
+		"fail if previous directory is absent": {prevHomeDir: "absent", newHomeDir: "newhome", wantErr: true},
+		"fail if previous directory is a file": {prevHomeDir: "oldhomefile", newHomeDir: "newhome", wantErr: true},
+		"fail if new directory already exists": {prevHomeDir: "oldhome", newHomeDir: "existingnewhome", wantErr: true},
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			cacheDir := t.TempDir()
+			cacheDB := "db_with_old_users"
+			testutils.PrepareDBsForTests(t, cacheDir, cacheDB)
+			cache := testutils.NewCacheForTests(t, cacheDir)
+
+			// Set up test filesystem structure
+			err := os.MkdirAll(filepath.Join(cacheDir, "oldhome"), 0750)
+			require.NoError(t, err, "Setup: failed to create previous home directory")
+			err = os.MkdirAll(filepath.Join(cacheDir, "existingnewhome"), 0750)
+			require.NoError(t, err, "Setup: failed to create existing new home directory")
+			err = os.WriteFile(filepath.Join(cacheDir, "oldhomefile"), []byte("test content"), 0600)
+			require.NoError(t, err, "Setup: failed to create previous home directory file")
+
+			prevHomeDir := filepath.Join(cacheDir, tc.prevHomeDir)
+			newHomeDir := filepath.Join(cacheDir, tc.newHomeDir)
+
+			err = cache.UpdateUserAttribute(context.Background(), "futureuser@domain.com", "home", prevHomeDir)
+			require.NoError(t, err, "Setup: failed to set initial user home directory")
+
+			c := cli.New(cli.WithCache(cache))
+			_, runErr := testutils.RunApp(t, c, "user", "--name", "futureuser@domain.com", "home", newHomeDir, "--move-home")
+
+			// We always expect the passwd attribute to be updated in this test, regardless of moving errors.
+			home, err := cache.QueryPasswdAttribute(context.Background(), "futureuser@domain.com", "home")
+			require.NoError(t, err, "Setup: failed to get user home directory")
+			require.Equal(t, newHomeDir, home, "expected home directory to be updated")
+
+			if !tc.wantErr {
+				require.NoError(t, runErr, "expected command to succeed")
+				require.DirExists(t, newHomeDir, "expected new home directory to exist")
+				require.NoDirExists(t, prevHomeDir, "expected previous home directory to not exist")
+				return
+			}
+
+			require.Error(t, runErr, "expected command to return an error")
+			if tc.prevHomeDir == "oldhome" {
+				require.DirExists(t, prevHomeDir, "expected previous home directory to exist")
+			}
+			if tc.newHomeDir != "existingnewhome" {
+				require.NoDirExists(t, newHomeDir, "expected new home directory to not exist")
+			}
+		})
+	}
+}
+
 func TestUserMutuallyExclusiveFlags(t *testing.T) {
-	cacheDir := t.TempDir()
-	cacheDB := "db_with_old_users"
-	testutils.PrepareDBsForTests(t, cacheDir, cacheDB)
-	cache := testutils.NewCacheForTests(t, cacheDir)
-	c := cli.New(cli.WithCache(cache))
+	tests := map[string]struct {
+		args        string
+		expectedErr string
+	}{
+		"both --name and --all": {
+			args:        "user --name futureuser@domain.com --all",
+			expectedErr: "if any flags in the group [name all] are set none of the others can be",
+		},
+		"both -n and -a": {
+			args:        "user -n futureuser@domain.com -a",
+			expectedErr: "if any flags in the group [name all] are set none of the others can be",
+		},
+		"both --move-home and --all": {
+			args:        "user --move-home --all home newvalue",
+			expectedErr: "if any flags in the group [move-home all] are set none of the others can be",
+		},
+		"both -m and -a": {
+			args:        "user -m -a home newvalue",
+			expectedErr: "if any flags in the group [move-home all] are set none of the others can be",
+		},
+		"--move-home without argument to update": {
+			args:        "user --move-home",
+			expectedErr: "move-home can only be used when modifying home attribute",
+		},
+		"--move-home with incorrect argument to update": {
+			args:        "user --move-home gecos newvalue",
+			expectedErr: "move-home can only be used when modifying home attribute",
+		},
+		"--move-home without new value to update with": {
+			args:        "user --move-home home",
+			expectedErr: "move-home can only be used when modifying home attribute",
+		},
+	}
 
-	_, err := testutils.RunApp(t, c, "user", "--name", "futureuser@domain.com", "--all")
-	require.ErrorContains(t, err, "if any flags in the group [name all] are set none of the others can be", "expected command to return mutually exclusive flag error")
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			cacheDir := t.TempDir()
+			cacheDB := "db_with_old_users"
+			testutils.PrepareDBsForTests(t, cacheDir, cacheDB)
+			cache := testutils.NewCacheForTests(t, cacheDir)
 
-	_, err = testutils.RunApp(t, c, "user", "-n", "futureuser@domain.com", "-a")
-	require.ErrorContains(t, err, "if any flags in the group [name all] are set none of the others can be", "expected command to return mutually exclusive flag error")
+			c := cli.New(cli.WithCache(cache))
+			_, err := testutils.RunApp(t, c, strings.Split(tc.args, " ")...)
+
+			require.ErrorContains(t, err, tc.expectedErr, "expected command to return flag parsing error")
+		})
+	}
 }
