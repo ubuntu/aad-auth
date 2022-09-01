@@ -10,87 +10,98 @@ import (
 	"github.com/ubuntu/aad-auth/internal/testutils"
 )
 
-func TestGetAllEnt(t *testing.T) {
-	tests := map[string]struct {
-		db string
-
-		wantErr bool
-	}{
-		"list all groups from group db": {db: "group"},
-		"list all users from passwd db": {db: "passwd"},
-		"list all users from shadow db": {db: "shadow"},
-
-		// Error cases
-		"error when trying to list from an inexistent db": {db: "dontexist", wantErr: true},
-	}
-
-	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			cacheDir := t.TempDir()
-
-			testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
-
-			uid, gid := testutils.GetCurrentUIDGID(t)
-			opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid)}
-
-			got, err := GetEnt(context.Background(), tc.db, "", opts...)
-			if tc.wantErr {
-				require.Error(t, err, "Expected an error but got none.")
-				return
-			}
-			require.NoError(t, err, "Expected no error but got one.")
-
-			want := testutils.LoadAndUpdateFromGolden(t, got)
-
-			require.Equal(t, want, got, "Output must match")
-		})
-	}
-}
-
 func TestGetEnt(t *testing.T) {
-	t.Parallel()
-
+	noShadow := 0
 	tests := map[string]struct {
-		db  string
-		key string
-
-		wantErr bool
+		db         string
+		key        string
+		cacheDB    string
+		rootUID    int
+		shadowMode *int
 	}{
-		"list user from passwd db by name": {db: "passwd", key: "myuser@domain.com"},
-		"list user from passwd db by uid":  {db: "passwd", key: "165119649"},
+		// List entry by name
+		"list entry from passwd by name": {db: "passwd", key: "myuser@domain.com"},
+		"list entry from group by name":  {db: "group", key: "myuser@domain.com"},
+		"list entry from shadow by name": {db: "shadow", key: "myuser@domain.com"},
 
-		"list group from group db by name": {db: "group", key: "myuser@domain.com"},
-		"list group from group db by gid":  {db: "passwd", key: "165119649"},
+		// List entry by UID/GID
+		"list entry from passwd by uid": {db: "passwd", key: "165119649"},
+		"list entry from group by gid":  {db: "passwd", key: "165119649"},
 
-		"list user from shadow db by name": {db: "shadow", key: "myuser@domain.com"},
+		// List entries
+		"list entries in passwd": {db: "passwd"},
+		"list entries in group":  {db: "group"},
+		"list entries in shadow": {db: "shadow"},
 
-		// Error cases
-		"error on trying to list inexistent user in passwd db": {db: "passwd", key: "doesnotexist@domain.com", wantErr: true},
-		"error on trying to list inexistent user in group db":  {db: "group", key: "doesnotexist@domain.com", wantErr: true},
-		"error on trying to list inexistent user in shadow db": {db: "shadow", key: "doesnotexist@domain.com", wantErr: true},
+		// List entries without access to shadow
+		"list entries in passwd without access to shadow": {db: "passwd", shadowMode: &noShadow},
+		"list entries in group without access to shadow":  {db: "group", shadowMode: &noShadow},
+		"try to list shadow without access to shadow":     {db: "shadow", shadowMode: &noShadow},
+
+		// Try to list non-existent entry
+		"try to list non-existent entry in passwd": {db: "passwd", key: "doesnotexist@domain.com"},
+		"try to list non-existent entry in group":  {db: "group", key: "doesnotexist@domain.com"},
+		"try to list non-existent entry in shadow": {db: "shadow", key: "doesnotexist@domain.com"},
+
+		// Try to list without cache
+		"try to list passwd without any cache": {db: "passwd", cacheDB: "nocache"},
+		"try to list group without any cache":  {db: "group", cacheDB: "nocache"},
+		"try to list shadow without any cache": {db: "shadow", cacheDB: "nocache"},
+
+		// Try to list with empty cache
+		"try to list passwd with empty cache": {db: "passwd", cacheDB: "empty"},
+		"try to list group with empty cache":  {db: "group", cacheDB: "empty"},
+		"try to list shadow with empty cache": {db: "shadow", cacheDB: "empty"},
+
+		// List local entry without cache
+		"list local passwd entry without cache": {db: "passwd", cacheDB: "nocache", key: "0"},
+		"list local group entry without cache":  {db: "group", cacheDB: "nocache", key: "0"},
+		"list local shadow entry without cache": {db: "shadow", cacheDB: "nocache", key: "root"},
+
+		// Cleans up old entries
+		"old entries in passwd are cleaned": {db: "passwd", cacheDB: "db_with_old_users"},
+		"old entries in group are cleaned":  {db: "group", cacheDB: "db_with_old_users"},
+		"old entries in shadow are cleaned": {db: "shadow", cacheDB: "db_with_old_users"},
+
+		// Try to list without permission on cache
+		"try to list passwd without permission on cache": {db: "passwd", rootUID: 4242},
+		"try to list group without permission on cache":  {db: "group", rootUID: 4242},
+		"try to list shadow without permission on cache": {db: "shadow", rootUID: 4242},
 	}
+
+	// Setting the DB that is not changed which will be used in most tests.
+	defaultCacheDir := t.TempDir()
+	testutils.PrepareDBsForTests(t, defaultCacheDir, "users_in_db")
 
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			cacheDir := t.TempDir()
-			testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
-
 			uid, gid := testutils.GetCurrentUIDGID(t)
+			if tc.rootUID != 0 {
+				uid = tc.rootUID
+			}
+
+			cacheDir := defaultCacheDir
+			switch tc.cacheDB {
+			case "db_with_old_users":
+				cacheDir = t.TempDir()
+				testutils.PrepareDBsForTests(t, cacheDir, tc.cacheDB)
+			case "empty":
+				cacheDir = t.TempDir()
+				testutils.NewCacheForTests(t, cacheDir)
+			case "nocache":
+				cacheDir = t.TempDir()
+			}
+
 			opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid)}
 
-			got, err := GetEnt(context.Background(), tc.db, tc.key, opts...)
-			if tc.wantErr {
-				require.Error(t, err, "Expected an error but got none.")
-				return
+			if tc.shadowMode != nil {
+				opts = append(opts, cache.WithShadowMode(*tc.shadowMode))
 			}
-			require.NoError(t, err, "Expected no error but got one.")
+
+			got := Getent(context.Background(), tc.db, tc.key, opts...)
 
 			want := testutils.LoadAndUpdateFromGolden(t, got)
-
 			require.Equal(t, want, got, "Output must match")
 		})
 	}
