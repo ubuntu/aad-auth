@@ -25,8 +25,8 @@ func TestGetEnt(t *testing.T) {
 		"list entry from shadow by name": {db: "shadow", key: "myuser@domain.com"},
 
 		// List entry by UID/GID
-		"list entry from passwd by uid": {db: "passwd", key: "165119649"},
-		"list entry from group by gid":  {db: "passwd", key: "165119649"},
+		"list entry from passwd by uid":        {db: "passwd", key: "165119649"},
+		"list entry from group by gid":         {db: "group", key: "165119649"},
 
 		// List entries
 		"list entries in passwd": {db: "passwd"},
