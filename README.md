@@ -6,7 +6,7 @@
 [![License CLI](https://img.shields.io/badge/License-GPL3.0-blue.svg)](https://github.com/ubuntu/aad-auth/blob/master/LICENSE)
 [![License libraries](https://img.shields.io/badge/License-LGPL3.0-blue.svg)](https://github.com/ubuntu/aad-auth/blob/master/LICENSE.LGPL)
 
-This project allows users to sign in an Ubuntu machine using Azure Active Directory credentials. It relies on [Microsoft Authentication Library](https://github.com/AzureAD/microsoft-authentication-library-for-go) to communicate with Microsoft service. It supports offline authentication.
+This project allows users to sign in an Ubuntu machine using Azure Active Directory credentials. It relies on [Microsoft Authentication Library](https://github.com/AzureAD/microsoft-authentication-library-for-go) to communicate with Microsoft service.
 
 The following components are distributed:
 
@@ -14,11 +14,9 @@ The following components are distributed:
  2. An NSS module to query the password, group and shadow databases.
  3. A command line tool to manage the local cache for offline authentication and the system's configuration.
 
-## Offline login
+Ubuntu AAD Authentication supports offline authentication. Once signed in online, you are entitled to offline login.
 
-You can sign in by connecting to Azure AD with your user name and password. Once sign in, you are entitled to offline login.
-
-Offline login, meaning login in with Azure AD not being reachable due to network connectivity is allowed for a period of 90 days. Once this delays pass, the user won't be able to connect back without having access to Azure AD to reset the offline grace period.
+Offline login, meaning login in without Azure Active Directory being reachable, is allowed for a period of 90 days. Once this time has passed, the user won't be able to authenticate without having access to Azure Active Directory and reset the offline grace period.
 
 This period can be modified in aad configuration file. See the related section below.
 
@@ -26,13 +24,13 @@ This period can be modified in aad configuration file. See the related section b
 
 ### Package installation
 
-AAD authentication module for Ubuntu is published as a debian package. To install it from the command line, open a terminal and run the following commands:
+AAD authentication module for Ubuntu is published as a debian package. To install it from the command line, open a terminal and run the following command:
 
 ```
 sudo apt install libpam-aad libnss-aad
 ```
 
-This command will install required modules for PAM and NSS.
+This command will install the required modules for PAM and NSS.
 
 For NSS it'll update the file ```/etc/nsswitch.conf``` and add the service ```aad``` for the databases ```password```, ```group``` and ```shadow```.
 
@@ -44,7 +42,7 @@ auth [success=1 default=ignore] pam_aad.so
 
 ### Automatic home directory creation
 
-In order to get a home directory when network users login, pam_mkhomedir must be enabled. It will automatically create a home directory on first login. This step can be done by running the following command:
+In order to get a home directory when network users login, ```pam_mkhomedir``` must be enabled. It will automatically create a home directory on first login. This step can be done by running the following command:
 
 ```
 sudo pam-auth-update --enable mkhomedir
@@ -52,6 +50,7 @@ sudo pam-auth-update --enable mkhomedir
 
 ### Setting up the Azure Application
 
+Ubuntu Azure Active Directory requires the creation of an application in Azure.
 See [Use the portal to create an Azure AD application and service principal that can access resources](https://docs.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal) for instructions to create an application that can access resources and retrieve the tenant and application ID required for authentication.
 
 ### System configuration
