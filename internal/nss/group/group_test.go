@@ -248,6 +248,14 @@ func TestRestartIterationWithoutEndingPreviousOne(t *testing.T) {
 	require.Equal(t, want, got, "Should list all groups from the start")
 }
 
+func TestString(t *testing.T) {
+	g := group.NewTestGroup(2)
+
+	got := g.String()
+	want := testutils.LoadAndUpdateFromGolden(t, got)
+	require.Equal(t, want, got, "Group strings must match")
+}
+
 func TestMain(m *testing.M) {
 	testutils.InstallUpdateFlag()
 	flag.Parse()
