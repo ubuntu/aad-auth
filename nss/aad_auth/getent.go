@@ -113,11 +113,11 @@ func getAllEntries(ctx context.Context, dbName string, cacheOpts ...cache.Option
 		return nil, err
 	}
 
-	if len(entries) != 0 {
-		err = nil
+	if len(entries) == 0 {
+		return nil, nss.ErrNotFoundSuccess
 	}
 
-	return entries, err
+	return entries, nil
 }
 
 func initIterationForDB(dbName string) (func(ctx context.Context, opts ...cache.Option) error, func(ctx context.Context) error) {
