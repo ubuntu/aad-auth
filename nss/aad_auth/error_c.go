@@ -43,6 +43,8 @@ func errToCStatus(ctx context.Context, err error) (nssStatus, errno int) {
 
 	if err != nil {
 		logger.Debug(ctx, "Returning to NSS error: %d with errno: %d", nssStatus, errno)
+	} else {
+		logger.Debug(ctx, "Returning NSS STATUS SUCCESS (%d) with errno: %d", nssStatus, errno)
 	}
 
 	return nssStatus, errno

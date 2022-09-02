@@ -22,40 +22,32 @@ func main() {
 
 		db, key := flag.Arg(1), flag.Arg(2)
 
-		if !dbIsSupported(db) {
-			log.Fatalf("Request db %s is not supported", db)
+		out, err := Getent(ctx, db, key)
+		if err != nil {
+			exit(1, fmt.Sprintf("Error when trying to list %q from %s: %v", key, db, err))
 		}
-
-		out := Getent(ctx, db, key)
 		fmt.Print(out)
 	case "":
-		flag.Usage()
-		os.Exit(1)
+		exit(1, "")
 	default:
-		log.Fatalf("Invalid argument %s", flag.Arg(0))
+		exit(1, fmt.Sprintf("Invalid argument %q", flag.Arg(0)))
 	}
-}
-
-func dbIsSupported(db string) bool {
-	supportedDbs := []string{"group", "passwd", "shadow"}
-	for _, d := range supportedDbs {
-		if d == db {
-			return true
-		}
-	}
-	return false
 }
 
 func aadAuthUsage() {
 	fmt.Fprintln(os.Stderr, `
 This executable should not be used directly, but should you wish too:
 
-Usage: aad_auth getenv {dbName} {key}
+Usage: aad_auth getent {dbName} {key}
 		
-dbName: Name of the database to be queried. Supported values: passwd, group, shadow
-key (optional): name or uid/gid of the entry to be queried for.
-  Supported keys for:
-    - passwd: name, uid
-    - group: name, gid
-    - shadow: name`)
+    - dbName: Name of the database to be queried.
+    - key (optional): name or uid/gid of the entry to be queried for.`)
+}
+
+func exit(status int, message string) {
+	if message != "" {
+		log.Println(message)
+	}
+	flag.Usage()
+	os.Exit(status)
 }

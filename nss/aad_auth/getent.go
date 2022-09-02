@@ -14,8 +14,14 @@ import (
 	"github.com/ubuntu/aad-auth/internal/nss/shadow"
 )
 
+var supportedDbs = []string{"group", "passwd", "shadow"}
+
 // Getent processes the args and queries the database for the requested entries.
-func Getent(ctx context.Context, dbName, key string, cacheOpts ...cache.Option) string {
+func Getent(ctx context.Context, dbName, key string, cacheOpts ...cache.Option) (string, error) {
+	if !dbIsSupported(dbName) {
+		return "", fmt.Errorf("database %q is not supported", dbName)
+	}
+
 	logger.Debug(ctx, "Getting entry %q from %s ", key, dbName)
 
 	var entries []fmt.Stringer
@@ -31,7 +37,7 @@ func Getent(ctx context.Context, dbName, key string, cacheOpts ...cache.Option) 
 		entries, err = getAllEntries(ctx, dbName, cacheOpts...)
 	}
 
-	return fmtGetentOutput(ctx, entries, err)
+	return fmtGetentOutput(ctx, entries, err), nil
 }
 
 func getEntryByKey(ctx context.Context, dbName, key string, cacheOpts ...cache.Option) (entry fmt.Stringer, err error) {
@@ -43,7 +49,7 @@ func getEntryByKey(ctx context.Context, dbName, key string, cacheOpts ...cache.O
 }
 
 func getEntryByName(ctx context.Context, dbName, name string, cacheOpts ...cache.Option) (entry fmt.Stringer, err error) {
-	logger.Debug(ctx, "Getting entry with name = %s from %s", name, dbName)
+	logger.Debug(ctx, "Getting entry with name %q from %s", name, dbName)
 
 	var e fmt.Stringer
 
@@ -64,7 +70,7 @@ func getEntryByName(ctx context.Context, dbName, name string, cacheOpts ...cache
 }
 
 func getEntryByID(ctx context.Context, dbName string, id uint, cacheOpts ...cache.Option) (entry fmt.Stringer, err error) {
-	logger.Debug(ctx, "Getting entry with id = %d from %s", id, dbName)
+	logger.Debug(ctx, "Getting entry with id %q from %s", id, dbName)
 
 	var e fmt.Stringer
 
@@ -151,4 +157,13 @@ func fmtGetentOutput(ctx context.Context, entries []fmt.Stringer, err error) str
 	}
 
 	return out
+}
+
+func dbIsSupported(db string) bool {
+	for _, d := range supportedDbs {
+		if d == db {
+			return true
+		}
+	}
+	return false
 }
