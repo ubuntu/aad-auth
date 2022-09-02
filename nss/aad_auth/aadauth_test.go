@@ -18,11 +18,14 @@ func TestGetEnt(t *testing.T) {
 		cacheDB    string
 		rootUID    int
 		shadowMode *int
+
+		wantErr bool
 	}{
 		// List entry by name
-		"list entry from passwd by name": {db: "passwd", key: "myuser@domain.com"},
-		"list entry from group by name":  {db: "group", key: "myuser@domain.com"},
-		"list entry from shadow by name": {db: "shadow", key: "myuser@domain.com"},
+		"list entry from passwd by name":                                 {db: "passwd", key: "myuser@domain.com"},
+		"list entry from group by name":                                  {db: "group", key: "myuser@domain.com"},
+		"list entry from shadow by name":                                 {db: "shadow", key: "myuser@domain.com"},
+		"try to list entry from shadow by name without access to shadow": {db: "shadow", key: "myuser@domain.com", shadowMode: &noShadow},
 
 		// List entry by UID/GID
 		"list entry from passwd by uid":        {db: "passwd", key: "165119649"},
@@ -68,11 +71,11 @@ func TestGetEnt(t *testing.T) {
 		"try to list passwd without permission on cache": {db: "passwd", rootUID: 4242},
 		"try to list group without permission on cache":  {db: "group", rootUID: 4242},
 		"try to list shadow without permission on cache": {db: "shadow", rootUID: 4242},
-	}
 
-	// Setting the DB that is not changed which will be used in most tests.
-	defaultCacheDir := t.TempDir()
-	testutils.PrepareDBsForTests(t, defaultCacheDir, "users_in_db")
+		// Error when trying to list from unsupported database
+		"error trying to list entry by name from unsupported db": {db: "unsupported", key: "myuser@domain.com", wantErr: true},
+		"error trying to list unsupported db":                    {db: "unsupported", wantErr: true},
+	}
 
 	for name, tc := range tests {
 		tc := tc
@@ -82,16 +85,18 @@ func TestGetEnt(t *testing.T) {
 				uid = tc.rootUID
 			}
 
-			cacheDir := defaultCacheDir
+			cacheDir := t.TempDir()
 			switch tc.cacheDB {
+			case "":
+				testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
 			case "db_with_old_users":
-				cacheDir = t.TempDir()
 				testutils.PrepareDBsForTests(t, cacheDir, tc.cacheDB)
 			case "empty":
-				cacheDir = t.TempDir()
 				testutils.NewCacheForTests(t, cacheDir)
 			case "nocache":
-				cacheDir = t.TempDir()
+				break
+			default:
+				t.Fatalf("Unexpected value used for cacheDB: %q", tc.cacheDB)
 			}
 
 			opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid)}
@@ -100,7 +105,12 @@ func TestGetEnt(t *testing.T) {
 				opts = append(opts, cache.WithShadowMode(*tc.shadowMode))
 			}
 
-			got := Getent(context.Background(), tc.db, tc.key, opts...)
+			got, err := Getent(context.Background(), tc.db, tc.key, opts...)
+			if tc.wantErr {
+				require.Error(t, err, "Expected an error but got none.")
+				return
+			}
+			require.NoError(t, err, "Expected no error but got one.")
 
 			want := testutils.LoadAndUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "Output must match")

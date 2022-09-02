@@ -12,7 +12,7 @@ func (e entryMock) String() string {
 	return e.str
 }
 
-func getMockEntries(n int) []fmt.Stringer {
+func newMockEntries(n int) []fmt.Stringer {
 	var mockEntries []fmt.Stringer
 	for i := 1; i < n+1; i++ {
 		e := entryMock{str: fmt.Sprintf(defaultEntry, i, i, i, i)}
