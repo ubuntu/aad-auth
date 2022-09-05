@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/ubuntu/aad-auth/internal/logger"
 	"github.com/ubuntu/aad-auth/internal/nss"
@@ -40,8 +41,8 @@ This executable should not be used directly, but should you wish too:
 Usage: aad_auth getent {dbName} {key}
 		
     - dbName: Name of the database to be queried.
-        - Supported values: %v
-    - key (optional): name or uid/gid of the entry to be queried for.`, supportedDbs)
+        - Supported databases: %v
+    - key (optional): name or uid/gid of the entry to be queried for.`, strings.Join(supportedDbs, ", "))
 }
 
 func exit(status int, message string) {
