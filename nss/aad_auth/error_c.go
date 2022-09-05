@@ -15,6 +15,9 @@ import (
 	"github.com/ubuntu/aad-auth/internal/nss"
 )
 
+// SUCCESS mimics the C number for success.
+const SUCCESS int = 0
+
 // errToCStatus converts our Go errors to corresponding nss status returned code and errno.
 // If err is nil, it returns a success.
 func errToCStatus(ctx context.Context, err error) (nssStatus, errno int) {
@@ -34,8 +37,8 @@ func errToCStatus(ctx context.Context, err error) (nssStatus, errno int) {
 		nssStatus = C.NSS_STATUS_NOTFOUND
 		errno = C.ENOENT
 	case errors.Is(err, nss.ErrNotFoundSuccess):
-		nssStatus = C.NSS_STATUS_SUCCESS
-		errno = C.ENOENT
+		nssStatus = C.NSS_STATUS_NOTFOUND
+		errno = SUCCESS
 	case err != nil: // Unexpected returned error
 		nssStatus = C.NSS_STATUS_SUCCESS
 		errno = C.EINVAL
@@ -44,7 +47,7 @@ func errToCStatus(ctx context.Context, err error) (nssStatus, errno int) {
 	if err != nil {
 		logger.Debug(ctx, "Returning to NSS error: %d with errno: %d", nssStatus, errno)
 	} else {
-		logger.Debug(ctx, "Returning NSS STATUS SUCCESS (%d) with errno: %d", nssStatus, errno)
+		logger.Debug(ctx, "Returning NSS STATUS SUCCESS with errno: %d", errno)
 	}
 
 	return nssStatus, errno
