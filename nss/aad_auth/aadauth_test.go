@@ -48,9 +48,9 @@ func TestGetEnt(t *testing.T) {
 		"try to list non-existent entry in shadow": {db: "shadow", key: "doesnotexist@domain.com"},
 
 		// Try to list without cache
-		"try to list passwd without any cache": {db: "passwd", cacheDB: "nocache"},
-		"try to list group without any cache":  {db: "group", cacheDB: "nocache"},
-		"try to list shadow without any cache": {db: "shadow", cacheDB: "nocache"},
+		"try to list passwd without cache and no permission to create it": {db: "passwd", cacheDB: "nocache", rootUID: 4242},
+		"try to list group without cache and no permission to create it":  {db: "group", cacheDB: "nocache", rootUID: 4242},
+		"try to list shadow without cache and no permission to create it": {db: "shadow", cacheDB: "nocache", rootUID: 4242},
 
 		// Try to list with empty cache
 		"try to list passwd with empty cache": {db: "passwd", cacheDB: "empty"},

@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/ubuntu/aad-auth/internal/logger"
@@ -28,25 +27,26 @@ func main() {
 		}
 		fmt.Print(out)
 	case "":
-		exit(1, "")
+		exit(1, "Missing required argument.")
 	default:
 		exit(1, fmt.Sprintf("Invalid argument %q", flag.Arg(0)))
 	}
 }
 
 func aadAuthUsage() {
-	fmt.Fprintln(os.Stderr, `
+	fmt.Fprintf(os.Stderr, `
 This executable should not be used directly, but should you wish too:
 
 Usage: aad_auth getent {dbName} {key}
 		
     - dbName: Name of the database to be queried.
-    - key (optional): name or uid/gid of the entry to be queried for.`)
+        - Supported values: %v
+    - key (optional): name or uid/gid of the entry to be queried for.`, supportedDbs)
 }
 
 func exit(status int, message string) {
 	if message != "" {
-		log.Println(message)
+		fmt.Fprintln(os.Stderr, message)
 	}
 	flag.Usage()
 	os.Exit(status)

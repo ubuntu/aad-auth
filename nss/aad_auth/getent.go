@@ -97,7 +97,7 @@ func getAllEntries(ctx context.Context, dbName string, cacheOpts ...cache.Option
 	if err = start(ctx, cacheOpts...); err != nil {
 		return nil, err
 	}
-	defer end(ctx)
+	defer end(ctx) //nolint:errcheck //We know that this is a call for EndIteration and we don't need to check the return.
 
 	for {
 		var entry fmt.Stringer
@@ -113,6 +113,7 @@ func getAllEntries(ctx context.Context, dbName string, cacheOpts ...cache.Option
 		return nil, err
 	}
 
+	// If error is ENoEnt and we got no entries, this means the cache is empty and the nss error returned should be ErrNotFoundSuccess.
 	if len(entries) == 0 {
 		return nil, nss.ErrNotFoundSuccess
 	}

@@ -17,15 +17,16 @@ func TestFmtGetentOutput(t *testing.T) {
 		nEntries int
 		err      error
 	}{
-		"properly format with error ErrTryAgainEAgain":    {err: nss.ErrTryAgainEAgain},
-		"properly format with error ErrTryAgainERange":    {err: nss.ErrTryAgainERange},
-		"properly format with error ErrUnavailableENoEnt": {err: nss.ErrUnavailableENoEnt},
-		"properly format with error ErrNotFoundENoEnt":    {err: nss.ErrNotFoundENoEnt},
-		"properly format with error ErrNotFoundSuccess":   {err: nss.ErrNotFoundSuccess},
-		"properly format with unknown Err":                {err: fmt.Errorf("SomeError")},
-		"properly format with nil error":                  {err: nil, nEntries: 1},
-		"properly format with multiple entries":           {err: nil, nEntries: 5},
-		"properly format with no entries":                 {err: nil, nEntries: 0},
+		"properly format with error ErrTryAgainEAgain":       {err: nss.ErrTryAgainEAgain},
+		"properly format with error ErrTryAgainERange":       {err: nss.ErrTryAgainERange},
+		"properly format with error ErrUnavailableENoEnt":    {err: nss.ErrUnavailableENoEnt},
+		"properly format with error ErrNotFoundENoEnt":       {err: nss.ErrNotFoundENoEnt},
+		"properly format with error ErrNotFoundSuccess":      {err: nss.ErrNotFoundSuccess},
+		"properly format with unknown Err":                   {err: fmt.Errorf("SomeError")},
+		"properly format with nil error":                     {err: nil, nEntries: 1},
+		"properly format with no entries":                    {err: nil, nEntries: 0},
+		"properly format with multiple entries":              {err: nil, nEntries: 5},
+		"properly format with an error and multiple entries": {err: nss.ErrNotFoundENoEnt, nEntries: 5},
 	}
 
 	for name, tc := range tests {
