@@ -21,9 +21,9 @@ func TestConfigPrint(t *testing.T) {
 
 		wantErr bool
 	}{
-		"default domain":               {},
-		"custom domain":                {domain: "example.com"},
-		"some optional fields missing": {configFile: "missing-optional-fields.conf"},
+		"default domain": {},
+		"custom domain":  {domain: "example.com"},
+		"homedir and shell optional fields missing":       {configFile: "missing-homedir-and-shell-fields.conf"},
 		"required entries only present in default domain": {domain: "example.com", configFile: "required-present-in-default-domain.conf"},
 
 		// error cases
