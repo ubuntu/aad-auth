@@ -178,21 +178,21 @@ func TestUserMoveHomeDirectory(t *testing.T) {
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			cacheDir := t.TempDir()
-			cacheDB := "db_with_old_users"
-			testutils.PrepareDBsForTests(t, cacheDir, cacheDB)
+			tmpDir := t.TempDir()
+			cacheDir := filepath.Join(tmpDir, "cache")
+			testutils.PrepareDBsForTests(t, cacheDir, "db_with_old_users")
 			cache := testutils.NewCacheForTests(t, cacheDir)
 
 			// Set up test filesystem structure
-			err := os.MkdirAll(filepath.Join(cacheDir, "oldhome"), 0750)
+			err := os.MkdirAll(filepath.Join(tmpDir, "oldhome"), 0750)
 			require.NoError(t, err, "Setup: failed to create previous home directory")
-			err = os.MkdirAll(filepath.Join(cacheDir, "existingnewhome"), 0750)
+			err = os.MkdirAll(filepath.Join(tmpDir, "existingnewhome"), 0750)
 			require.NoError(t, err, "Setup: failed to create existing new home directory")
-			err = os.WriteFile(filepath.Join(cacheDir, "oldhomefile"), []byte("test content"), 0600)
+			err = os.WriteFile(filepath.Join(tmpDir, "oldhomefile"), []byte("test content"), 0600)
 			require.NoError(t, err, "Setup: failed to create previous home directory file")
 
-			prevHomeDir := filepath.Join(cacheDir, tc.prevHomeDir)
-			newHomeDir := filepath.Join(cacheDir, tc.newHomeDir)
+			prevHomeDir := filepath.Join(tmpDir, tc.prevHomeDir)
+			newHomeDir := filepath.Join(tmpDir, tc.newHomeDir)
 
 			err = cache.UpdateUserAttribute(context.Background(), "futureuser@domain.com", "home", prevHomeDir)
 			require.NoError(t, err, "Setup: failed to set initial user home directory")
