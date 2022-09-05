@@ -68,9 +68,6 @@ func TestMain(m *testing.M) {
 	}
 	defer cleanup()
 
-	cc := "gcc"
-	cflags := "-g -Wall -Wextra $(shell pkg-config --cflags glib-2.0)"
-	ldflags := "$(shell pkg-config --libs glib-2.0)"
 	libPath = filepath.Join(libDir, "libnss_aad.so.2")
 	execPath = filepath.Join(libDir, "aad_auth")
 
@@ -89,25 +86,52 @@ func TestMain(m *testing.M) {
 		cFiles = append(cFiles, entry.Name())
 	}
 
-	// Builds the nss C library.
-	command := fmt.Sprintf(
-		`%s -DSCRIPTPATH="%s" %s %s %s -fPIC -shared -Wl,-soname,-libnss_aad.so.2 -o %s`,
-		cc, execPath, strings.Join(cFiles, " "), cflags, ldflags, libPath)
-
+	// Builds the nss Go cli.
 	// #nosec:G204 - we control the command arguments in tests
-	out, err := exec.Command(command).CombinedOutput()
+	cmd := exec.Command("go", "build", "-tags", "integrationtests", "-o", execPath)
+	err = cmd.Run()
 	if err != nil {
 		cleanup()
-		fmt.Fprintf(os.Stderr, "Can not build nss library (%v) : %s", err, out)
+		fmt.Fprintf(os.Stderr, "Can not build nss Go module: %v", err)
 		os.Exit(1)
 	}
 
-	// Builds the nss Go cli.
-	// #nosec:G204 - we control the command arguments in tests
-	out, err = exec.Command("go", "build", "-tags", "integrationtests", "-o", execPath).CombinedOutput()
+	// Gets the cflags
+	cflags := "-g -Wall -Wextra"
+	out, err := exec.Command("pkg-config", "--cflags", "glib-2.0").CombinedOutput()
 	if err != nil {
 		cleanup()
-		fmt.Fprintf(os.Stderr, "Can not build nss Go module (%v) : %s", err, out)
+		fmt.Fprintf(os.Stderr, "Could not get the required cflags (%s): %v", out, err)
+		os.Exit(1)
+	}
+	s := string(out)
+	cflags += " " + s[:len(s)-1] // Ignoring the last \n
+
+	// Gets the ldflags
+	out, err = exec.Command("pkg-config", "--libs", "glib-2.0").CombinedOutput()
+	if err != nil {
+		cleanup()
+		fmt.Fprintf(os.Stderr, "Could not get the required ldflags (%s): %v", out, err)
+		os.Exit(1)
+	}
+	s = string(out)
+	ldflags := s[:len(s)-1] // Ignoring the last \n
+
+	// Builds the nss C library.
+	command := []string{fmt.Sprintf("-DSCRIPTPATH=\"%s\"", execPath)}
+	command = append(command, cFiles...)
+	command = append(command, strings.Split(cflags, " ")...)
+	command = append(command, strings.Split(ldflags, " ")...)
+	command = append(command, "-fPIC", "-shared", "-Wl,-soname,libnss_aad.so.2", "-o", libPath)
+
+	// #nosec:G204 - we control the command arguments in tests
+	cmd = exec.Command("gcc", command...)
+	cmd.Dir = ".."
+
+	out, err = cmd.CombinedOutput()
+	if err != nil {
+		cleanup()
+		fmt.Fprintf(os.Stderr, "Can not build nss library (%s): %v", out, err)
 		os.Exit(1)
 	}
 

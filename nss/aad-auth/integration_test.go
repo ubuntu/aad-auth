@@ -79,6 +79,7 @@ func TestNssGetent(t *testing.T) {
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			uid, gid := testutils.GetCurrentUIDGID(t)
 			if tc.rootUID != 0 {
 				uid = tc.rootUID
@@ -98,7 +99,12 @@ func TestNssGetent(t *testing.T) {
 				t.Fatalf("Unexpected value used for cacheDB: %q", tc.cacheDB)
 			}
 
-			got, err := outNSSCommandForLib(t, uid, gid, *tc.shadowMode, cacheDir, nil, "getent", tc.db, tc.key)
+			shadowMode := -1
+			if tc.shadowMode != nil {
+				shadowMode = *tc.shadowMode
+			}
+
+			got, err := outNSSCommandForLib(t, uid, gid, shadowMode, cacheDir, nil, "getent", tc.db, tc.key)
 			if tc.wantErr {
 				require.Error(t, err, "Expected an error but got none.")
 				return
