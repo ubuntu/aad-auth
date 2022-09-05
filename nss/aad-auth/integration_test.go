@@ -1,15 +1,15 @@
 package main
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/ubuntu/aad-auth/internal/cache"
 	"github.com/ubuntu/aad-auth/internal/testutils"
 )
 
-func TestGetEnt(t *testing.T) {
+func TestNssGetent(t *testing.T) {
+	t.Parallel()
+
 	noShadow := 0
 	tests := map[string]struct {
 		db         string
@@ -98,13 +98,7 @@ func TestGetEnt(t *testing.T) {
 				t.Fatalf("Unexpected value used for cacheDB: %q", tc.cacheDB)
 			}
 
-			opts := []cache.Option{cache.WithCacheDir(cacheDir), cache.WithRootUID(uid), cache.WithRootGID(gid), cache.WithShadowGID(gid)}
-
-			if tc.shadowMode != nil {
-				opts = append(opts, cache.WithShadowMode(*tc.shadowMode))
-			}
-
-			got, err := Getent(context.Background(), tc.db, tc.key, opts...)
+			got, err := outNSSCommandForLib(t, uid, gid, *tc.shadowMode, cacheDir, nil, "getent", tc.db, tc.key)
 			if tc.wantErr {
 				require.Error(t, err, "Expected an error but got none.")
 				return
@@ -115,4 +109,5 @@ func TestGetEnt(t *testing.T) {
 			require.Equal(t, want, got, "Output must match")
 		})
 	}
+
 }

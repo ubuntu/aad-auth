@@ -7,9 +7,12 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ubuntu/aad-auth/internal/cache"
 	"github.com/ubuntu/aad-auth/internal/logger"
 	"github.com/ubuntu/aad-auth/internal/nss"
 )
+
+var opts []cache.Option
 
 func main() {
 	flag.Usage = aadAuthUsage
@@ -22,7 +25,7 @@ func main() {
 
 		db, key := flag.Arg(1), flag.Arg(2)
 
-		out, err := Getent(ctx, db, key)
+		out, err := Getent(ctx, db, key, opts...)
 		if err != nil {
 			exit(1, fmt.Sprintf("Error when trying to list %q from %s: %v", key, db, err))
 		}
