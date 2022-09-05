@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/ubuntu/aad-auth/internal/cache"
 	"github.com/ubuntu/aad-auth/internal/logger"
@@ -16,6 +18,17 @@ type Group struct {
 	passwd  string   /* user password */
 	gid     uint     /* group ID */
 	members []string /* Members of the group */
+}
+
+// String creates a string with Group values.
+func (g Group) String() string {
+	v := []string{
+		g.name,
+		g.passwd,
+		strconv.FormatUint(uint64(g.gid), 10),
+	}
+	v = append(v, g.members...)
+	return strings.Join(v, ":")
 }
 
 // NewByName returns a passwd entry from a name.

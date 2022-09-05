@@ -202,6 +202,14 @@ func TestRestartIterationWithoutEndingPreviousOne(t *testing.T) {
 	require.Equal(t, want, got, "Should list all users from the start")
 }
 
+func TestString(t *testing.T) {
+	s := shadow.NewTestShadow()
+
+	got := s.String()
+	want := testutils.LoadAndUpdateFromGolden(t, got)
+	require.Equal(t, want, got, "Shadow strings must match")
+}
+
 func TestMain(m *testing.M) {
 	testutils.InstallUpdateFlag()
 	flag.Parse()

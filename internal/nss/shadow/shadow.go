@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/ubuntu/aad-auth/internal/cache"
 	"github.com/ubuntu/aad-auth/internal/logger"
@@ -20,6 +22,21 @@ type Shadow struct {
 	warn   int    /* Number of days to warn user to change the password.  */
 	inact  int    /* Number of days the account may be inactive.  */
 	expire int    /* Number of days since 1970-01-01 until account expires.  */
+}
+
+// String creates a string with Shadow values.
+func (s Shadow) String() string {
+	v := []string{
+		s.name,
+		s.passwd,
+		strconv.Itoa(s.lstchg),
+		strconv.Itoa(s.min),
+		strconv.Itoa(s.max),
+		strconv.Itoa(s.warn),
+		strconv.Itoa(s.inact),
+		strconv.Itoa(s.expire),
+	}
+	return strings.Join(v, ":")
 }
 
 // NewByName returns a passwd entry from a name.
