@@ -182,14 +182,20 @@ func updateUserAttribute(ctx context.Context, c *cache.Cache, username, key stri
 	if key == "home" && moveHome {
 		// Update the home directory if it changed
 		if err := moveUserHome(ctx, username, fmt.Sprintf("%v", prevValue), fmt.Sprintf("%v", value)); err != nil {
-			return fmt.Errorf("Unable to move home directory for %s: %w", username, err)
+			return err
 		}
 	}
 	return nil
 }
 
 // moveUserHome moves the home directory of an user from the previous location to the new one.
-func moveUserHome(ctx context.Context, username, prevValue, value string) error {
+func moveUserHome(ctx context.Context, username, prevValue, value string) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("Unable to move home directory for %s: %w", username, err)
+		}
+	}()
+
 	// Does the target directory exist?
 	if unix.Access(value, unix.F_OK) == nil {
 		return fmt.Errorf("directory %q already exists", value)
@@ -200,7 +206,7 @@ func moveUserHome(ctx context.Context, username, prevValue, value string) error 
 		return err
 	}
 	if !homeInfo.IsDir() {
-		return fmt.Errorf("%q was not a directory, it is not removed and no home directories area created", prevValue)
+		return fmt.Errorf("%q was not a directory, it is not removed and no home directories are created", prevValue)
 	}
 
 	// Try renaming first
