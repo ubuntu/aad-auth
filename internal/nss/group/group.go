@@ -20,17 +20,6 @@ type Group struct {
 	members []string /* Members of the group */
 }
 
-// String creates a string with Group values.
-func (g Group) String() string {
-	v := []string{
-		g.name,
-		g.passwd,
-		strconv.FormatUint(uint64(g.gid), 10),
-	}
-	v = append(v, g.members...)
-	return strings.Join(v, ":")
-}
-
 // NewByName returns a passwd entry from a name.
 func NewByName(ctx context.Context, name string, cacheOpts ...cache.Option) (g Group, err error) {
 	defer func() {
@@ -92,6 +81,17 @@ func NewByGID(ctx context.Context, gid uint, cacheOpts ...cache.Option) (g Group
 		gid:     uint(grp.GID),
 		members: grp.Members,
 	}, nil
+}
+
+// String creates a string with Group values.
+func (g Group) String() string {
+	v := []string{
+		g.name,
+		g.passwd,
+		strconv.FormatUint(uint64(g.gid), 10),
+	}
+	v = append(v, g.members...)
+	return strings.Join(v, ":")
 }
 
 var groupIterationCache *cache.Cache

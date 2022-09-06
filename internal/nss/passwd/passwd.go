@@ -23,21 +23,6 @@ type Passwd struct {
 	shell  string /* shell program */
 }
 
-// String creates a string with Passwd values.
-func (p Passwd) String() string {
-	v := []string{
-		p.name,
-		p.passwd,
-		strconv.FormatUint(uint64(p.uid), 10),
-		strconv.FormatUint(uint64(p.gid), 10),
-		p.gecos,
-		p.dir,
-		p.shell,
-	}
-
-	return strings.Join(v, ":")
-}
-
 // NewByName returns a passwd entry from a name.
 func NewByName(ctx context.Context, name string, cacheOpts ...cache.Option) (p Passwd, err error) {
 	defer func() {
@@ -100,6 +85,21 @@ func NewByUID(ctx context.Context, uid uint, cacheOpts ...cache.Option) (p Passw
 		dir:    u.Home,
 		shell:  u.Shell,
 	}, nil
+}
+
+// String creates a string with Passwd values.
+func (p Passwd) String() string {
+	v := []string{
+		p.name,
+		p.passwd,
+		strconv.FormatUint(uint64(p.uid), 10),
+		strconv.FormatUint(uint64(p.gid), 10),
+		p.gecos,
+		p.dir,
+		p.shell,
+	}
+
+	return strings.Join(v, ":")
 }
 
 var passwdIterationCache *cache.Cache

@@ -1,0 +1,7 @@
+|-
+    1:0
+    myuser1@domain.com:x:1:1::/home/myuser1@domain.com:/bin/bash
+    myuser2@domain.com:x:2:2::/home/myuser2@domain.com:/bin/bash
+    myuser3@domain.com:x:3:3::/home/myuser3@domain.com:/bin/bash
+    myuser4@domain.com:x:4:4::/home/myuser4@domain.com:/bin/bash
+    myuser5@domain.com:x:5:5::/home/myuser5@domain.com:/bin/bash

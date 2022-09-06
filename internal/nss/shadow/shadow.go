@@ -24,21 +24,6 @@ type Shadow struct {
 	expire int    /* Number of days since 1970-01-01 until account expires.  */
 }
 
-// String creates a string with Shadow values.
-func (s Shadow) String() string {
-	v := []string{
-		s.name,
-		s.passwd,
-		strconv.Itoa(s.lstchg),
-		strconv.Itoa(s.min),
-		strconv.Itoa(s.max),
-		strconv.Itoa(s.warn),
-		strconv.Itoa(s.inact),
-		strconv.Itoa(s.expire),
-	}
-	return strings.Join(v, ":")
-}
-
 // NewByName returns a passwd entry from a name.
 func NewByName(ctx context.Context, name string, cacheOpts ...cache.Option) (s Shadow, err error) {
 	defer func() {
@@ -71,6 +56,22 @@ func NewByName(ctx context.Context, name string, cacheOpts ...cache.Option) (s S
 		inact:  spw.PwdInactivity,
 		expire: spw.ExpirationDate,
 	}, nil
+}
+
+// String creates a string with Shadow values.
+func (s Shadow) String() string {
+	v := []string{
+		s.name,
+		s.passwd,
+		strconv.Itoa(s.lstchg),
+		strconv.Itoa(s.min),
+		strconv.Itoa(s.max),
+		strconv.Itoa(s.warn),
+		strconv.Itoa(s.inact),
+		strconv.Itoa(s.expire),
+		strconv.FormatUint(^uint64(0), 10),
+	}
+	return strings.Join(v, ":")
 }
 
 var shadowIterationCache *cache.Cache
