@@ -24,6 +24,7 @@ type options struct {
 	editor       string
 	configFile   string
 	dpkgQueryCmd string
+	procFs       string
 	cache        *cache.Cache
 }
 type option func(*options)
@@ -35,6 +36,7 @@ func New(opts ...option) *App {
 		editor:       getDefaultEditor(),
 		configFile:   consts.DefaultConfigPath,
 		dpkgQueryCmd: "dpkg-query",
+		procFs:       "/proc",
 	}
 
 	for _, o := range opts {

@@ -33,6 +33,13 @@ func WithConfigFile(p string) func(o *options) {
 	}
 }
 
+// WithProcFs specifies a custom /proc path to use for the user command.
+func WithProcFs(p string) func(o *options) {
+	return func(o *options) {
+		o.procFs = p
+	}
+}
+
 // Editor returns the editor used by the program.
 func (a App) Editor() string {
 	return a.options.editor

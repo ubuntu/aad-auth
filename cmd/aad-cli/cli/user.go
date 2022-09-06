@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"os/user"
+	osuser "os/user"
 	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/ubuntu/aad-auth/internal/cache"
 	"github.com/ubuntu/aad-auth/internal/logger"
+	"github.com/ubuntu/aad-auth/internal/user"
 	"golang.org/x/exp/slices"
 	"golang.org/x/sys/unix"
 )
@@ -57,7 +58,7 @@ Currently the only modifiable attributes are: %s.`, strings.Join(cache.PasswdUpd
 			allUsers, _ := cmd.Flags().GetBool("all")
 			moveHome, _ := cmd.Flags().GetBool("move-home")
 
-			return runUser(a.ctx, args, c, username, allUsers, moveHome)
+			return runUser(a.ctx, args, c, a.options.procFs, username, allUsers, moveHome)
 		},
 	}
 	cmd.Flags().StringP("name", "n", getDefaultUser(), "username to operate on")
@@ -104,7 +105,7 @@ func (a *App) getCache() (*cache.Cache, error) {
 
 // getDefaultUser returns the current user name or a blank string if an error occurs.
 func getDefaultUser() string {
-	u, err := user.Current()
+	u, err := osuser.Current()
 	if err != nil {
 		return ""
 	}
@@ -113,7 +114,7 @@ func getDefaultUser() string {
 }
 
 // runUser executes a specific user action based on the arguments passed to the command.
-func runUser(ctx context.Context, args []string, c *cache.Cache, username string, allUsers bool, moveHome bool) error {
+func runUser(ctx context.Context, args []string, c *cache.Cache, procFs, username string, allUsers bool, moveHome bool) error {
 	var err error
 	var key string
 	var value any
@@ -147,7 +148,7 @@ func runUser(ctx context.Context, args []string, c *cache.Cache, username string
 	case 2:
 		// Set the value for the given key and exit
 		key, value = args[0], args[1]
-		if err := updateUserAttribute(ctx, c, username, key, value, moveHome); err != nil {
+		if err := updateUserAttribute(ctx, c, procFs, username, key, value, moveHome); err != nil {
 			return err
 		}
 		return nil
@@ -163,7 +164,13 @@ func runUser(ctx context.Context, args []string, c *cache.Cache, username string
 
 // updateUserAttribute updates the given attribute for an user to the specified value.
 // For some attributes such as home, additional actions are performed.
-func updateUserAttribute(ctx context.Context, c *cache.Cache, username, key string, value any, moveHome bool) error {
+func updateUserAttribute(ctx context.Context, c *cache.Cache, procFs, username, key string, value any, moveHome bool) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("Cannot update attribute: %w", err)
+		}
+	}()
+
 	prevValue, err := c.QueryPasswdAttribute(ctx, username, key)
 	if err != nil {
 		return err
@@ -172,6 +179,22 @@ func updateUserAttribute(ctx context.Context, c *cache.Cache, username, key stri
 	if prevValue == value {
 		logger.Debug(ctx, "No change to %q for %s", key, username)
 		return nil
+	}
+
+	// Don't change the attribute if moving home was requested and the user is logged in.
+	if moveHome {
+		uid, err := c.QueryPasswdAttribute(ctx, username, "uid")
+		if err != nil {
+			return err
+		}
+
+		id, ok := uid.(int64)
+		if !ok {
+			return fmt.Errorf("invalid uid type: %T", uid)
+		}
+		if err := user.IsBusy(ctx, procFs, uint64(id)); err != nil {
+			return err
+		}
 	}
 
 	if err := c.UpdateUserAttribute(ctx, username, key, value); err != nil {

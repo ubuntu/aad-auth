@@ -163,17 +163,21 @@ func TestUserSetAttribute(t *testing.T) {
 
 func TestUserMoveHomeDirectory(t *testing.T) {
 	tests := map[string]struct {
-		prevHomeDir string
-		newHomeDir  string
+		prevHomeDir  string
+		newHomeDir   string
+		userLoggedIn bool
 
 		wantErr bool
 	}{
 		"move home directory": {prevHomeDir: "oldhome", newHomeDir: "newhome"},
 
-		// Error cases
+		// Error cases - homedir attribute is updated
 		"fail if previous directory is absent": {prevHomeDir: "absent", newHomeDir: "newhome", wantErr: true},
 		"fail if previous directory is a file": {prevHomeDir: "oldhomefile", newHomeDir: "newhome", wantErr: true},
 		"fail if new directory already exists": {prevHomeDir: "oldhome", newHomeDir: "existingnewhome", wantErr: true},
+
+		// Error cases - homedir attribute is not updated
+		"fail if the user has open processses": {prevHomeDir: "oldhome", newHomeDir: "newhome", userLoggedIn: true, wantErr: true},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -191,19 +195,43 @@ func TestUserMoveHomeDirectory(t *testing.T) {
 			err = os.WriteFile(filepath.Join(tmpDir, "oldhomefile"), []byte("test content"), 0600)
 			require.NoError(t, err, "Setup: failed to create previous home directory file")
 
+			// Set up fake /proc structure for checking if the user has open processes
+			procFs := filepath.Join("testdata", "not_in_use")
+			if tc.userLoggedIn {
+				procFs = filepath.Join("testdata", "in_use")
+			}
+
+			require.DirExists(t, procFs, "Setup: failed to find fake /proc filesystem")
+			t.Cleanup(func() {
+				err := os.Remove(filepath.Join(procFs, "1", "root"))
+				require.NoError(t, err, "Teardown: failed to remove symlink")
+				err = os.Remove(filepath.Join(procFs, "2", "root"))
+				require.NoError(t, err, "Teardown: failed to remove symlink")
+			})
+
+			// Both processes run in our namespace
+			err = os.Symlink("/", filepath.Join(procFs, "1", "root"))
+			require.NoError(t, err, "Setup: failed to create symlink")
+			err = os.Symlink("/", filepath.Join(procFs, "2", "root"))
+			require.NoError(t, err, "Setup: failed to create symlink")
+
 			prevHomeDir := filepath.Join(tmpDir, tc.prevHomeDir)
 			newHomeDir := filepath.Join(tmpDir, tc.newHomeDir)
 
 			err = cache.UpdateUserAttribute(context.Background(), "futureuser@domain.com", "home", prevHomeDir)
 			require.NoError(t, err, "Setup: failed to set initial user home directory")
 
-			c := cli.New(cli.WithCache(cache))
+			c := cli.New(cli.WithCache(cache), cli.WithProcFs(procFs))
 			_, runErr := testutils.RunApp(t, c, "user", "--name", "futureuser@domain.com", "home", newHomeDir, "--move-home")
 
-			// We always expect the passwd attribute to be updated in this test, regardless of moving errors.
+			// We always expect the passwd attribute to be updated in this test, unless the user has open processes
 			home, err := cache.QueryPasswdAttribute(context.Background(), "futureuser@domain.com", "home")
 			require.NoError(t, err, "Setup: failed to get user home directory")
-			require.Equal(t, newHomeDir, home, "expected home directory to be updated")
+			if tc.userLoggedIn {
+				require.Equal(t, prevHomeDir, home, "expected home directory not to be updated")
+			} else {
+				require.Equal(t, newHomeDir, home, "expected home directory to be updated")
+			}
 
 			if !tc.wantErr {
 				require.NoError(t, runErr, "expected command to succeed")
