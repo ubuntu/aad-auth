@@ -35,6 +35,7 @@ func (s Shadow) String() string {
 		strconv.Itoa(s.warn),
 		strconv.Itoa(s.inact),
 		strconv.Itoa(s.expire),
+		strconv.FormatUint(^uint64(0), 10),
 	}
 	return strings.Join(v, ":")
 }
