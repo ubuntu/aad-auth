@@ -251,7 +251,7 @@ func TestString(t *testing.T) {
 	p := passwd.NewTestPasswd()
 
 	got := p.String()
-	want := testutils.LoadAndUpdateFromGolden(t, got)
+	want := testutils.LoadYAMLWithUpdateFromGolden(t, got)
 	require.Equal(t, want, got, "Passwd strings must match")
 }
 

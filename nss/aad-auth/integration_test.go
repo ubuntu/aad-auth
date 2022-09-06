@@ -146,7 +146,7 @@ func TestIntegration(t *testing.T) {
 			}
 			require.NoError(t, err, "Expected no error but got one: %v", err)
 
-			want := testutils.LoadAndUpdateFromGolden(t, got)
+			want := testutils.LoadYAMLWithUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "Output must match")
 		})
 	}

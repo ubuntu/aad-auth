@@ -206,7 +206,7 @@ func TestString(t *testing.T) {
 	s := shadow.NewTestShadow()
 
 	got := s.String()
-	want := testutils.LoadAndUpdateFromGolden(t, got)
+	want := testutils.LoadYAMLWithUpdateFromGolden(t, got)
 	require.Equal(t, want, got, "Shadow strings must match")
 }
 
