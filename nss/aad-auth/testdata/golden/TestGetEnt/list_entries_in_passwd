@@ -1,4 +1,4 @@
-|
+|-
     1:0
     myuser@domain.com:x:1929326240:1929326240::/home/myuser@domain.com:/bin/bash
     otheruser@domain.com:x:165119648:165119648::/home/otheruser@domain.com:/bin/bash

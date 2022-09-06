@@ -1,4 +1,4 @@
-|
+|-
     0:2
     myuser1@domain.com:x:1:1::/home/myuser1@domain.com:/bin/bash
     myuser2@domain.com:x:2:2::/home/myuser2@domain.com:/bin/bash
