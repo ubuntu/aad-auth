@@ -16,11 +16,10 @@ func run(a *cli.App) int {
 	defer installSignalHandler(a)()
 
 	if err := a.Run(); err != nil {
-		logger.Err(context.Background(), err.Error())
-
 		if a.UsageError() {
 			return 2
 		}
+		logger.Err(context.Background(), err.Error())
 		return 1
 	}
 

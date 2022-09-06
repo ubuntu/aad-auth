@@ -50,7 +50,6 @@ func New(opts ...option) *App {
 		Use:   "aad-cli [COMMAND]",
 		Short: "Azure AD CLI",
 		Long:  "Manage Azure AD accounts configuration",
-		Args:  cobra.NoArgs,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 
@@ -62,7 +61,6 @@ func New(opts ...option) *App {
 
 			return nil
 		},
-		SilenceErrors: true,
 	}
 
 	a.rootCmd.PersistentFlags().CountP("verbose", "v", "issue INFO (-v), DEBUG (-vv) or DEBUG with caller (-vvv) output")
