@@ -61,9 +61,9 @@ Currently the only modifiable attributes are: %s.`, strings.Join(cache.PasswdUpd
 			return runUser(a.ctx, args, c, a.options.procFs, username, allUsers, moveHome)
 		},
 	}
-	cmd.Flags().StringP("name", "n", getDefaultUser(), "username to operate on")
+	cmd.Flags().StringP("name", "n", a.options.currentUser, "username to operate on")
 	cmd.Flags().BoolP("all", "a", false, "list all users")
-	cmd.Flags().BoolP("move-home", "m", false, "if updating hoem, move the content of the home directory to the new location")
+	cmd.Flags().BoolP("move-home", "m", false, "if updating home, move the content of the home directory to the new location")
 	cmd.MarkFlagsMutuallyExclusive("name", "all")
 	cmd.MarkFlagsMutuallyExclusive("move-home", "all")
 

@@ -122,9 +122,10 @@ func TestUserSetAttribute(t *testing.T) {
 		badPerms bool
 		wantErr  bool
 	}{
-		"set gecos": {args: "user --name futureuser@domain.com gecos newvalue"},
-		"set home":  {args: "user --name futureuser@domain.com home newvalue"},
-		"set shell": {args: "user --name futureuser@domain.com shell newvalue"},
+		"set gecos":                 {args: "user --name futureuser@domain.com gecos newvalue"},
+		"set home":                  {args: "user --name futureuser@domain.com home newvalue"},
+		"set shell":                 {args: "user --name futureuser@domain.com shell newvalue"},
+		"set shell on default user": {args: "user shell newvalue"},
 
 		// error cases
 		"set bad_attribute":    {args: "user --name futureuser@domain.com bad_attribute newvalue", wantErr: true},
@@ -134,13 +135,20 @@ func TestUserSetAttribute(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			args := strings.Split(tc.args, " ")
-			username := args[slices.Index(args, "--name")+1]
+
+			usernameIndex := slices.Index(args, "--name")
+			username := args[usernameIndex+1]
+
+			// Fallback when a username is not provided
+			if usernameIndex == -1 {
+				username = "futureuser@domain.com"
+			}
 
 			cacheDir := t.TempDir()
 			cacheDB := "db_with_old_users"
 			testutils.PrepareDBsForTests(t, cacheDir, cacheDB)
 			cache := testutils.NewCacheForTests(t, cacheDir)
-			c := cli.New(cli.WithCache(cache))
+			c := cli.New(cli.WithCache(cache), cli.WithCurrentUser("futureuser@domain.com"))
 
 			_, err := testutils.RunApp(t, c, args...)
 			if tc.wantErr {

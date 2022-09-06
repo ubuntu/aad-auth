@@ -40,6 +40,13 @@ func WithProcFs(p string) func(o *options) {
 	}
 }
 
+// WithCurrentUser specifies a custom user to use by default for the user command.
+func WithCurrentUser(p string) func(o *options) {
+	return func(o *options) {
+		o.currentUser = p
+	}
+}
+
 // Editor returns the editor used by the program.
 func (a App) Editor() string {
 	return a.options.editor
