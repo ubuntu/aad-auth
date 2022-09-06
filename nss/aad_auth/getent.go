@@ -151,10 +151,10 @@ func fmtGetentOutput(ctx context.Context, entries []fmt.Stringer, err error) str
 	var out string
 
 	status, errno := errToCStatus(ctx, err)
-	out = fmt.Sprintf("%d:%d\n", status, errno)
+	out = fmt.Sprintf("%d:%d", status, errno)
 
 	for _, entry := range entries {
-		out = fmt.Sprintf("%s%s\n", out, entry)
+		out = fmt.Sprintf("%s\n%s", out, entry)
 	}
 
 	return out
