@@ -78,14 +78,6 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	var cFiles []string
-	for _, entry := range tmp {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".c") {
-			continue
-		}
-		cFiles = append(cFiles, entry.Name())
-	}
-
 	// Builds the nss Go cli.
 	// #nosec:G204 - we control the command arguments in tests
 	cmd := exec.Command("go", "build", "-tags", "integrationtests", "-o", execPath)
@@ -94,6 +86,15 @@ func TestMain(m *testing.M) {
 		cleanup()
 		fmt.Fprintf(os.Stderr, "Can not build nss Go module: %v", err)
 		os.Exit(1)
+	}
+
+	// Gets the .c files required to build the nss c library.
+	var cFiles []string
+	for _, entry := range tmp {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".c") {
+			continue
+		}
+		cFiles = append(cFiles, entry.Name())
 	}
 
 	// Gets the cflags
@@ -118,7 +119,7 @@ func TestMain(m *testing.M) {
 	ldflags := s[:len(s)-1] // Ignoring the last \n
 
 	// Builds the nss C library.
-	command := []string{fmt.Sprintf("-DSCRIPTPATH=\"%s\"", execPath)}
+	command := []string{fmt.Sprintf(`-DSCRIPTPATH="%s"`, execPath)}
 	command = append(command, cFiles...)
 	command = append(command, strings.Split(cflags, " ")...)
 	command = append(command, strings.Split(ldflags, " ")...)
