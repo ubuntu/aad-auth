@@ -11,6 +11,7 @@ import (
 
 func TestGetEnt(t *testing.T) {
 	noShadow := 0
+	//nolint:dupl // We use the same table for the integration and the package tests.
 	tests := map[string]struct {
 		db         string
 		key        string
