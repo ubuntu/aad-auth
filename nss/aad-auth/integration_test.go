@@ -12,7 +12,7 @@ import (
 	"github.com/ubuntu/aad-auth/internal/testutils"
 )
 
-func TestNssGetent(t *testing.T) {
+func TestIntegration(t *testing.T) {
 	t.Parallel()
 
 	noShadow := 0
@@ -27,15 +27,15 @@ func TestNssGetent(t *testing.T) {
 		wantErr bool
 	}{
 		// List entry by name
-		"list entry from passwd by name":                                 {db: "passwd", key: "myuser@domain.com"},
-		"list entry from group by name":                                  {db: "group", key: "myuser@domain.com"},
-		"list entry from shadow by name":                                 {db: "shadow", key: "myuser@domain.com"},
-		"try to list entry from shadow by name without access to shadow": {db: "shadow", key: "myuser@domain.com", shadowMode: &noShadow, wantErr: true},
+		"list entry from passwd by name":                                      {db: "passwd", key: "myuser@domain.com"},
+		"list entry from group by name":                                       {db: "group", key: "myuser@domain.com"},
+		"list entry from shadow by name":                                      {db: "shadow", key: "myuser@domain.com"},
+		"error on listing entry by name from shadow without access to shadow": {db: "shadow", key: "myuser@domain.com", shadowMode: &noShadow, wantErr: true},
 
 		// List entry by UID/GID
-		"list entry from passwd by uid":        {db: "passwd", key: "165119649"},
-		"list entry from group by gid":         {db: "group", key: "165119649"},
-		"try to list entry from shadow by uid": {db: "shadow", key: "165119649", wantErr: true},
+		"list entry from passwd by uid":             {db: "passwd", key: "165119649"},
+		"list entry from group by gid":              {db: "group", key: "165119649"},
+		"error on listing entry from shadow by uid": {db: "shadow", key: "165119649", wantErr: true},
 
 		// List entries
 		"list entries in passwd": {db: "passwd"},
@@ -43,34 +43,34 @@ func TestNssGetent(t *testing.T) {
 		"list entries in shadow": {db: "shadow"},
 
 		// List entries without access to shadow
-		"list entries in passwd without access to shadow": {db: "passwd", shadowMode: &noShadow},
-		"list entries in group without access to shadow":  {db: "group", shadowMode: &noShadow},
-		"try to list shadow without access to shadow":     {db: "shadow", shadowMode: &noShadow, wantErr: true},
+		"list entries in passwd without access to shadow":  {db: "passwd", shadowMode: &noShadow},
+		"list entries in group without access to shadow":   {db: "group", shadowMode: &noShadow},
+		"error on listing shadow without access to shadow": {db: "shadow", shadowMode: &noShadow, wantErr: true},
 
 		// List entries by name without access to shadow
 		"list entry from passwd by name without access to shadow":             {db: "passwd", key: "myuser@domain.com", shadowMode: &noShadow},
 		"list entry from group by name without access to shadow":              {db: "group", key: "myuser@domain.com", shadowMode: &noShadow},
-		"try to list list entry from shadow by name without access to shadow": {db: "shadow", key: "myuser@domain.com", shadowMode: &noShadow, wantErr: true},
+		"error on listing entry from shadow by name without access to shadow": {db: "shadow", key: "myuser@domain.com", shadowMode: &noShadow, wantErr: true},
 
 		// List entries by UID/GID without access to shadow
-		"list entry from passwd by uid without access to shadow":        {db: "passwd", key: "165119649", shadowMode: &noShadow},
-		"list entry from group by gid without access to shadow":         {db: "group", key: "165119649", shadowMode: &noShadow},
-		"try to list entry from shadow by uid without access to shadow": {db: "shadow", key: "165119649", shadowMode: &noShadow, wantErr: true},
+		"list entry from passwd by uid without access to shadow":             {db: "passwd", key: "165119649", shadowMode: &noShadow},
+		"list entry from group by gid without access to shadow":              {db: "group", key: "165119649", shadowMode: &noShadow},
+		"error on listing entry from shadow by uid without access to shadow": {db: "shadow", key: "165119649", shadowMode: &noShadow, wantErr: true},
 
-		// Try to list non-existent entry
-		"try to list non-existent entry in passwd": {db: "passwd", key: "doesnotexist@domain.com", wantErr: true},
-		"try to list non-existent entry in group":  {db: "group", key: "doesnotexist@domain.com", wantErr: true},
-		"try to list non-existent entry in shadow": {db: "shadow", key: "doesnotexist@domain.com", wantErr: true},
+		// Error on listing non-existent entry
+		"error on listing non-existent entry in passwd": {db: "passwd", key: "doesnotexist@domain.com", wantErr: true},
+		"error on listing non-existent entry in group":  {db: "group", key: "doesnotexist@domain.com", wantErr: true},
+		"error on listing non-existent entry in shadow": {db: "shadow", key: "doesnotexist@domain.com", wantErr: true},
 
-		// Try to list without cache
-		"try to list passwd without cache and no permission to create it": {db: "passwd", cacheDB: "nocache", rootUID: 4242., wantErr: true},
-		"try to list group without cache and no permission to create it":  {db: "group", cacheDB: "nocache", rootUID: 4242, wantErr: true},
-		"try to list shadow without cache and no permission to create it": {db: "shadow", cacheDB: "nocache", rootUID: 4242, wantErr: true},
+		// error on listing without cache
+		"error on listing passwd without cache and no permission to create it": {db: "passwd", cacheDB: "nocache", rootUID: 4242., wantErr: true},
+		"error on listing group without cache and no permission to create it":  {db: "group", cacheDB: "nocache", rootUID: 4242, wantErr: true},
+		"error on listing shadow without cache and no permission to create it": {db: "shadow", cacheDB: "nocache", rootUID: 4242, wantErr: true},
 
-		// Try to list with empty cache
-		"try to list passwd with empty cache": {db: "passwd", cacheDB: "empty", wantErr: true},
-		"try to list group with empty cache":  {db: "group", cacheDB: "empty", wantErr: true},
-		"try to list shadow with empty cache": {db: "shadow", cacheDB: "empty", wantErr: true},
+		// error on listing with empty cache
+		"error on listing passwd with empty cache": {db: "passwd", cacheDB: "empty", wantErr: true},
+		"error on listing group with empty cache":  {db: "group", cacheDB: "empty", wantErr: true},
+		"error on listing shadow with empty cache": {db: "shadow", cacheDB: "empty", wantErr: true},
 
 		// List local entry without cache
 		"list local passwd entry without cache": {db: "passwd", cacheDB: "nocache", key: "0"},
@@ -82,10 +82,10 @@ func TestNssGetent(t *testing.T) {
 		"old entries in group are cleaned":  {db: "group", cacheDB: "db_with_old_users"},
 		"old entries in shadow are cleaned": {db: "shadow", cacheDB: "db_with_old_users"},
 
-		// Try to list without permission on cache
-		"try to list passwd without permission on cache": {db: "passwd", rootUID: 4242, wantErr: true},
-		"try to list group without permission on cache":  {db: "group", rootUID: 4242, wantErr: true},
-		"try to list shadow without permission on cache": {db: "shadow", rootUID: 4242, wantErr: true},
+		// error on listing without permission on cache
+		"error on listing passwd without permission on cache": {db: "passwd", rootUID: 4242, wantErr: true},
+		"error on listing group without permission on cache":  {db: "group", rootUID: 4242, wantErr: true},
+		"error on listing shadow without permission on cache": {db: "shadow", rootUID: 4242, wantErr: true},
 
 		// Error when trying to list from unsupported database
 		"error trying to list entry by name from unsupported db": {db: "unsupported", key: "myuser@domain.com", wantErr: true},
@@ -137,10 +137,10 @@ func TestNssGetent(t *testing.T) {
 
 			got, err := outNSSCommandForLib(t, uid, gid, shadowMode, cacheDir, originOut, cmds...)
 			if tc.wantErr {
-				require.Error(t, err, "Expected an error but got none.")
+				require.Error(t, err, "Expected an error but got none: %v", got)
 				return
 			}
-			require.NoError(t, err, "Expected no error but got one.")
+			require.NoError(t, err, "Expected no error but got one: %v", err)
 
 			want := testutils.LoadAndUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "Output must match")

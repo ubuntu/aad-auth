@@ -1,0 +1,14 @@
+|-
+    2022/09/07 13:51:56 DEBUG: Getting entry 0x0 from shadow
+    2022/09/07 13:51:56 DEBUG: Getting all entries from shadow
+    2022/09/07 13:51:56 DEBUG: Cache initialization
+    2022/09/07 13:51:56 DEBUG: Opening cache in /tmp/TestIntegrationerror_on_listing_shadow_without_access_to_shadow4122956534/001
+    2022/09/07 13:51:56 DEBUG: check file permissions on /tmp/TestIntegrationerror_on_listing_shadow_without_access_to_shadow4122956534/001/passwd.db
+    2022/09/07 13:51:56 DEBUG: check file permissions on /tmp/TestIntegrationerror_on_listing_shadow_without_access_to_shadow4122956534/001/shadow.db
+    2022/09/07 13:51:56 DEBUG: Shadow db mode: 0
+    2022/09/07 13:51:56 DEBUG: get next shadow entry
+    2022/09/07 13:51:56 DEBUG: request next shadow entry in db
+    2022/09/07 13:51:56 DEBUG: request to close shadow iteration in db
+    2022/09/07 13:51:56 DEBUG: Close database request
+    2022/09/07 13:51:56 DEBUG: Returning to NSS error: -1 with errno: 2
+    -1:2

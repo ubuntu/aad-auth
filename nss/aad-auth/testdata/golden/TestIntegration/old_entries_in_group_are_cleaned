@@ -1,0 +1,18 @@
+|
+    2022/09/07 13:59:45 DEBUG: Getting entry 0x0 from group
+    2022/09/07 13:59:45 DEBUG: Getting all entries from group
+    2022/09/07 13:59:45 DEBUG: Cache initialization
+    2022/09/07 13:59:45 DEBUG: Opening cache in /tmp/TestIntegrationold_entries_in_group_are_cleaned16613317/001
+    2022/09/07 13:59:45 DEBUG: check file permissions on /tmp/TestIntegrationold_entries_in_group_are_cleaned16613317/001/passwd.db
+    2022/09/07 13:59:45 DEBUG: check file permissions on /tmp/TestIntegrationold_entries_in_group_are_cleaned16613317/001/shadow.db
+    2022/09/07 13:59:45 DEBUG: Shadow db mode: 2
+    2022/09/07 13:59:45 DEBUG: Clean up database
+    2022/09/07 13:59:45 DEBUG: get next group entry
+    2022/09/07 13:59:45 DEBUG: request next group entry in db
+    2022/09/07 13:59:45 DEBUG: get next group entry
+    2022/09/07 13:59:45 DEBUG: request next group entry in db
+    2022/09/07 13:59:45 DEBUG: request to close group iteration in db
+    2022/09/07 13:59:45 DEBUG: Close database request
+    2022/09/07 13:59:45 DEBUG: Returning NSS STATUS SUCCESS with errno: 0
+    1:0
+    futureuser@domain.com:x:80938656:futureuser@domain.comfutureuser@domain.com:x:80938656:futureuser@domain.com

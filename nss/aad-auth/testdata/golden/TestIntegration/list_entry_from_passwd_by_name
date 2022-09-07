@@ -1,0 +1,15 @@
+|
+    2022/09/07 13:59:45 DEBUG: Getting entry 0xc0000787d0 from passwd
+    2022/09/07 13:59:45 DEBUG: Getting entry with name "myuser@domain.com" from passwd
+    2022/09/07 13:59:45 DEBUG: Requesting a passwd entry matching name "myuser@domain.com"
+    2022/09/07 13:59:45 DEBUG: Cache initialization
+    2022/09/07 13:59:45 DEBUG: Opening cache in /tmp/TestIntegrationlist_entry_from_passwd_by_name3192111504/001
+    2022/09/07 13:59:45 DEBUG: check file permissions on /tmp/TestIntegrationlist_entry_from_passwd_by_name3192111504/001/passwd.db
+    2022/09/07 13:59:45 DEBUG: check file permissions on /tmp/TestIntegrationlist_entry_from_passwd_by_name3192111504/001/shadow.db
+    2022/09/07 13:59:45 DEBUG: Shadow db mode: 2
+    2022/09/07 13:59:45 DEBUG: Clean up database
+    2022/09/07 13:59:45 DEBUG: getting user information from cache for "myuser@domain.com"
+    2022/09/07 13:59:45 DEBUG: Close database request
+    2022/09/07 13:59:45 DEBUG: Returning NSS STATUS SUCCESS with errno: 0
+    1:0
+    myuser@domain.com:x:1929326240:1929326240::/home/myuser@domain.com:/bin/bashmyuser@domain.com:x:1929326240:1929326240::/home/myuser@domain.com:/bin/bash

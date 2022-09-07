@@ -9,7 +9,7 @@ import (
 	"github.com/ubuntu/aad-auth/internal/testutils"
 )
 
-func TestGetEnt(t *testing.T) {
+func TestGetent(t *testing.T) {
 	noShadow := 0
 	//nolint:dupl // We use the same table for the integration and the package tests.
 	tests := map[string]struct {

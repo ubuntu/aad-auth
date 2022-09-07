@@ -1,0 +1,26 @@
+|
+    2022/09/07 13:59:44 DEBUG: Getting entry 0x0 from shadow
+    2022/09/07 13:59:44 DEBUG: Getting all entries from shadow
+    2022/09/07 13:59:44 DEBUG: Cache initialization
+    2022/09/07 13:59:44 DEBUG: Opening cache in /tmp/TestIntegrationlist_entries_in_shadow249365685/001
+    2022/09/07 13:59:44 DEBUG: check file permissions on /tmp/TestIntegrationlist_entries_in_shadow249365685/001/passwd.db
+    2022/09/07 13:59:44 DEBUG: check file permissions on /tmp/TestIntegrationlist_entries_in_shadow249365685/001/shadow.db
+    2022/09/07 13:59:44 DEBUG: Shadow db mode: 2
+    2022/09/07 13:59:44 DEBUG: Clean up database
+    2022/09/07 13:59:44 DEBUG: get next shadow entry
+    2022/09/07 13:59:44 DEBUG: request next shadow entry in db
+    2022/09/07 13:59:44 DEBUG: get next shadow entry
+    2022/09/07 13:59:44 DEBUG: request next shadow entry in db
+    2022/09/07 13:59:44 DEBUG: get next shadow entry
+    2022/09/07 13:59:44 DEBUG: request next shadow entry in db
+    2022/09/07 13:59:44 DEBUG: get next shadow entry
+    2022/09/07 13:59:44 DEBUG: request next shadow entry in db
+    2022/09/07 13:59:44 DEBUG: request to close shadow iteration in db
+    2022/09/07 13:59:44 DEBUG: Close database request
+    2022/09/07 13:59:44 DEBUG: Returning NSS STATUS SUCCESS with errno: 0
+    1:0
+    myuser@domain.com:$2a$10$R4ieqs.yZJuN1MSp2xhevemo5XnGK5oZ/RnMgWM67cpC3I10no97q:-1:-1:-1:-1:-1:-1:18446744073709551615
+    otheruser@domain.com:$2a$10$XnMdMBMWoYRxZdODZXhB2O6ZUiAQedtX3VuIVJc3bVpdNHuEBa8YS:-1:-1:-1:-1:-1:-1:18446744073709551615
+    user@otherdomain.com:$2a$10$uA1nwSVblaSj9GtYnP38/eAu9q6fQfJWgAeVMd6dyZfgsaYL5TgsS:-1:-1:-1:-1:-1:-1:18446744073709551615myuser@domain.com:$2a$10$R4ieqs.yZJuN1MSp2xhevemo5XnGK5oZ/RnMgWM67cpC3I10no97q:::::::
+    otheruser@domain.com:$2a$10$XnMdMBMWoYRxZdODZXhB2O6ZUiAQedtX3VuIVJc3bVpdNHuEBa8YS:::::::
+    user@otherdomain.com:$2a$10$uA1nwSVblaSj9GtYnP38/eAu9q6fQfJWgAeVMd6dyZfgsaYL5TgsS:::::::

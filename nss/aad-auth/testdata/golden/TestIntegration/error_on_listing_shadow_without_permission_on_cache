@@ -1,0 +1,8 @@
+|-
+    2022/09/07 13:51:57 DEBUG: Getting entry 0x0 from shadow
+    2022/09/07 13:51:57 DEBUG: Getting all entries from shadow
+    2022/09/07 13:51:57 DEBUG: Cache initialization
+    2022/09/07 13:51:57 DEBUG: Opening cache in /tmp/TestIntegrationerror_on_listing_shadow_without_permission_on_cache244408042/001
+    2022/09/07 13:51:57 DEBUG: check file permissions on /tmp/TestIntegrationerror_on_listing_shadow_without_permission_on_cache244408042/001/shadow.db
+    2022/09/07 13:51:57 DEBUG: Returning to NSS error: -1 with errno: 2
+    -1:2
