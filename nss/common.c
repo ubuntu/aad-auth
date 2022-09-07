@@ -55,6 +55,10 @@ enum nss_status run_aad_auth(const char *db, const char *name, const uid_t uid, 
     }
     g_free(cmd);
 
+    if (g_strcmp0(getenv("AAD_NSS_DEBUG"), "stderr")) {
+        g_fprintf(stderr, stderr);
+    }
+
     enum nss_status nss_exit_status;
     gchar **lines = g_strsplit(stdout, "\n", -1);
     for (gint i = 0; lines[i]; i++)
