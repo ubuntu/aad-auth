@@ -90,6 +90,11 @@ func TestNssGetent(t *testing.T) {
 		// Error when trying to list from unsupported database
 		"error trying to list entry by name from unsupported db": {db: "unsupported", key: "myuser@domain.com", wantErr: true},
 		"error trying to list unsupported db":                    {db: "unsupported", wantErr: true},
+
+		// Error when trying to list from db with an explicit empty key
+		"error on get entry from passwd with explicit empty key": {db: "passwd", key: "-", wantErr: true},
+		"error on get entry from group with explicit empty key":  {db: "group", key: "-", wantErr: true},
+		"error on get entry from shadow with explicit empty key": {db: "shadow", key: "-", wantErr: true},
 	}
 
 	for name, tc := range tests {
@@ -123,7 +128,14 @@ func TestNssGetent(t *testing.T) {
 				shadowMode = *tc.shadowMode
 			}
 
-			got, err := outNSSCommandForLib(t, uid, gid, shadowMode, cacheDir, nil, "getent", tc.db, tc.key)
+			cmds := []string{"getent", tc.db}
+			if tc.key == "-" {
+				cmds = append(cmds, "")
+			} else if tc.key != "" {
+				cmds = append(cmds, tc.key)
+			}
+
+			got, err := outNSSCommandForLib(t, uid, gid, shadowMode, cacheDir, originOut, cmds...)
 			if tc.wantErr {
 				require.Error(t, err, "Expected an error but got none.")
 				return

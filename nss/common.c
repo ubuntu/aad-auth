@@ -23,8 +23,14 @@ enum nss_status run_aad_auth(const char *db, const char *name, const uid_t uid, 
     GError *error = NULL;
     gchar *cmd;
 
-    if (name)
+    if (name != NULL)
     {
+        // Empty name would be trimmed by g_spawn_command_line_sync and no argument will be provided, forcing it
+        // to list every entries.
+        if (!g_strcmp0(name, "")) {
+            name = g_strdup("''");
+        }
+
         // Concatenate name with cmd
         cmd = g_strconcat(SCRIPTPATH, " ", "getent", " ", db, " ", name, NULL);
     }

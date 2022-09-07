@@ -23,11 +23,16 @@ func main() {
 		ctx := nss.CtxWithSyslogLogger(context.Background())
 		defer logger.CloseLoggerFromContext(ctx)
 
-		db, key := flag.Arg(1), flag.Arg(2)
+		db := flag.Arg(1)
+
+		var key *string
+		if len(flag.Args()) > 2 {
+			*key = flag.Arg(2)
+		}
 
 		out, err := Getent(ctx, db, key, opts...)
 		if err != nil {
-			exit(1, fmt.Sprintf("Error when trying to list %q from %s: %v", key, db, err))
+			exit(1, fmt.Sprintf("Error when trying to list %v from %s: %v", key, db, err))
 		}
 		fmt.Print(out)
 	case "":
