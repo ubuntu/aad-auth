@@ -15,7 +15,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo DEBIAN_FRONTEND=noninteractive apt update
-          sudo DEBIAN_FRONTEND=noninteractive apt install -y libpam-dev
+          sudo DEBIAN_FRONTEND=noninteractive apt install -y libpam-dev libglib2.0-0 gcc
       - uses: actions/checkout@v3
       - name: Code formatting, vet, static checker Security…
         uses: golangci/golangci-lint-action@v3
@@ -38,8 +38,12 @@ jobs:
           # Build PAM library
           go build -ldflags='-s -w' -buildmode=c-shared -o pam_aad.so ./pam
 
-          # Build NSS library
-          go build -ldflags='-s -w' -buildmode=c-shared -o libnss_aad.so.2 ./nss/integration_tests
+          # Build Nss CLI executable
+          go build -o aad-auth ./nss/aad-auth
+
+          # Build NSS C library
+          cd ./nss && make libnss_aad.so.2
+
         if: ${{ always() }}
 
   tests:
