@@ -1,6 +1,11 @@
 package main
 
 import (
+	"flag"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -41,6 +46,16 @@ func TestNssGetent(t *testing.T) {
 		"list entries in passwd without access to shadow": {db: "passwd", shadowMode: &noShadow},
 		"list entries in group without access to shadow":  {db: "group", shadowMode: &noShadow},
 		"try to list shadow without access to shadow":     {db: "shadow", shadowMode: &noShadow, wantErr: true},
+
+		// List entries by name without access to shadow
+		"list entry from passwd by name without access to shadow":             {db: "passwd", key: "myuser@domain.com", shadowMode: &noShadow},
+		"list entry from group by name without access to shadow":              {db: "group", key: "myuser@domain.com", shadowMode: &noShadow},
+		"try to list list entry from shadow by name without access to shadow": {db: "shadow", key: "myuser@domain.com", shadowMode: &noShadow, wantErr: true},
+
+		// List entries by UID/GID without access to shadow
+		"list entry from passwd by uid without access to shadow":        {db: "passwd", key: "165119649", shadowMode: &noShadow},
+		"list entry from group by gid without access to shadow":         {db: "group", key: "165119649", shadowMode: &noShadow},
+		"try to list entry from shadow by uid without access to shadow": {db: "shadow", key: "165119649", shadowMode: &noShadow, wantErr: true},
 
 		// Try to list non-existent entry
 		"try to list non-existent entry in passwd": {db: "passwd", key: "doesnotexist@domain.com", wantErr: true},
@@ -86,6 +101,9 @@ func TestNssGetent(t *testing.T) {
 				uid = tc.rootUID
 			}
 
+			originOut, err := exec.Command("getent", tc.db).CombinedOutput()
+			require.NoError(t, err, "Setup: can't run getent to get original output from system")
+
 			cacheDir := t.TempDir()
 			switch tc.cacheDB {
 			case "":
@@ -116,4 +134,37 @@ func TestNssGetent(t *testing.T) {
 			require.Equal(t, want, got, "Output must match")
 		})
 	}
+}
+
+func TestMain(m *testing.M) {
+	// Build the NSS library and executable in a temporary directory and allow linking to it.
+	tmpDir, cleanup, err := createTempDir()
+	if err != nil {
+		os.Exit(1)
+	}
+	defer cleanup()
+
+	libPath = filepath.Join(tmpDir, "libnss_aad.so.2")
+	execPath = filepath.Join(tmpDir, "aad-auth")
+
+	// Builds the NSS Go CLI.
+	// #nosec:G204 - we control the command arguments in tests
+	cmd := exec.Command("go", "build", "-tags", "integrationtests", "-o", execPath)
+	if err = cmd.Run(); err != nil {
+		cleanup()
+		fmt.Fprintf(os.Stderr, "Can not build nss Go module: %v", err)
+		os.Exit(1)
+	}
+
+	// Builds the NSS Library.
+	if err = buildNSSCLib(); err != nil {
+		cleanup()
+		fmt.Fprintf(os.Stderr, "Can not build nss C library: %v", err)
+		os.Exit(1)
+	}
+
+	testutils.InstallUpdateFlag()
+	flag.Parse()
+
+	m.Run()
 }
