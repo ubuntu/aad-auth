@@ -218,6 +218,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		os.Exit(1)
 	}
+	defer cleanup()
 
 	libPath = filepath.Join(libDir, "pam_aad.so")
 	// #nosec:G204 - we control the command arguments in tests
