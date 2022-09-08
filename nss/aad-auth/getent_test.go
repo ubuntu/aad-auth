@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -10,8 +9,9 @@ import (
 	"github.com/ubuntu/aad-auth/internal/testutils"
 )
 
-func TestGetEnt(t *testing.T) {
+func TestGetent(t *testing.T) {
 	noShadow := 0
+	//nolint:dupl // We use the same table for the integration and the package tests.
 	tests := map[string]struct {
 		db         string
 		key        string
@@ -72,6 +72,11 @@ func TestGetEnt(t *testing.T) {
 		"try to list group without permission on cache":  {db: "group", rootUID: 4242},
 		"try to list shadow without permission on cache": {db: "shadow", rootUID: 4242},
 
+		// Try to get entry with empty value
+		"try to get passwd entry with explicit empty key": {db: "passwd", key: "-"},
+		"try to get group entry with explicit empty key":  {db: "group", key: "-"},
+		"try to get shadow entry with explicit empty key": {db: "shadow", key: "-"},
+
 		// Error when trying to list from unsupported database
 		"error trying to list entry by name from unsupported db": {db: "unsupported", key: "myuser@domain.com", wantErr: true},
 		"error trying to list unsupported db":                    {db: "unsupported", wantErr: true},
@@ -105,7 +110,15 @@ func TestGetEnt(t *testing.T) {
 				opts = append(opts, cache.WithShadowMode(*tc.shadowMode))
 			}
 
-			got, err := Getent(context.Background(), tc.db, tc.key, opts...)
+			var key *string
+			var emptyString string
+			if tc.key == "-" {
+				key = &emptyString
+			} else if tc.key != "" {
+				key = &tc.key
+			}
+
+			got, err := Getent(context.Background(), tc.db, key, opts...)
 			if tc.wantErr {
 				require.Error(t, err, "Expected an error but got none.")
 				return
@@ -116,10 +129,4 @@ func TestGetEnt(t *testing.T) {
 			require.Equal(t, want, got, "Output must match")
 		})
 	}
-}
-
-func TestMain(m *testing.M) {
-	testutils.InstallUpdateFlag()
-	flag.Parse()
-	m.Run()
 }

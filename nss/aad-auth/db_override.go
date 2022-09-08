@@ -10,21 +10,6 @@ import (
 	"github.com/ubuntu/aad-auth/internal/cache"
 )
 
-/*
-#include <nss.h>
-#include <stdlib.h>
-
-static void __attribute__((constructor))
-nsstest_ctor(void)
-{
-    __nss_configure_lookup("passwd", "files aad");
-    __nss_configure_lookup("group", "files aad");
-    __nss_configure_lookup("shadow", "go  aad");
-
-}
-*/
-import "C"
-
 // initialize via env variables in mock test
 func init() {
 	uidEnv := os.Getenv("NSS_AAD_ROOT_UID")

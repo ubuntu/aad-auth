@@ -18,13 +18,19 @@
 
 enum nss_status run_aad_auth(const char *db, const char *name, const uid_t uid, int *errnop, GPtrArray *entries)
 {
-    gchar *stdout = NULL;
-    gchar *stderr = NULL;
+    gchar *out = NULL;
+    gchar *err = NULL;
     GError *error = NULL;
     gchar *cmd;
 
-    if (name)
+   if (name != NULL)
     {
+        // Empty name would be trimmed by g_spawn_command_line_sync and no argument will be provided, forcing it
+        // to list every entries.
+        if (!g_strcmp0(name, "")) {
+            name = g_strdup("''");
+        }
+
         // Concatenate name with cmd
         cmd = g_strconcat(SCRIPTPATH, " ", "getent", " ", db, " ", name, NULL);
     }
@@ -41,16 +47,21 @@ enum nss_status run_aad_auth(const char *db, const char *name, const uid_t uid, 
     }
 
     gint exit_status;
-    if (!g_spawn_command_line_sync(cmd, &stdout, &stderr, &exit_status, &error) || exit_status != 0)
+    if (!g_spawn_command_line_sync(cmd, &out, &err, &exit_status, &error) || exit_status != 0)
     {
+        g_fprintf(stderr, err);
         *errnop = ENOENT;
         g_free(cmd);
         return NSS_STATUS_UNAVAIL;
     }
     g_free(cmd);
 
+    if(!g_strcmp0(getenv("NSS_AAD_DEBUG"), "stderr")) {
+        g_fprintf(stderr, err);
+    }
+
     enum nss_status nss_exit_status;
-    gchar **lines = g_strsplit(stdout, "\n", -1);
+    gchar **lines = g_strsplit(out, "\n", -1);
     for (gint i = 0; lines[i]; i++)
     {
         if (!g_strcmp0(lines[i], ""))

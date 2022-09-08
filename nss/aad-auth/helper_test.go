@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -10,15 +9,13 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/ubuntu/aad-auth/internal/testutils"
 )
 
-var libPath string
+var libPath, execPath string
 
-// outNSSCommandForLib returns the specific part by the nss command to got, filtering originOut.
-// It uses the locally build aad nss module.
-func outNSSCommandForLib(t *testing.T, rootUID, rootGID, shadowMode int, cacheDir string, originOut []byte, cmds ...string) (got string, err error) {
+// outNSSCommandForLib returns the specific part for the nss command, filtering originOut.
+// It uses the locally build aad nss module for the integration tests.
+func outNSSCommandForLib(t *testing.T, rootUID, rootGID, shadowMode int, cacheDir string, originOut string, cmds ...string) (got string, err error) {
 	t.Helper()
 
 	// #nosec:G204 - we control the command arguments in tests
@@ -42,7 +39,7 @@ func outNSSCommandForLib(t *testing.T, rootUID, rootGID, shadowMode int, cacheDi
 	cmd.Stdout = io.MultiWriter(os.Stdout, &out)
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()
-	got = strings.Replace(out.String(), string(originOut), "", 1)
+	got = strings.Replace(out.String(), originOut, "", 1)
 
 	return got, err
 }
@@ -60,24 +57,34 @@ func createTempDir() (tmp string, cleanup func(), err error) {
 	}, nil
 }
 
-func TestMain(m *testing.M) {
-	// Build the pam module in a temporary directory and allow linking to it.
-	libDir, cleanup, err := createTempDir()
+func buildNSSCLib() error {
+	// Gets the .c files required to build the NSS C library.
+	cFiles, err := filepath.Glob("../*.c")
 	if err != nil {
-		os.Exit(1)
+		return fmt.Errorf("error when fetching the required c files: %w", err)
 	}
 
-	libPath = filepath.Join(libDir, "libnss_aad.so.2")
-	// #nosec:G204 - we control the command arguments in tests
-	out, err := exec.Command("go", "build", "-buildmode=c-shared", "-tags", "integrationtests", "-o", libPath).CombinedOutput()
+	// Gets the cflags and ldflags.
+	flags := []string{"-g", "-Wall", "-Wextra"}
+	out, err := exec.Command("pkg-config", "--cflags", "--libs", "glib-2.0").CombinedOutput()
 	if err != nil {
-		cleanup()
-		fmt.Fprintf(os.Stderr, "Can not build nss module (%v) : %s", err, out)
-		os.Exit(1)
+		return fmt.Errorf("could not get the required cflags (%s): %w", out, err)
+	}
+	flags = append(flags, strings.Fields(string(out))...)
+
+	// Assembles the flags required to build the NSS library.
+	c := []string{fmt.Sprintf(`-DSCRIPTPATH="%s"`, execPath)}
+	c = append(c, "-DINTEGRATIONTESTS=1")
+	c = append(c, cFiles...)
+	c = append(c, flags...)
+	c = append(c, "-fPIC", "-shared", "-Wl,-soname,libnss_aad.so.2", "-o", libPath)
+
+	// #nosec:G204 - we control the command arguments in tests.
+	cmd := exec.Command("gcc", c...)
+	out, err = cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("can not build nss library (%s): %w", out, err)
 	}
 
-	testutils.InstallUpdateFlag()
-	flag.Parse()
-
-	m.Run()
+	return nil
 }

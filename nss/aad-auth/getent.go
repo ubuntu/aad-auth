@@ -17,30 +17,29 @@ import (
 var supportedDbs = []string{"group", "passwd", "shadow"}
 
 // Getent processes the args and queries the database for the requested entries.
-func Getent(ctx context.Context, dbName, key string, cacheOpts ...cache.Option) (string, error) {
+func Getent(ctx context.Context, dbName string, key *string, cacheOpts ...cache.Option) (string, error) {
 	if !dbIsSupported(dbName) {
 		return "", fmt.Errorf("database %q is not supported", dbName)
 	}
 
-	logger.Debug(ctx, "Getting entry %q from %s ", key, dbName)
-
 	var entries []fmt.Stringer
 	var err error
-	if key != "" {
+	if key == nil {
+		entries, err = getAllEntries(ctx, dbName, cacheOpts...)
+	} else {
 		var e fmt.Stringer
-		e, err = getEntryByKey(ctx, dbName, key, cacheOpts...)
+		e, err = getEntryByKey(ctx, dbName, *key, cacheOpts...)
 		entries = []fmt.Stringer{e}
 		if err != nil {
 			entries = nil
 		}
-	} else {
-		entries, err = getAllEntries(ctx, dbName, cacheOpts...)
 	}
 
 	return fmtGetentOutput(ctx, entries, err), nil
 }
 
 func getEntryByKey(ctx context.Context, dbName, key string, cacheOpts ...cache.Option) (entry fmt.Stringer, err error) {
+	logger.Debug(ctx, "Getting entry %q from %s", key, dbName)
 	u, err := strconv.ParseUint(key, 10, 64)
 	if err != nil {
 		return getEntryByName(ctx, dbName, key, cacheOpts...)
