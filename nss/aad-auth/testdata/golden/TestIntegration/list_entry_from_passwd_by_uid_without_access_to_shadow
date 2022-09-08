@@ -1,14 +1,2 @@
 |
-    2022/09/07 13:59:43 DEBUG: Getting entry 0xc0000b07a0 from passwd
-    2022/09/07 13:59:43 DEBUG: Getting entry with id '�' from passwd
-    2022/09/07 13:59:43 DEBUG: Requesting a passwd entry matching UID 165119649
-    2022/09/07 13:59:43 DEBUG: Cache initialization
-    2022/09/07 13:59:43 DEBUG: Opening cache in /tmp/TestIntegrationlist_entry_from_passwd_by_uid_without_access_to_shadow2373965321/001
-    2022/09/07 13:59:43 DEBUG: check file permissions on /tmp/TestIntegrationlist_entry_from_passwd_by_uid_without_access_to_shadow2373965321/001/passwd.db
-    2022/09/07 13:59:43 DEBUG: check file permissions on /tmp/TestIntegrationlist_entry_from_passwd_by_uid_without_access_to_shadow2373965321/001/shadow.db
-    2022/09/07 13:59:43 DEBUG: Shadow db mode: 0
-    2022/09/07 13:59:43 DEBUG: getting user information from cache for uid 165119649
-    2022/09/07 13:59:43 DEBUG: Close database request
-    2022/09/07 13:59:43 DEBUG: Returning NSS STATUS SUCCESS with errno: 0
-    1:0
-    user@otherdomain.com:x:165119649:165119649::/home/user@otherdomain.com:/bin/bashuser@otherdomain.com:x:165119649:165119649::/home/user@otherdomain.com:/bin/bash
+    user@otherdomain.com:x:165119649:165119649::/home/user@otherdomain.com:/bin/bash

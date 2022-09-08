@@ -1,18 +1,2 @@
 |
-    2022/09/07 13:59:44 DEBUG: Getting entry 0x0 from passwd
-    2022/09/07 13:59:44 DEBUG: Getting all entries from passwd
-    2022/09/07 13:59:44 DEBUG: Cache initialization
-    2022/09/07 13:59:44 DEBUG: Opening cache in /tmp/TestIntegrationold_entries_in_passwd_are_cleaned2532036994/001
-    2022/09/07 13:59:44 DEBUG: check file permissions on /tmp/TestIntegrationold_entries_in_passwd_are_cleaned2532036994/001/passwd.db
-    2022/09/07 13:59:44 DEBUG: check file permissions on /tmp/TestIntegrationold_entries_in_passwd_are_cleaned2532036994/001/shadow.db
-    2022/09/07 13:59:44 DEBUG: Shadow db mode: 2
-    2022/09/07 13:59:44 DEBUG: Clean up database
-    2022/09/07 13:59:44 DEBUG: get next passwd entry
-    2022/09/07 13:59:44 DEBUG: request next passwd entry in db
-    2022/09/07 13:59:44 DEBUG: get next passwd entry
-    2022/09/07 13:59:44 DEBUG: request next passwd entry in db
-    2022/09/07 13:59:44 DEBUG: request to close passwd iteration in db
-    2022/09/07 13:59:44 DEBUG: Close database request
-    2022/09/07 13:59:44 DEBUG: Returning NSS STATUS SUCCESS with errno: 0
-    1:0
-    futureuser@domain.com:x:80938656:80938656::/home/futureuser@domain.com:/bin/bashfutureuser@domain.com:x:80938656:80938656::/home/futureuser@domain.com:/bin/bash
+    futureuser@domain.com:x:80938656:80938656::/home/futureuser@domain.com:/bin/bash

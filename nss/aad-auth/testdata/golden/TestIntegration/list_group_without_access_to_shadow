@@ -1,0 +1,4 @@
+|
+    myuser@domain.com:x:1929326240:myuser@domain.com
+    otheruser@domain.com:x:165119648:otheruser@domain.com
+    user@otherdomain.com:x:165119649:user@otherdomain.com

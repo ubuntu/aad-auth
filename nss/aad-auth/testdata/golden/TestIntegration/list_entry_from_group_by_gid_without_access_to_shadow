@@ -1,14 +1,2 @@
 |
-    2022/09/07 13:59:45 DEBUG: Getting entry 0xc0000787d0 from group
-    2022/09/07 13:59:45 DEBUG: Getting entry with id '�' from group
-    2022/09/07 13:59:45 DEBUG: Requesting an group entry matching GID 165119649
-    2022/09/07 13:59:45 DEBUG: Cache initialization
-    2022/09/07 13:59:45 DEBUG: Opening cache in /tmp/TestIntegrationlist_entry_from_group_by_gid_without_access_to_shadow3816888042/001
-    2022/09/07 13:59:45 DEBUG: check file permissions on /tmp/TestIntegrationlist_entry_from_group_by_gid_without_access_to_shadow3816888042/001/passwd.db
-    2022/09/07 13:59:45 DEBUG: check file permissions on /tmp/TestIntegrationlist_entry_from_group_by_gid_without_access_to_shadow3816888042/001/shadow.db
-    2022/09/07 13:59:45 DEBUG: Shadow db mode: 0
-    2022/09/07 13:59:45 DEBUG: getting group information from cache for gid 165119649
-    2022/09/07 13:59:45 DEBUG: Close database request
-    2022/09/07 13:59:45 DEBUG: Returning NSS STATUS SUCCESS with errno: 0
-    1:0
-    user@otherdomain.com:x:165119649:user@otherdomain.comuser@otherdomain.com:x:165119649:user@otherdomain.com
+    user@otherdomain.com:x:165119649:user@otherdomain.com

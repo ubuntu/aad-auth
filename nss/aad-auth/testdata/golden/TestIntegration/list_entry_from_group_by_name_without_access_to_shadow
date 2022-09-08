@@ -1,14 +1,2 @@
 |
-    2022/09/07 13:59:44 DEBUG: Getting entry 0xc0000b07a0 from group
-    2022/09/07 13:59:44 DEBUG: Getting entry with name "myuser@domain.com" from group
-    2022/09/07 13:59:44 DEBUG: Requesting a group entry matching name "myuser@domain.com"
-    2022/09/07 13:59:44 DEBUG: Cache initialization
-    2022/09/07 13:59:44 DEBUG: Opening cache in /tmp/TestIntegrationlist_entry_from_group_by_name_without_access_to_shadow431325101/001
-    2022/09/07 13:59:44 DEBUG: check file permissions on /tmp/TestIntegrationlist_entry_from_group_by_name_without_access_to_shadow431325101/001/passwd.db
-    2022/09/07 13:59:44 DEBUG: check file permissions on /tmp/TestIntegrationlist_entry_from_group_by_name_without_access_to_shadow431325101/001/shadow.db
-    2022/09/07 13:59:44 DEBUG: Shadow db mode: 0
-    2022/09/07 13:59:44 DEBUG: getting group information from cache for "myuser@domain.com"
-    2022/09/07 13:59:44 DEBUG: Close database request
-    2022/09/07 13:59:44 DEBUG: Returning NSS STATUS SUCCESS with errno: 0
-    1:0
-    myuser@domain.com:x:1929326240:myuser@domain.commyuser@domain.com:x:1929326240:myuser@domain.com
+    myuser@domain.com:x:1929326240:myuser@domain.com
