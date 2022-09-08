@@ -64,27 +64,19 @@ func buildNSSCLib() error {
 		return fmt.Errorf("error when fetching the required c files: %w", err)
 	}
 
-	// Gets the cflags.
-	cflags := []string{"-g", "-Wall", "-Wextra"}
-	out, err := exec.Command("pkg-config", "--cflags", "glib-2.0").CombinedOutput()
+	// Gets the cflags and ldflags.
+	flags := []string{"-g", "-Wall", "-Wextra"}
+	out, err := exec.Command("pkg-config", "--cflags", "--libs", "glib-2.0").CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("could not get the required cflags (%s): %w", out, err)
 	}
-	cflags = append(cflags, strings.Fields(string(out))...)
-
-	// Gets the ldflags
-	out, err = exec.Command("pkg-config", "--libs", "glib-2.0").CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("could not get the required ldflags (%s): %w", out, err)
-	}
-	ldflags := strings.Fields(string(out))
+	flags = append(flags, strings.Fields(string(out))...)
 
 	// Assembles the flags required to build the NSS library.
 	c := []string{fmt.Sprintf(`-DSCRIPTPATH="%s"`, execPath)}
 	c = append(c, "-DINTEGRATIONTESTS=1")
 	c = append(c, cFiles...)
-	c = append(c, cflags...)
-	c = append(c, ldflags...)
+	c = append(c, flags...)
 	c = append(c, "-fPIC", "-shared", "-Wl,-soname,libnss_aad.so.2", "-o", libPath)
 
 	// #nosec:G204 - we control the command arguments in tests.

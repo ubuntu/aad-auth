@@ -23,7 +23,7 @@ enum nss_status run_aad_auth(const char *db, const char *name, const uid_t uid, 
     GError *error = NULL;
     gchar *cmd;
 
-    if (name != NULL)
+   if (name != NULL)
     {
         // Empty name would be trimmed by g_spawn_command_line_sync and no argument will be provided, forcing it
         // to list every entries.
@@ -55,7 +55,7 @@ enum nss_status run_aad_auth(const char *db, const char *name, const uid_t uid, 
     }
     g_free(cmd);
 
-    if (g_strcmp0(getenv("AAD_NSS_DEBUG"), "stderr")) {
+    if(!g_strcmp0(getenv("NSS_AAD_DEBUG"), "stderr")) {
         g_fprintf(stderr, stderr);
     }
 
