@@ -106,6 +106,7 @@ func TestIntegration(t *testing.T) {
 				uid = tc.rootUID
 			}
 
+			//#nosec:G204 - We control the cmd arguments in tests.
 			originOut, err := exec.Command("getent", tc.db).CombinedOutput()
 			require.NoError(t, err, "Setup: can't run getent to get original output from system")
 			if tc.key == "" {

@@ -22,8 +22,6 @@ func Getent(ctx context.Context, dbName string, key *string, cacheOpts ...cache.
 		return "", fmt.Errorf("database %q is not supported", dbName)
 	}
 
-	logger.Debug(ctx, "Getting entry %p from %s", key, dbName)
-
 	var entries []fmt.Stringer
 	var err error
 	if key == nil {
@@ -41,6 +39,7 @@ func Getent(ctx context.Context, dbName string, key *string, cacheOpts ...cache.
 }
 
 func getEntryByKey(ctx context.Context, dbName, key string, cacheOpts ...cache.Option) (entry fmt.Stringer, err error) {
+	logger.Debug(ctx, "Getting entry %q from %s", key, dbName)
 	u, err := strconv.ParseUint(key, 10, 64)
 	if err != nil {
 		return getEntryByName(ctx, dbName, key, cacheOpts...)
