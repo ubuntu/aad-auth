@@ -1,16 +1,23 @@
-# required values
-tenant_id = <TENANT_ID>
-app_id = <APPLICATION OR CLIENT ID>
+### required values
+## See https://docs.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal
+## for more information on how to set up an Azure AD app.
+# tenant_id = xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+# app_id = yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy
 
-# optional values
-offline_credentials_expiration = 90
-homedir = /home/%u
-shell = /bin/bash
+### optional values (defaults)
+# offline_credentials_expiration = 90 ; duration in days a user can log in without online verification
+# homedir = /home/%f ; home directory pattern for the user, the following mapping applies:
+#                    ; %f - full username
+#                    ; %U - UID
+#                    ; %l - first char of username
+#                    ; %u - username without domain
+#                    ; %d - domain
+# shell = /bin/bash ; default shell for the user
 
-# overriding values for a specific domain, every value inside a section is optional
-[someDomain.com]
-tenant_id = <TENANT_ID for someDomain.com>
-app_id = <APP OR CLIENT ID for someDomain.com>
-offline_credentials_expiration = <expiration interval for someDomain.com>
-homedir = /home/someDomain/%u
-shell = /bin/ssh
+### overriding values for a specific domain, every value inside a section is optional
+# [domain.com]
+# tenant_id = aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
+# app_id = bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb
+# offline_credentials_expiration = 30
+# homedir = /home/domain.com/%u
+# shell = /bin/zsh
