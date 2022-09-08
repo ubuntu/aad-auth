@@ -15,6 +15,14 @@ import (
 func TestIntegration(t *testing.T) {
 	t.Parallel()
 
+	originOuts := make(map[string]string)
+	for _, db := range []string{"passwd", "group", "shadow"} {
+		//#nosec:G204 - We control the cmd arguments in tests.
+		data, err := exec.Command("getent", db).CombinedOutput()
+		require.NoError(t, err, "Setup: can't run getent to get original output from system")
+		originOuts[db] = string(data)
+	}
+
 	noShadow := 0
 	//nolint:dupl // We use the same table for the integration and the package tests.
 	tests := map[string]struct {
@@ -106,13 +114,6 @@ func TestIntegration(t *testing.T) {
 				uid = tc.rootUID
 			}
 
-			//#nosec:G204 - We control the cmd arguments in tests.
-			originOut, err := exec.Command("getent", tc.db).CombinedOutput()
-			require.NoError(t, err, "Setup: can't run getent to get original output from system")
-			if tc.key == "" {
-				originOut = nil
-			}
-
 			cacheDir := t.TempDir()
 			switch tc.cacheDB {
 			case "":
@@ -139,7 +140,7 @@ func TestIntegration(t *testing.T) {
 				cmds = append(cmds, tc.key)
 			}
 
-			got, err := outNSSCommandForLib(t, uid, gid, shadowMode, cacheDir, originOut, cmds...)
+			got, err := outNSSCommandForLib(t, uid, gid, shadowMode, cacheDir, originOuts[tc.db], cmds...)
 			if tc.wantErr {
 				require.Error(t, err, "Expected an error but got none: %v", got)
 				return

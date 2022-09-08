@@ -15,7 +15,7 @@ var libPath, execPath string
 
 // outNSSCommandForLib returns the specific part for the nss command, filtering originOut.
 // It uses the locally build aad nss module for the integration tests.
-func outNSSCommandForLib(t *testing.T, rootUID, rootGID, shadowMode int, cacheDir string, originOut []byte, cmds ...string) (got string, err error) {
+func outNSSCommandForLib(t *testing.T, rootUID, rootGID, shadowMode int, cacheDir string, originOut string, cmds ...string) (got string, err error) {
 	t.Helper()
 
 	// #nosec:G204 - we control the command arguments in tests
@@ -39,7 +39,7 @@ func outNSSCommandForLib(t *testing.T, rootUID, rootGID, shadowMode int, cacheDi
 	cmd.Stdout = io.MultiWriter(os.Stdout, &out)
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()
-	got = strings.Replace(out.String(), string(originOut), "", 1)
+	got = strings.Replace(out.String(), originOut, "", 1)
 
 	return got, err
 }

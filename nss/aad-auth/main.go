@@ -27,7 +27,8 @@ func main() {
 
 		var key *string
 		if len(flag.Args()) > 2 {
-			*key = flag.Arg(2)
+			k := flag.Arg(2)
+			key = &k
 		}
 
 		out, err := Getent(ctx, db, key, opts...)

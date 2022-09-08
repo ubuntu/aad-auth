@@ -18,8 +18,8 @@
 
 enum nss_status run_aad_auth(const char *db, const char *name, const uid_t uid, int *errnop, GPtrArray *entries)
 {
-    gchar *stdout = NULL;
-    gchar *stderr = NULL;
+    gchar *out = NULL;
+    gchar *err = NULL;
     GError *error = NULL;
     gchar *cmd;
 
@@ -47,8 +47,9 @@ enum nss_status run_aad_auth(const char *db, const char *name, const uid_t uid, 
     }
 
     gint exit_status;
-    if (!g_spawn_command_line_sync(cmd, &stdout, &stderr, &exit_status, &error) || exit_status != 0)
+    if (!g_spawn_command_line_sync(cmd, &out, &err, &exit_status, &error) || exit_status != 0)
     {
+        g_fprintf(stderr, err);
         *errnop = ENOENT;
         g_free(cmd);
         return NSS_STATUS_UNAVAIL;
@@ -56,11 +57,11 @@ enum nss_status run_aad_auth(const char *db, const char *name, const uid_t uid, 
     g_free(cmd);
 
     if(!g_strcmp0(getenv("NSS_AAD_DEBUG"), "stderr")) {
-        g_fprintf(stderr, stderr);
+        g_fprintf(stderr, err);
     }
 
     enum nss_status nss_exit_status;
-    gchar **lines = g_strsplit(stdout, "\n", -1);
+    gchar **lines = g_strsplit(out, "\n", -1);
     for (gint i = 0; lines[i]; i++)
     {
         if (!g_strcmp0(lines[i], ""))
