@@ -18,7 +18,7 @@ remove_nss_entry() {
     fi
     sed -i --regexp-extended '
       /^(passwd|group|shadow):/ {
-        s/\baad\b//g
+        s/\s?\baad\b\s?/ /g
         s/[[:space:]]+$//
       }
     ' /etc/nsswitch.conf
