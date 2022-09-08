@@ -13,24 +13,14 @@ libnss_aad.so.2 libnss-aad #MINVER#
  _nss_aad_setgrent@Base 0.1
  _nss_aad_setpwent@Base 0.1
  _nss_aad_setspent@Base 0.1
- authorizerTrampoline@Base 0.1
- callbackTrampoline@Base 0.1
- commitHookTrampoline@Base 0.1
- compareTrampoline@Base 0.1
- crosscall2@Base 0.1
- (arch=arm64 riscv64)crosscall1@Base 0.1
- (arch=amd64)crosscall_amd64@Base 0.1
- (arch=i386)crosscall_386@Base 0.1
- (arch=armhf)crosscall_arm1@Base 0.1
- (arch=ppc64el)crosscall_ppc64@Base 0.1
- (arch=s390x)crosscall_s390x@Base 0.1
- doneTrampoline@Base 0.1
- fatalf@Base 0.1
- preUpdateHookTrampoline@Base 0.1
- rollbackHookTrampoline@Base 0.1
- stepTrampoline@Base 0.1
- updateHookTrampoline@Base 0.1
- (regex|optional)"_sqlite3_*" 0.1
- (regex|optional)"sqlite3_*" 0.1
- (regex|optional)"x_cgo.*" 0.1
- (regex|optional)"_cgo.*" 0.1
+ all_grp_entries@Base 0.1
+ all_grp_entries_index@Base 0.1
+ all_pwd_entries@Base 0.1
+ all_pwd_entries_index@Base 0.1
+ all_spwd_entries@Base 0.1
+ all_spwd_entries_index@Base 0.1
+ fetch_info@Base 0.1
+ grp_search@Base 0.1
+ pwd_search@Base 0.1
+ run_aad_auth@Base 0.1
+ spwd_search@Base 0.1
