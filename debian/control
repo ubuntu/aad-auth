@@ -48,4 +48,5 @@ Depends: ${misc:Depends}
 Description: ${source:Synopsis} common files
  ${source:Extended-Description}
  .
- This package contains translation files shared between the other AAD packages.
+ This package contains configuration and translation files shared between the
+ other AAD packages.
