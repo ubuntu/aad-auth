@@ -1,3 +1,27 @@
+aad-auth (0.2) kinetic; urgency=medium
+
+  [ Didier Roche ]
+  [ Denison Barbosa ]
+  [ Gabriel Nagy ]
+  [ Jean-Baptiste Lallement ]
+  * Rewrite NSS Go library in C
+    - due to random crashes caused by loading a multithreaded shared library
+      written in Go from NSS, we now have a thin C wrapper calling a Go
+      executable which does the actual queries
+  * Add translations supported by gettext to the PAM module
+    - to support the future CLI integration, these are shipped in a
+      common architecture-independent package
+  * Ship a configuration template in the common package
+  * Fix segfault on interrupted pam conversation
+  * Fix FTBFS on armhf due to int type size
+  * Various test improvements and fixes
+  * Update dependencies to latest:
+    - github.com/AzureAD/microsoft-authentication-library-for-go
+    - github.com/go-ini/ini
+    - github.com/mattn/go-sqlite3
+
+ -- Gabriel Nagy <gabriel.nagy@canonical.com>  Fri, 09 Sep 2022 10:48:17 +0300
+
 aad-auth (0.1) kinetic; urgency=medium
 
   [ Didier Roche ]
