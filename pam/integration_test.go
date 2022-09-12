@@ -47,6 +47,7 @@ func TestPamSmAuthenticate(t *testing.T) {
 		// special cases
 		"authenticate successfully with unmatched case (online)":                  {username: "Success@Domain.COM"},
 		"authenticate successfully on config with values only in matching domain": {conf: "with-domain.conf"},
+		"authenticate successfully on config with offline auth disabled (online)": {conf: "offline-auth-disabled.conf"},
 
 		// error cases
 		"error on invalid conf":                               {conf: "invalid-aad.conf", wantErr: true},
@@ -58,6 +59,7 @@ func TestPamSmAuthenticate(t *testing.T) {
 		"error on offline with purged user account":           {username: "purgeduser@domain.com", offline: true, initialCache: "db_with_expired_users", wantErr: true},
 		"error on offline connecting expired user from cache": {conf: "forceoffline.conf", offline: true, initialCache: "db_with_expired_users", username: "expireduser@domain.com", wantErr: true},
 		"error on offline with unpurged old user account":     {conf: "forceoffline-expire-right-away.conf", offline: true, initialCache: "db_with_expired_users", username: "purgeduser@domain.com", wantErr: true},
+		"error on offline with offline auth disabled":         {conf: "forceoffline-offline-auth-disabled.conf", offline: true, initialCache: "users_in_db", username: "myuser@domain.com", password: "my password", wantErr: true},
 		"error on server error":                               {username: "unreadable server response", wantErr: true},
 		"error on cache can't be created/opened":              {wrongCacheOwnership: true, wantErr: true},
 	}
