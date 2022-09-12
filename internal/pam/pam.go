@@ -97,6 +97,9 @@ func Authenticate(ctx context.Context, username, password, conf string, opts ...
 			if errors.Is(err, cache.ErrOfflineCredentialsExpired) {
 				Info(ctx, i18n.G("Machine is offline and cached credentials expired. Please try again when the machine is online."))
 			}
+			if errors.Is(err, cache.ErrOfflineAuthDisabled) {
+				Info(ctx, i18n.G("Machine is offline and offline authentication is disabled. Please try again when the machine is online."))
+			}
 			logError(ctx, i18n.G("%w. Denying access."), err)
 			return ErrPamAuth
 		}

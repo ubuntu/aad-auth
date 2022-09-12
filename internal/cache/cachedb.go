@@ -216,12 +216,7 @@ func (c *Cache) updateOnlineAuthAndPassword(ctx context.Context, uid int64, user
 	return tx.Commit()
 }
 
-func cleanUpDB(ctx context.Context, db *sql.DB, offlineCredentialsExpiration time.Duration) error {
-	if offlineCredentialsExpiration == 0 {
-		logger.Debug(ctx, "Do not clean up database as revalidation period is set to 0")
-		return nil
-	}
-
+func cleanUpDB(ctx context.Context, db *sql.DB, maxCacheEntryDuration time.Duration) error {
 	logger.Debug(ctx, "Clean up database")
 
 	tx, err := db.Begin()
@@ -230,18 +225,18 @@ func cleanUpDB(ctx context.Context, db *sql.DB, offlineCredentialsExpiration tim
 	}
 	defer tx.Rollback() // The rollback will be ignored if the tx has been committed later in the function.
 
-	offlineCredentialsExpirationTime := time.Now().Add(-offlineCredentialsExpiration).Unix()
+	entryPurgeTime := time.Now().Add(-maxCacheEntryDuration).Unix()
 
 	// Shadow cleanup
-	if _, err := tx.Exec("DELETE FROM shadow.shadow WHERE uid IN (SELECT uid FROM passwd WHERE last_online_auth < ?)", offlineCredentialsExpirationTime); err != nil {
+	if _, err := tx.Exec("DELETE FROM shadow.shadow WHERE uid IN (SELECT uid FROM passwd WHERE last_online_auth < ?)", entryPurgeTime); err != nil {
 		return err
 	}
 	// uid_gid cleanup
-	if _, err := tx.Exec("DELETE FROM uid_gid WHERE uid IN (SELECT uid FROM passwd WHERE last_online_auth < ?)", offlineCredentialsExpirationTime); err != nil {
+	if _, err := tx.Exec("DELETE FROM uid_gid WHERE uid IN (SELECT uid FROM passwd WHERE last_online_auth < ?)", entryPurgeTime); err != nil {
 		return err
 	}
 	// passwd cleanup
-	if _, err := tx.Exec("DELETE FROM passwd WHERE last_online_auth < ?", offlineCredentialsExpirationTime); err != nil {
+	if _, err := tx.Exec("DELETE FROM passwd WHERE last_online_auth < ?", entryPurgeTime); err != nil {
 		return err
 	}
 	// empty groups cleanup
