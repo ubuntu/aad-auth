@@ -12,6 +12,9 @@ import (
 	"github.com/ubuntu/aad-auth/internal/logger"
 )
 
+//go:generate go run ../generate_completion_documentation.go completion ../../generated
+//go:generate go run ../generate_completion_documentation.go man ../../generated
+
 func run(a *cli.App) int {
 	defer installSignalHandler(a)()
 

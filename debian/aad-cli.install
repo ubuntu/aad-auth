@@ -1,0 +1,5 @@
+usr/bin/aad-cli
+usr/share/zsh/vendor-completions/_aad-cli
+usr/share/bash-completion/completions/aad-cli
+usr/share/fish/vendor_completions.d/aad-cli.fish
+usr/share/man/man1/aad-cli.1

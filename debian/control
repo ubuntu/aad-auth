@@ -43,10 +43,22 @@ Description: ${source:Synopsis} module for NSS
 
 Package: aad-common
 Architecture: all
-Enhances: libpam-aad, libnss-aad
+Enhances: libpam-aad, libnss-aad, aad-cli
 Depends: ${misc:Depends}
 Description: ${source:Synopsis} common files
  ${source:Extended-Description}
  .
  This package contains configuration and translation files shared between the
  other AAD packages.
+
+Package: aad-cli
+Architecture: any
+Built-Using: ${misc:Built-Using},
+Depends: aad-common,
+         ${shlibs:Depends},
+         ${misc:Depends},
+Description: ${source:Synopsis} CLI tool
+ ${source:Extended-Description}
+ .
+ This package contains the CLI tool to manage various aspects of the Azure AD
+ integration.
