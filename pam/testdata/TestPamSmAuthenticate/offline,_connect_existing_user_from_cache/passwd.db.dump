@@ -1,15 +1,18 @@
 passwd
 login,password,uid,gid,gecos,home,shell,last_online_auth
-futureuser@domain.com,x,80938656,80938656,Future User,/home/futureuser@domain.com,/bin/bash,4242
-expireduser@domain.com,x,2128709280,2128709280,Expired User,/home/expireduser@domain.com,/bin/bash,4242
+otheruser@domain.com,x,165119648,165119648,Other User,/home/otheruser@domain.com,/bin/bash,4242
+user@otherdomain.com,x,165119649,165119649,User,/home/user@otherdomain.com,/bin/bash,4242
+myuser@domain.com,x,1929326240,1929326240,My User,/home/myuser@domain.com,/bin/bash,4242
 
 groups
 name,password,gid
-expireduser@domain.com,x,2128709280
-futureuser@domain.com,x,80938656
+myuser@domain.com,x,1929326240
+otheruser@domain.com,x,165119648
+user@otherdomain.com,x,165119649
 
 uid_gid
 uid,gid
-2128709280,2128709280
-80938656,80938656
+1929326240,1929326240
+165119648,165119648
+165119649,165119649
 
