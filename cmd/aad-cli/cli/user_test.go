@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -81,7 +82,7 @@ func TestUser(t *testing.T) {
 			args = append(args, strings.Split(tc.args, " ")...)
 
 			cacheDir := t.TempDir()
-			cacheDB := "db_with_old_users"
+			cacheDB := "db_with_expired_users"
 			testutils.PrepareDBsForTests(t, cacheDir, cacheDB)
 
 			shadowMode := -1
@@ -102,11 +103,17 @@ func TestUser(t *testing.T) {
 				username := args[slices.Index(args, "--name")+1]
 				user, err := cache.GetUserByName(context.Background(), username)
 				require.NoError(t, err, "Setup: failed to get user from cache")
-				// Timestamps get serialized as RFC3339 which includes timezone
-				// information.
-				// We replace this with the unix timestamp to make
-				// the comparison easier.
-				got = testutils.TimestampToUnix(t, got, user.LastOnlineAuth)
+
+				if slices.Contains(args, "last_online_auth") {
+					i, err := strconv.ParseInt(strings.Trim(got, "\n"), 10, 64)
+					require.NoError(t, err, "Expected no error but got one")
+					require.Equal(t, user.LastOnlineAuth.Unix(), i)
+					return
+				}
+
+				// Timestamps get serialized as RFC3339 which includes timezone information.
+				// We replace this with the unix timestamp to make the comparison easier.
+				got = testutils.TimestampToUnixZero(t, got, user.LastOnlineAuth)
 			}
 
 			want := testutils.LoadWithUpdateFromGolden(t, got)
@@ -145,7 +152,7 @@ func TestUserSetAttribute(t *testing.T) {
 			}
 
 			cacheDir := t.TempDir()
-			cacheDB := "db_with_old_users"
+			cacheDB := "db_with_expired_users"
 			testutils.PrepareDBsForTests(t, cacheDir, cacheDB)
 			cache := testutils.NewCacheForTests(t, cacheDir)
 			c := cli.New(cli.WithCache(cache), cli.WithCurrentUser("futureuser@domain.com"))
@@ -159,9 +166,10 @@ func TestUserSetAttribute(t *testing.T) {
 
 			user, err := cache.GetUserByName(context.Background(), username)
 			require.NoError(t, err, "Setup: failed to get user from cache")
+
 			got, err := user.IniString()
 			require.NoError(t, err, "Setup: failed to get user representation as ini")
-			got = testutils.TimestampToUnix(t, got, user.LastOnlineAuth)
+			got = testutils.TimestampToUnixZero(t, got, user.LastOnlineAuth)
 
 			want := testutils.LoadWithUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "expected output to match golden file")
@@ -192,7 +200,7 @@ func TestUserMoveHomeDirectory(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			tmpDir := t.TempDir()
 			cacheDir := filepath.Join(tmpDir, "cache")
-			testutils.PrepareDBsForTests(t, cacheDir, "db_with_old_users")
+			testutils.PrepareDBsForTests(t, cacheDir, "db_with_expired_users")
 			cache := testutils.NewCacheForTests(t, cacheDir)
 
 			// Set up test filesystem structure
@@ -298,7 +306,7 @@ func TestUserMutuallyExclusiveFlags(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			cacheDir := t.TempDir()
-			cacheDB := "db_with_old_users"
+			cacheDB := "db_with_expired_users"
 			testutils.PrepareDBsForTests(t, cacheDir, cacheDB)
 			cache := testutils.NewCacheForTests(t, cacheDir)
 
