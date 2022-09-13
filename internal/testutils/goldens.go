@@ -85,12 +85,13 @@ func LoadWithUpdateFromGolden(t *testing.T, data string) string {
 	return string(want)
 }
 
-// TimestampToUnix converts a given timestamp from its RFC3339 representation to unix time,
+// TimestampToUnixZero converts a given timestamp from its RFC3339 representation to unix zero time,
 // for the purpose of storing timezone-independent information.
-func TimestampToUnix(t *testing.T, s string, timestamp time.Time) string {
+func TimestampToUnixZero(t *testing.T, s string, timestamp time.Time) string {
 	t.Helper()
 
-	return strings.ReplaceAll(s, timestamp.Format(time.RFC3339), strconv.FormatInt(timestamp.Unix(), 10))
+	var zeroTime time.Time
+	return strings.ReplaceAll(s, timestamp.Format(time.RFC3339), strconv.FormatInt(zeroTime.Unix(), 10))
 }
 
 // InstallUpdateFlag install an update flag referenced in this package.
