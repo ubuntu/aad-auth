@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
@@ -57,23 +58,23 @@ func TestUser(t *testing.T) {
 		wantErr bool
 	}{
 		"get all users":                  {args: "--all"},
-		"get user":                       {args: "--name futureuser@domain.com"},
-		"get user, shadow not available": {args: "--name futureuser@domain.com", shadowNotAvailable: true},
+		"get user":                       {args: "--name myuser@domain.com"},
+		"get user, shadow not available": {args: "--name myuser@domain.com", shadowNotAvailable: true},
 
-		"get login":            {args: "--name futureuser@domain.com login"},
-		"get password":         {args: "--name futureuser@domain.com password"},
-		"get uid":              {args: "--name futureuser@domain.com uid"},
-		"get gid":              {args: "--name futureuser@domain.com gid"},
-		"get gecos":            {args: "--name futureuser@domain.com gecos"},
-		"get home":             {args: "--name futureuser@domain.com home"},
-		"get shell":            {args: "--name futureuser@domain.com shell"},
-		"get last_online_auth": {args: "--name futureuser@domain.com last_online_auth"},
-		"get shadow_password":  {args: "--name futureuser@domain.com shadow_password"},
+		"get login":            {args: "--name myuser@domain.com login"},
+		"get password":         {args: "--name myuser@domain.com password"},
+		"get uid":              {args: "--name myuser@domain.com uid"},
+		"get gid":              {args: "--name myuser@domain.com gid"},
+		"get gecos":            {args: "--name myuser@domain.com gecos"},
+		"get home":             {args: "--name myuser@domain.com home"},
+		"get shell":            {args: "--name myuser@domain.com shell"},
+		"get last_online_auth": {args: "--name myuser@domain.com last_online_auth"},
+		"get shadow_password":  {args: "--name myuser@domain.com shadow_password"},
 
 		// error cases
 		"get nonexistent user":                      {args: "--name nouser@domain.com", wantErr: true},
-		"get bad_attribute":                         {args: "--name futureuser@domain.com bad_attribute", wantErr: true},
-		"get shadow_password, shadow not available": {args: "--name futureuser@domain.com shadow_password", shadowNotAvailable: true, wantErr: true},
+		"get bad_attribute":                         {args: "--name myuser@domain.com bad_attribute", wantErr: true},
+		"get shadow_password, shadow not available": {args: "--name myuser@domain.com shadow_password", shadowNotAvailable: true, wantErr: true},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -82,7 +83,7 @@ func TestUser(t *testing.T) {
 			args = append(args, strings.Split(tc.args, " ")...)
 
 			cacheDir := t.TempDir()
-			cacheDB := "db_with_expired_users"
+			cacheDB := "users_in_db"
 			testutils.PrepareDBsForTests(t, cacheDir, cacheDB)
 
 			shadowMode := -1
@@ -111,11 +112,13 @@ func TestUser(t *testing.T) {
 					return
 				}
 
-				// Timestamps get serialized as RFC3339 which includes timezone information.
-				// We replace this with the unix timestamp to make the comparison easier.
-				got = testutils.TimestampToUnixZero(t, got, user.LastOnlineAuth)
+				if len(args) < 4 {
+					usrStr, err := user.IniString()
+					require.NoError(t, err, "Expected no error but got one")
+					require.Equal(t, strings.Trim(usrStr, " \n"), strings.Trim(got, "\n"), "Expected user to not change")
+					return
+				}
 			}
-
 			want := testutils.LoadWithUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "expected output to match golden file")
 		})
@@ -157,7 +160,14 @@ func TestUserSetAttribute(t *testing.T) {
 			cache := testutils.NewCacheForTests(t, cacheDir)
 			c := cli.New(cli.WithCache(cache), cli.WithCurrentUser("futureuser@domain.com"))
 
-			_, err := testutils.RunApp(t, c, args...)
+			// Gets the user time before running the cli
+			var wantTime time.Time
+			aux, err := cache.GetUserByName(context.Background(), username)
+			if err == nil {
+				wantTime = aux.LastOnlineAuth
+			}
+
+			_, err = testutils.RunApp(t, c, args...)
 			if tc.wantErr {
 				require.Error(t, err, "expected command to return an error")
 				return
@@ -166,6 +176,9 @@ func TestUserSetAttribute(t *testing.T) {
 
 			user, err := cache.GetUserByName(context.Background(), username)
 			require.NoError(t, err, "Setup: failed to get user from cache")
+
+			// Handles time comparison separately
+			require.Equal(t, wantTime, user.LastOnlineAuth, "Expected last_online_auth to not have changed")
 
 			got, err := user.IniString()
 			require.NoError(t, err, "Setup: failed to get user representation as ini")
