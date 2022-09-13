@@ -217,7 +217,7 @@ func (c *Cache) updateOnlineAuthAndPassword(ctx context.Context, uid int64, user
 }
 
 func cleanUpDB(ctx context.Context, db *sql.DB, maxCacheEntryDuration time.Duration) error {
-	logger.Debug(ctx, "Clean up database")
+	logger.Debug(ctx, "Cleaning up db. Removing entries that last authenticated online more than %d days ago", maxCacheEntryDuration/(24*time.Hour))
 
 	tx, err := db.Begin()
 	if err != nil {

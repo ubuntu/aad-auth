@@ -204,9 +204,9 @@ func TestCleanupDB(t *testing.T) {
 
 		wantKeepOldUsers bool
 	}{
-		"clean up old users": {},
-		"clean up old users when offline auth is disabled": {offlineCredentialsExpirationTime: &offlineAuthDisabled},
-		"do not clean up anyone":                           {offlineCredentialsExpirationTime: &zeroDuration, wantKeepOldUsers: true},
+		"clean up old users":                             {},
+		"clean up old users with default cleanup policy": {offlineCredentialsExpirationTime: &offlineAuthDisabled},
+		"do not clean up anyone":                         {offlineCredentialsExpirationTime: &zeroDuration, wantKeepOldUsers: true},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -367,7 +367,7 @@ func TestCanAuthenticate(t *testing.T) {
 		"error on wrong user":                             {userPasswords: map[string]string{"does not exist user": "my password"}, wantErr: true},
 		"error on checking when can’t access shadow file": {userPasswords: map[string]string{"myuser@domain.com": "my password"}, shadowMode: &cache.ShadowNotAvailableMode, wantErr: true},
 		"error on trying to authenticate expired user":    {userPasswords: map[string]string{"expireduser@domain.com": "my password"}, initialCache: "db_with_expired_users", wantErr: true},
-		"error on offline authentication disabled":        {userPasswords: map[string]string{"myuser@domain.com": "my password"}, wantErr: true, disabledOfflineAuth: true},
+		"error on offline authentication disabled":        {userPasswords: map[string]string{"myuser@domain.com": "my password"}, disabledOfflineAuth: true, wantErr: true},
 	}
 	for name, tc := range tests {
 		tc := tc

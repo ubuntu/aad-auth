@@ -36,7 +36,7 @@ const (
 	shadowRWMode
 
 	defaultCredentialsExpiration int    = 90
-	expirationPurgeModifier      uint64 = 2
+	expirationPurgeMultiplier    uint64 = 2
 )
 
 // Cache is the cache object, wrapping our database.
@@ -215,14 +215,14 @@ func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 		if o.offlineCredentialsExpiration < 0 {
 			d = defaultCredentialsExpiration
 		}
-		days := uint64(d) * expirationPurgeModifier
-
-		logger.Debug(ctx, "Cleaning up db. Removing entries that last authenticated online more than %d days ago", days)
+		days := uint64(d) * expirationPurgeMultiplier
 
 		maxCacheEntryDuration := time.Duration(days * 24 * uint64(time.Hour))
 		if err := cleanUpDB(ctx, db, maxCacheEntryDuration); err != nil {
 			return nil, err
 		}
+	} else if o.offlineCredentialsExpiration == 0 {
+		logger.Debug(ctx, "Cache won't be cleaned up as credentials expiration is set to 0")
 	}
 
 	// reset shadowGid to initial value as the detection may have changed it after initialization, to retest
@@ -323,7 +323,7 @@ func (c *Cache) CanAuthenticate(ctx context.Context, username, password string) 
 	// ensure that we checked credential online recently.
 	logger.Debug(ctx, "Last online login was: %s. Current time: %s.", user.LastOnlineAuth, time.Now())
 	if c.offlineCredentialsExpiration > 0 {
-		logger.Debug(ctx, "Revalidation needed every %d days", c.offlineCredentialsExpiration)
+		logger.Debug(ctx, "Online revalidation needed every %d days", c.offlineCredentialsExpiration)
 		if time.Now().After(user.LastOnlineAuth.Add(time.Duration(uint64(c.offlineCredentialsExpiration) * 24 * uint64(time.Hour)))) {
 			return ErrOfflineCredentialsExpired
 		}
