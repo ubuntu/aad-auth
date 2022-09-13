@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/AzureAD/microsoft-authentication-library-for-go v0.5.3
 	github.com/go-ini/ini v1.67.0
-	github.com/mattn/go-sqlite3 v1.14.14
+	github.com/mattn/go-sqlite3 v1.14.15
 	github.com/stretchr/testify v1.8.0
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa
 	gopkg.in/yaml.v3 v3.0.1
