@@ -30,7 +30,7 @@ func TestAuthenticate(t *testing.T) {
 		"specified offline expiration":       {conf: "withoffline-expiration.conf"},
 
 		// offline cases
-		"Offline, connect existing user from cache": {conf: "forceoffline.conf", initialCache: "db_with_expired_users", username: "futureuser@domain.com"},
+		"Offline, connect existing user from cache": {conf: "forceoffline.conf", initialCache: "users_in_db", username: "myuser@domain.com"},
 
 		// special cases
 		"authenticate successfully with unmatched case (online)": {username: "Success@Domain.COM"},
@@ -42,8 +42,8 @@ func TestAuthenticate(t *testing.T) {
 		"error on invalid password":                           {username: "invalid credentials", wantErrType: pam.ErrPamAuth},
 		"error on offline with user online user not in cache": {conf: "forceoffline.conf", initialCache: "db_with_expired_users", wantErrType: pam.ErrPamAuth},
 		"error on offline with purged user account":           {username: "purgeduser@domain.com", initialCache: "db_with_expired_users", wantErrType: pam.ErrPamAuth},
-		"error on offline with unpurged old user account":     {conf: "forceoffline-expire-right-away.conf", initialCache: "db_with_expired_users", username: "purgeduser@domain.com", wantErrType: pam.ErrPamAuth},
 		"error on offline with expired user account":          {conf: "forceoffline.conf", initialCache: "db_with_expired_users", username: "expireduser@domain.com", wantErrType: pam.ErrPamAuth},
+		"error on offline with unpurged old user account":     {conf: "forceoffline-expire-right-away.conf", initialCache: "db_with_expired_users", username: "purgeduser@domain.com", wantErrType: pam.ErrPamAuth},
 		"error on server error":                               {username: "unreadable server response", wantErrType: pam.ErrPamAuth},
 		"error on cache can't be created/opened":              {wrongCacheOwnership: true, wantErrType: pam.ErrPamSystem},
 	}
