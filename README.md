@@ -68,6 +68,8 @@ The [default template](https://github.com/ubuntu/aad-auth/blob/main/conf/aad.con
 
 ### optional values (defaults)
 # offline_credentials_expiration = 90 ; duration in days a user can log in without online verification
+                                      ; set to 0 to prevent old users from being cleaned and allow offline authentication for an undetermined amount of time
+                                      ; set to a negative value to prevent offline authentication
 # homedir = /home/%f ; home directory pattern for the user, the following mapping applies:
 #                    ; %f - full username
 #                    ; %U - UID
