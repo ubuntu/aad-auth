@@ -41,8 +41,8 @@ func TestPamSmAuthenticate(t *testing.T) {
 		"correctly set homedir and shell values specified at domain for a new user with matching domain": {conf: "aad-with-homedir-and-shell-domain.conf"},
 
 		// offline cases
-		"offline, connect existing user from cache":                                     {conf: "forceoffline.conf", offline: true, initialCache: "db_with_old_users", username: "futureuser@domain.com"},
-		"homedir and shell values should not change for user that was already on cache": {conf: "forceoffline-with-homedir-and-shell.conf", offline: true, initialCache: "db_with_old_users", username: "futureuser@domain.com"},
+		"offline, connect existing user from cache":                                     {conf: "forceoffline.conf", offline: true, initialCache: "db_with_expired_users", username: "futureuser@domain.com"},
+		"homedir and shell values should not change for user that was already on cache": {conf: "forceoffline-with-homedir-and-shell.conf", offline: true, initialCache: "db_with_expired_users", username: "futureuser@domain.com"},
 
 		// special cases
 		"authenticate successfully with unmatched case (online)":                  {username: "Success@Domain.COM"},
@@ -54,11 +54,12 @@ func TestPamSmAuthenticate(t *testing.T) {
 		"error on unexisting users":                             {username: "no such user", wantErr: true},
 		"error on invalid password":                             {username: "invalid credentials", wantErr: true},
 		"error on config values only in mismatching domain":     {username: "success@otherdomain.com", conf: "with-domain.conf", wantErr: true},
-		"error on offline with user online user not in cache":   {conf: "forceoffline.conf", offline: true, initialCache: "db_with_old_users", wantErr: true},
-		"error on offline with purged user accoauthenticateunt": {username: "veryolduser@domain.com", offline: true, initialCache: "db_with_old_users", wantErr: true},
-		"error on offline with unpurged old user account":       {conf: "forceoffline-expire-right-away.conf", offline: true, initialCache: "db_with_old_users", username: "veryolduser@domain.com", wantErr: true},
+		"error on offline with user online user not in cache":   {conf: "forceoffline.conf", offline: true, initialCache: "db_with_expired_users", wantErr: true},
+		"error on offline with purged user accoauthenticateunt": {username: "purgeduser@domain.com", offline: true, initialCache: "db_with_expired_users", wantErr: true},
+		"error on offline with unpurged old user account":       {conf: "forceoffline-expire-right-away.conf", offline: true, initialCache: "db_with_expired_users", username: "purgeduser@domain.com", wantErr: true},
 		"error on server error":                                 {username: "unreadable server response", wantErr: true},
 		"error on cache can't be created/opened":                {wrongCacheOwnership: true, wantErr: true},
+		"error on offline connecting expired user from cache":   {conf: "forceoffline.conf", offline: true, initialCache: "db_with_expired_users", username: "expireduser@domain.com", wantErr: true},
 	}
 	for name, tc := range tests {
 		tc := tc
