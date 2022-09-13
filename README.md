@@ -3,8 +3,8 @@
 [![Code quality](https://github.com/ubuntu/aad-auth/workflows/QA/badge.svg)](https://github.com/ubuntu/aad-auth/actions?query=workflow%3AQA)
 [![Code coverage](https://codecov.io/gh/ubuntu/aad-auth/branch/master/graph/badge.svg)](https://codecov.io/gh/ubuntu/aad-auth)
 [![Go Reference](https://pkg.go.dev/badge/github.com/ubuntu/aad-auth.svg)](https://pkg.go.dev/github.com/ubuntu/aad-auth)
-[![License CLI](https://img.shields.io/badge/License-GPL3.0-blue.svg)](https://github.com/ubuntu/aad-auth/blob/master/LICENSE)
-[![License libraries](https://img.shields.io/badge/License-LGPL3.0-blue.svg)](https://github.com/ubuntu/aad-auth/blob/master/LICENSE.LGPL)
+[![License CLI](https://img.shields.io/badge/License-GPL3.0-blue.svg)](https://github.com/ubuntu/aad-auth/blob/main/COPYING)
+[![License libraries](https://img.shields.io/badge/License-LGPL3.0-blue.svg)](https://github.com/ubuntu/aad-auth/blob/main/COPYING.LESSER)
 
 This project allows users to sign in an Ubuntu machine using Azure Active Directory credentials. It relies on [Microsoft Authentication Library](https://github.com/AzureAD/microsoft-authentication-library-for-go) to communicate with Microsoft service.
 

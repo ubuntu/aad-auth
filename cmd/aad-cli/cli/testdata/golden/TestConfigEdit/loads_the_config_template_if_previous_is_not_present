@@ -1,0 +1,30 @@
+TEMPORARY CONFIG PATH: /tmp/aad.conf
+TEMPORARY CONFIG CONTENTS:
+### required values
+## See https://docs.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal
+## for more information on how to set up an Azure AD app.
+# tenant_id = xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+# app_id = yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy
+
+### optional values (defaults)
+# offline_credentials_expiration = 90 ; duration in days a user can log in without online verification
+# homedir = /home/%f ; home directory pattern for the user, the following mapping applies:
+#                    ; %f - full username
+#                    ; %U - UID
+#                    ; %l - first char of username
+#                    ; %u - username without domain
+#                    ; %d - domain
+# shell = /bin/bash ; default shell for the user
+
+### overriding values for a specific domain, every value inside a section is optional
+# [domain.com]
+# tenant_id = aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
+# app_id = bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb
+# offline_credentials_expiration = 30
+# homedir = /home/domain.com/%u
+# shell = /bin/zsh
+PREVIOUS CONFIG FILE:
+NEW CONFIG FILE:
+tenant_id = something
+app_id = something
+The configuration at /tmp/aad.conf has been successfully updated.

@@ -1,0 +1,6 @@
+[default]
+tenant_id                      = default_tenant_id
+app_id                         = default_app_id
+offline_credentials_expiration = 90
+homedir                        = /home/%u
+shell                          = /bin/bash

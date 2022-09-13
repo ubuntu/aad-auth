@@ -35,7 +35,7 @@ func TestFmtGetentOutput(t *testing.T) {
 			t.Parallel()
 
 			got := fmtGetentOutput(context.Background(), newMockEntries(tc.nEntries), tc.err)
-			want := testutils.LoadAndUpdateFromGolden(t, got)
+			want := testutils.LoadYAMLWithUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "Formatted output must match")
 		})
 	}

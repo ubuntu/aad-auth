@@ -2,6 +2,8 @@ package cache_test
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -394,4 +396,113 @@ func TestCanAuthenticate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestUpdateUserAttribute(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		username  string
+		attribute string
+		value     any
+
+		wantErr bool
+	}{
+		"gecos": {attribute: "gecos", value: "new gecos"},
+		"home":  {attribute: "home", value: "new home"},
+		"shell": {attribute: "shell", value: "new shell"},
+
+		// error cases
+		"unsupported attribute": {attribute: "uid", value: 1, wantErr: true},
+		"unsupported value":     {attribute: "gecos", value: []string{"a"}, wantErr: true},
+		"nonexistent user":      {username: "nonexistentuser@domain.com", attribute: "gecos", wantErr: true},
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			if tc.username == "" {
+				tc.username = "futureuser@domain.com"
+			}
+
+			cacheDir := t.TempDir()
+			cacheDB := "db_with_old_users"
+			testutils.PrepareDBsForTests(t, cacheDir, cacheDB)
+			c := testutils.NewCacheForTests(t, cacheDir)
+
+			err := c.UpdateUserAttribute(context.Background(), tc.username, tc.attribute, tc.value)
+			if tc.wantErr {
+				require.Error(t, err, "UpdateUserAttribute should return an error but hasn't")
+				return
+			}
+			assert.NoError(t, err, "UpdateUserAttribute should not have returned an error but has")
+
+			user, err := c.GetUserByName(context.Background(), tc.username)
+			require.NoError(t, err, "Setup: GetUserByName should not have returned an error but has")
+			got, err := user.IniString()
+			require.NoError(t, err, "Setup: failed to get user representation as ini")
+			got = testutils.TimestampToUnix(t, got, user.LastOnlineAuth)
+
+			want := testutils.LoadWithUpdateFromGolden(t, got)
+			require.Equal(t, want, got, "expected output to match golden file")
+		})
+	}
+}
+
+func TestQueryPasswdAttribute(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		username  string
+		attribute string
+
+		wantErr bool
+	}{
+		"get login":            {attribute: "login"},
+		"get password":         {attribute: "password"},
+		"get uid":              {attribute: "uid"},
+		"get gid":              {attribute: "gid"},
+		"get gecos":            {attribute: "gecos"},
+		"get home":             {attribute: "home"},
+		"get shell":            {attribute: "shell"},
+		"get last_online_auth": {attribute: "last_online_auth"},
+
+		// error cases
+		"get nonexistent user": {username: "nouser@domain.com", attribute: "uid", wantErr: true},
+		"get bad_attribute":    {attribute: "bad_attribute", wantErr: true},
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			if tc.username == "" {
+				tc.username = "futureuser@domain.com"
+			}
+
+			cacheDir := t.TempDir()
+			cacheDB := "db_with_old_users"
+			testutils.PrepareDBsForTests(t, cacheDir, cacheDB)
+			c := testutils.NewCacheForTests(t, cacheDir)
+
+			value, err := c.QueryPasswdAttribute(context.Background(), tc.username, tc.attribute)
+			if tc.wantErr {
+				require.Error(t, err, "QueryPasswdAttribute should return an error but hasn't")
+				return
+			}
+			assert.NoError(t, err, "QueryPasswdAttribute should not have returned an error but has")
+
+			got := fmt.Sprintf("%#v\n", value)
+			want := testutils.LoadWithUpdateFromGolden(t, got)
+			require.Equal(t, want, got, "expected output to match golden file")
+		})
+	}
+}
+
+func TestMain(m *testing.M) {
+	testutils.InstallUpdateFlag()
+	flag.Parse()
+
+	m.Run()
 }

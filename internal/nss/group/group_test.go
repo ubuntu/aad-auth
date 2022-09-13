@@ -51,7 +51,7 @@ func TestNewByName(t *testing.T) {
 			}
 			require.NoError(t, err, "NewByName should not have returned an error and has")
 
-			want := testutils.LoadAndUpdateFromGolden(t, got)
+			want := testutils.LoadYAMLWithUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "Group object is the expected one")
 		})
 	}
@@ -95,7 +95,7 @@ func TestNewByGID(t *testing.T) {
 			}
 			require.NoError(t, err, "NewByGID should not have returned an error and has")
 
-			want := testutils.LoadAndUpdateFromGolden(t, got)
+			want := testutils.LoadYAMLWithUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "Group object is the expected one")
 		})
 	}
@@ -150,7 +150,7 @@ func TestNextEntry(t *testing.T) {
 				return // no need to deserialize anything
 			}
 
-			want := testutils.LoadAndUpdateFromGolden(t, got)
+			want := testutils.LoadYAMLWithUpdateFromGolden(t, got)
 			if len(want) == 0 {
 				want = nil
 			}
@@ -241,7 +241,7 @@ func TestRestartIterationWithoutEndingPreviousOne(t *testing.T) {
 	_, err = group.NextEntry(context.Background())
 	require.ErrorIs(t, err, nss.ErrNotFoundENoEnt, "Should return ENOENT once there is no more groups")
 
-	want := testutils.LoadAndUpdateFromGolden(t, got)
+	want := testutils.LoadYAMLWithUpdateFromGolden(t, got)
 	if len(want) == 0 {
 		want = nil
 	}
@@ -252,7 +252,7 @@ func TestString(t *testing.T) {
 	g := group.NewTestGroup(2)
 
 	got := g.String()
-	want := testutils.LoadAndUpdateFromGolden(t, got)
+	want := testutils.LoadYAMLWithUpdateFromGolden(t, got)
 	require.Equal(t, want, got, "Group strings must match")
 }
 

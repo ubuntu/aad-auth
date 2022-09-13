@@ -1,0 +1,32 @@
+TEMPORARY CONFIG PATH: /tmp/aad.conf
+TEMPORARY CONFIG CONTENTS:
+tenant_id = default_tenant_id
+app_id = default_app_id
+offline_credentials_expiration = 90
+homedir = /home/%u
+shell = /bin/bash
+
+unsupported_option = a
+
+[example.com]
+tenant_id = example_com_tenant_id
+app_id = example_com_app_id
+offline_credentials_expiration = 30
+homedir = /home/example.com/%u
+shell = /bin/zsh
+PREVIOUS CONFIG FILE:
+tenant_id = default_tenant_id
+app_id = default_app_id
+offline_credentials_expiration = 90
+homedir = /home/%u
+shell = /bin/bash
+
+unsupported_option = a
+
+[example.com]
+tenant_id = example_com_tenant_id
+app_id = example_com_app_id
+offline_credentials_expiration = 30
+homedir = /home/example.com/%u
+shell = /bin/zsh
+The configuration at /tmp/aad.conf has been successfully updated.

@@ -2,12 +2,15 @@
 #export DH_VERBOSE = 1
 
 export GOCACHE := $(shell mktemp -d /tmp/gocache-XXXX)
-export GOFLAGS := -buildmode=pie
+export GOFLAGS := -ldflags=-X=github.com/ubuntu/aad-auth/internal/consts.Version=$(shell dpkg-parsechangelog -S Version) --mod=vendor -buildmode=pie
 
 export DEB_BUILD_MAINT_OPTIONS := optimize=-lto
 
 # Strict symbols checking
 export DPKG_GENSYMBOLS_CHECK_LEVEL := 4
+
+# Copy in build directory all content to embed
+export DH_GOLANG_INSTALL_ALL := 1
 
 # Copy in build directory all content to embed
 export DH_GOLANG_INSTALL_ALL := 1
@@ -28,7 +31,7 @@ override_dh_auto_build:
 	make -C nss/
 
 	# Build the CLI
-	# DH_GOLANG_BUILDPKG=github.com/ubuntu/aad-auth/cmd/aad-auth dh_auto_build
+	DH_GOLANG_BUILDPKG=github.com/ubuntu/aad-auth/cmd/aad-cli dh_auto_build
 
 	# Build the NSS helper binary
 	DH_GOLANG_BUILDPKG=github.com/ubuntu/aad-auth/nss/aad-auth dh_auto_build
@@ -53,5 +56,5 @@ override_dh_auto_install:
 	mkdir -p debian/tmp/usr/libexec
 	mv debian/tmp/usr/bin/aad-auth debian/tmp/usr/libexec
 
-	# Generate and install translations
-	GENERATE_ONLY_INSTALL_TO_DESTDIR=$(CURDIR)/debian/tmp go generate -x ./internal/i18n
+	# Generate and install translations and shell completions
+	GENERATE_ONLY_INSTALL_TO_DESTDIR=$(CURDIR)/debian/tmp go generate -x ./internal/i18n ./cmd/aad-cli

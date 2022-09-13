@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-ini/ini"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/aad-auth/internal/config"
 	"github.com/ubuntu/aad-auth/internal/testutils"
@@ -102,12 +103,6 @@ func TestLoadConfig(t *testing.T) {
 			aadConfigPath: "aad-missing_homedirpattern_and_shell.conf",
 			addUserPath:   "doesnotexist.conf",
 		},
-		"aad.conf with invalid 'offline_credentials_expiration' value": {
-			aadConfigPath: "aad-invalid_expiration.conf",
-		},
-		"aad.conf with invalid 'offline_credentials_expiration' value in domain": {
-			aadConfigPath: "aad-invalid_expiration-domain.conf",
-		},
 
 		// Error cases
 		"aad.conf does not exist": {
@@ -120,6 +115,14 @@ func TestLoadConfig(t *testing.T) {
 		},
 		"aad.conf missing 'app_id' value": {
 			aadConfigPath: "aad-missing_appId.conf",
+			wantErr:       true,
+		},
+		"aad.conf with invalid 'offline_credentials_expiration' value": {
+			aadConfigPath: "aad-invalid_expiration.conf",
+			wantErr:       true,
+		},
+		"aad.conf with invalid 'offline_credentials_expiration' value in domain": {
+			aadConfigPath: "aad-invalid_expiration-domain.conf",
 			wantErr:       true,
 		},
 	}
@@ -142,10 +145,58 @@ func TestLoadConfig(t *testing.T) {
 				require.Error(t, err, "LoadConfig should have failed, but didn't")
 				return
 			}
+			require.NoError(t, err, "LoadConfig failed when it shouldn't")
 
 			goldenPath := filepath.Join(testFilesPath, "golden", def)
-			want := testutils.LoadAndUpdateFromGolden(t, got, testutils.WithGoldPath(goldenPath))
+			want := testutils.LoadYAMLWithUpdateFromGolden(t, got, testutils.WithGoldPath(goldenPath))
 			require.Equal(t, want, got, "Got config and expected config are different")
+		})
+	}
+}
+
+func TestToIni(t *testing.T) {
+	t.Parallel()
+
+	expiration := 90
+	aad := config.AAD{TenantID: "tenantID", AppID: "appID", HomeDirPattern: "homeDirPattern", Shell: "shell", OfflineCredentialsExpiration: &expiration}
+
+	want := ini.Empty()
+	err := ini.ReflectFrom(want, &aad)
+	require.NoError(t, err, "Setup: failed to reflect config to ini")
+
+	got, err := aad.ToIni()
+	require.NoError(t, err, "Setup: failed to reflect config to ini")
+
+	require.Equal(t, want, got, "Got and expected ini files are different")
+}
+
+func TestValidate(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		configFile string
+		wantErr    bool
+	}{
+		"valid config, default domain":   {configFile: "valid.conf"},
+		"valid config, multiple domains": {configFile: "valid-multiple-domains.conf"},
+
+		// Error cases
+		"invalid config, default domain":   {configFile: "invalid.conf", wantErr: true},
+		"invalid config, commented values": {configFile: "invalid-commented.conf", wantErr: true},
+		"invalid config, multiple domains": {configFile: "invalid-multiple-domains.conf", wantErr: true},
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			configFile := filepath.Join("testdata", tc.configFile)
+			err := config.Validate(context.Background(), configFile)
+			if tc.wantErr {
+				require.Error(t, err, "Validate should have failed, but didn't")
+				return
+			}
+			require.NoError(t, err, "Validate failed but shouldn't have")
 		})
 	}
 }

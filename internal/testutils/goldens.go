@@ -4,7 +4,10 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -28,9 +31,9 @@ func WithGoldPath(path string) OptionGolden {
 
 var update bool
 
-// LoadAndUpdateFromGolden loads the element from an yaml golden file in testdata/golden.
+// LoadYAMLWithUpdateFromGolden loads the element from an yaml golden file in testdata/golden.
 // It will update the file if the update flag is used prior to deserializing it.
-func LoadAndUpdateFromGolden[E any](t *testing.T, ref E, opts ...OptionGolden) E {
+func LoadYAMLWithUpdateFromGolden[E any](t *testing.T, ref E, opts ...OptionGolden) E {
 	t.Helper()
 
 	o := goldenOption{
@@ -59,6 +62,35 @@ func LoadAndUpdateFromGolden[E any](t *testing.T, ref E, opts ...OptionGolden) E
 	require.NoError(t, err, "Cannot create object from golden file")
 
 	return want
+}
+
+// LoadWithUpdateFromGolden loads the element from a plaintext golden file in testdata/golden.
+// It will update the file if the update flag is used prior to deserializing it.
+func LoadWithUpdateFromGolden(t *testing.T, data string) string {
+	t.Helper()
+
+	goldPath := filepath.Join("testdata", "golden", t.Name())
+
+	if update {
+		t.Logf("updating golden file %s", goldPath)
+		err := os.MkdirAll(filepath.Dir(goldPath), 0750)
+		require.NoError(t, err, "Cannot create directory for updating golden files")
+		err = os.WriteFile(goldPath, []byte(data), 0600)
+		require.NoError(t, err, "Cannot write golden file")
+	}
+
+	want, err := os.ReadFile(goldPath)
+	require.NoError(t, err, "Cannot load golden file")
+
+	return string(want)
+}
+
+// TimestampToUnix converts a given timestamp from its RFC3339 representation to unix time,
+// for the purpose of storing timezone-independent information.
+func TimestampToUnix(t *testing.T, s string, timestamp time.Time) string {
+	t.Helper()
+
+	return strings.ReplaceAll(s, timestamp.Format(time.RFC3339), strconv.FormatInt(timestamp.Unix(), 10))
 }
 
 // InstallUpdateFlag install an update flag referenced in this package.

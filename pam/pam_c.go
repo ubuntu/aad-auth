@@ -23,10 +23,6 @@ import (
 	"github.com/ubuntu/aad-auth/internal/pam"
 )
 
-const (
-	defaultConfigPath = "/etc/aad.conf"
-)
-
 //go:generate sh -c "go build -ldflags='-extldflags -Wl,-soname,pam_aad.so' -buildmode=c-shared -o pam_aad.so"
 
 var (
@@ -44,7 +40,7 @@ func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 	pamLogger := pam.NewLogger(pam.Handle(pamh), pam.LogInfo)
 
 	// Get options.
-	conf := defaultConfigPath
+	conf := consts.DefaultConfigPath
 	for _, arg := range sliceFromArgv(argc, argv) {
 		opt, optarg, _ := strings.Cut(arg, "=")
 		switch opt {

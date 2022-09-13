@@ -15,6 +15,8 @@ import (
 	// register sqlite3 as our database driver.
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/ubuntu/aad-auth/internal/logger"
+	"golang.org/x/exp/slices"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -113,11 +115,9 @@ func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGID, f
 	shadowMode = forceShadowMode
 	if forceShadowMode == -1 {
 		shadowMode = 0
-		if f, err := os.OpenFile(shadowPath, os.O_RDWR, 0); err == nil {
-			f.Close()
+		if unix.Access(shadowPath, unix.W_OK) == nil {
 			shadowMode = shadowRWMode
-		} else if f, err := os.Open(shadowPath); err == nil {
-			f.Close()
+		} else if unix.Access(shadowPath, unix.R_OK) == nil {
 			shadowMode = shadowROMode
 		}
 	}
@@ -173,6 +173,18 @@ func (c *Cache) insertUser(ctx context.Context, newUser UserRecord) (err error) 
 	}
 
 	return tx.Commit()
+}
+
+// userExists checks if username exists in passwd.
+func userExists(db *sql.DB, login string) (bool, error) {
+	var userExists bool
+
+	row := db.QueryRow("SELECT EXISTS(SELECT 1 FROM passwd where login = ?)", login)
+	if err := row.Scan(&userExists); err != nil {
+		return userExists, fmt.Errorf("failed to check if %q exists: %w", login, err)
+	}
+
+	return userExists, nil
 }
 
 // updateOnlineAuthAndPassword updates password and last_online_auth.
@@ -243,5 +255,68 @@ func cleanUpDB(ctx context.Context, db *sql.DB, offlineCredentialsExpiration tim
 /*func updateUid()   {}
 func updateGid()   {}*/
 // TODO: add user to local groups.
-// func updateShell() {}
-// func updateHome()  {}
+
+// UpdateUserAttribute updates an attribute to a specified value for a given user.
+// If the attribute is not permitted or the value is invalid, an error is returned.
+func (c *Cache) UpdateUserAttribute(ctx context.Context, login, attr string, value any) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("could not update %s for %s: %w", attr, login, err)
+		}
+	}()
+
+	if !slices.Contains(PasswdUpdateAttributes, attr) {
+		return errors.New("invalid attribute")
+	}
+
+	logger.Debug(ctx, "Updating %s for user %s", attr, login)
+
+	if b, err := userExists(c.db, login); !b {
+		return errors.New("user does not exist")
+	} else if err != nil {
+		return err
+	}
+
+	tx, err := c.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// We control the attribute to update so sanitization for it can be bypassed.
+	if _, err = tx.Exec(fmt.Sprintf("UPDATE passwd SET %s = ? WHERE login = ?", attr), value, login); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+// QueryPasswdAttribute searches the passwd table for the given attribute for a user.
+// If no attribute is provided, the entire row is returned.
+func (c *Cache) QueryPasswdAttribute(ctx context.Context, login, attr string) (value any, err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("could not query %s for %s: %w", attr, login, err)
+		}
+	}()
+
+	if !slices.Contains(PasswdQueryAttributes, attr) {
+		return "", errors.New("invalid attribute")
+	}
+
+	logger.Debug(ctx, "Querying %s for user %s", attr, login)
+
+	if b, err := userExists(c.db, login); !b {
+		return "", errors.New("user does not exist")
+	} else if err != nil {
+		return "", err
+	}
+
+	// We control the attribute to query so sanitization for it can be bypassed.
+	row := c.db.QueryRow(fmt.Sprintf("SELECT %s from passwd WHERE login = ?", attr), login)
+	if err := row.Scan(&value); err != nil {
+		return "", fmt.Errorf("cannot scan value: %w", err)
+	}
+
+	return value, nil
+}

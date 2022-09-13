@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"strconv"
 
 	"github.com/go-ini/ini"
 	"github.com/ubuntu/aad-auth/internal/logger"
@@ -20,11 +19,21 @@ const (
 
 // AAD represents the configuration values that are used for AAD.
 type AAD struct {
-	TenantID                     string
-	AppID                        string
-	OfflineCredentialsExpiration *int
-	HomeDirPattern               string
-	Shell                        string
+	TenantID                     string `ini:"tenant_id"`
+	AppID                        string `ini:"app_id"`
+	OfflineCredentialsExpiration *int   `ini:"offline_credentials_expiration"`
+	HomeDirPattern               string `ini:"homedir"`
+	Shell                        string `ini:"shell"`
+}
+
+// ToIni reflects the configuration values to an ini.File representation.
+func (a AAD) ToIni() (*ini.File, error) {
+	cfg := ini.Empty()
+	if err := ini.ReflectFrom(cfg, &a); err != nil {
+		return nil, fmt.Errorf("could not reflect configuration to ini.File: %w", err)
+	}
+
+	return cfg, nil
 }
 
 type options struct {
@@ -74,28 +83,9 @@ func Load(ctx context.Context, p, domain string, opts ...Option) (config AAD, er
 	}
 
 	// Load default section first, and then override with domain specified keys.
-	for _, section := range []string{"", domain} {
-		cfgSection := cfg.Section(section)
-		if tmp := cfgSection.Key("tenant_id").String(); tmp != "" {
-			config.TenantID = tmp
-		}
-		if tmp := cfgSection.Key("app_id").String(); tmp != "" {
-			config.AppID = tmp
-		}
-		if tmp := cfgSection.Key("offline_credentials_expiration").String(); tmp != "" {
-			v, err := strconv.Atoi(tmp)
-			if err != nil {
-				logger.Warn(ctx, "Invalid cache revalidation period %v", err)
-				config.OfflineCredentialsExpiration = nil
-			} else {
-				config.OfflineCredentialsExpiration = &v
-			}
-		}
-		if tmp := cfgSection.Key("homedir").String(); tmp != "" {
-			config.HomeDirPattern = tmp
-		}
-		if tmp := cfgSection.Key("shell").String(); tmp != "" {
-			config.Shell = tmp
+	for _, section := range []string{ini.DefaultSection, domain} {
+		if err := cfg.Section(section).StrictMapTo(&config); err != nil {
+			return AAD{}, err
 		}
 	}
 
@@ -107,6 +97,27 @@ func Load(ctx context.Context, p, domain string, opts ...Option) (config AAD, er
 	}
 
 	return config, nil
+}
+
+// Validate validates a given configuration file.
+func Validate(ctx context.Context, p string) error {
+	cfg, err := ini.Load(p)
+	if err != nil {
+		return err
+	}
+
+	// Config sections are domains, so check them all if present
+	for _, domain := range cfg.SectionStrings() {
+		// Skip default section if we have multiple domains, as users might set
+		// required options only in the domain sections
+		if domain == ini.DefaultSection && len(cfg.Sections()) > 1 {
+			continue
+		}
+		if _, err = Load(ctx, p, domain); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // loadDefaultHomeAndShell returns default home and shell patterns for all users.

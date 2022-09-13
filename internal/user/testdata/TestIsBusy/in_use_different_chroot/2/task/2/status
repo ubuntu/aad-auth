@@ -1,0 +1,10 @@
+Name:	zsh
+Umask:	0022
+State:	S (sleeping)
+Tgid:	737004
+Ngid:	0
+Pid:	737004
+PPid:	2216
+TracerPid:	0
+Uid:	1000	1000	1000	1000
+Gid:	1000	1000	1000	1000
