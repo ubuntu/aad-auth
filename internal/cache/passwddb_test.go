@@ -63,7 +63,8 @@ func TestGetUserByName(t *testing.T) {
 				Name:           tc.name,
 				Passwd:         "x",
 				UID:            usersForTests[tc.name].uid,
-				GID:            usersForTests[tc.name].uid,      // GID match UID
+				GID:            usersForTests[tc.name].uid, // GID match UID
+				Gecos:          usersForTests[tc.name].gecos,
 				Home:           filepath.Join("/home", tc.name), // Default (fallback) home
 				Shell:          "/bin/bash",                     // Default (fallback) home
 				ShadowPasswd:   "",                              // already hanlded
@@ -125,7 +126,8 @@ func TestGetUserByUID(t *testing.T) {
 				Name:           usersForTestsByUID[tc.uid].name,
 				Passwd:         "x",
 				UID:            int64(tc.uid),
-				GID:            int64(tc.uid),                                           // GID match UID
+				GID:            int64(tc.uid), // GID match UID
+				Gecos:          usersForTestsByUID[tc.uid].gecos,
 				Home:           filepath.Join("/home", usersForTestsByUID[tc.uid].name), // Default (fallback) home
 				Shell:          "/bin/bash",                                             // Default (fallback) home
 				ShadowPasswd:   "",                                                      // already hanlded
@@ -148,7 +150,8 @@ func TestNextPasswdEntry(t *testing.T) {
 			Name:           n,
 			Passwd:         "x",
 			UID:            info.uid,
-			GID:            info.uid,                  // GID match UID
+			GID:            info.uid, // GID match UID
+			Gecos:          info.gecos,
 			Home:           filepath.Join("/home", n), // Default (fallback) home
 			Shell:          "/bin/bash",               // Default (fallback) home
 			ShadowPasswd:   "",                        // we don’t have access to shadow password in this mode.
