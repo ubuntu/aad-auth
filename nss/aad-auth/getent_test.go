@@ -63,9 +63,9 @@ func TestGetent(t *testing.T) {
 		"list local shadow entry without cache": {db: "shadow", cacheDB: "nocache", key: "root"},
 
 		// Cleans up old entries
-		"old entries in passwd are cleaned": {db: "passwd", cacheDB: "db_with_old_users"},
-		"old entries in group are cleaned":  {db: "group", cacheDB: "db_with_old_users"},
-		"old entries in shadow are cleaned": {db: "shadow", cacheDB: "db_with_old_users"},
+		"old entries in passwd are cleaned": {db: "passwd", cacheDB: "db_with_expired_users"},
+		"old entries in group are cleaned":  {db: "group", cacheDB: "db_with_expired_users"},
+		"old entries in shadow are cleaned": {db: "shadow", cacheDB: "db_with_expired_users"},
 
 		// Try to list without permission on cache
 		"try to list passwd without permission on cache": {db: "passwd", rootUID: 4242},
@@ -94,7 +94,7 @@ func TestGetent(t *testing.T) {
 			switch tc.cacheDB {
 			case "":
 				testutils.PrepareDBsForTests(t, cacheDir, "users_in_db")
-			case "db_with_old_users":
+			case "db_with_expired_users":
 				testutils.PrepareDBsForTests(t, cacheDir, tc.cacheDB)
 			case "empty":
 				testutils.NewCacheForTests(t, cacheDir)
