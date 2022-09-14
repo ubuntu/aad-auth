@@ -31,6 +31,8 @@ func TestAuthenticate(t *testing.T) {
 
 		// offline cases
 		"Offline, connect existing user from cache": {conf: "forceoffline.conf", initialCache: "users_in_db", username: "myuser@domain.com"},
+		"offline, connect expired user from cache":  {conf: "forceoffline-no-expiration.conf", initialCache: "db_with_expired_users", username: "expireduser@domain.com"},
+		"offline, connect purged user from cache":   {conf: "forceoffline-no-expiration.conf", initialCache: "db_with_expired_users", username: "purgeduser@domain.com"},
 
 		// special cases
 		"authenticate successfully with unmatched case (online)":                  {username: "Success@Domain.COM"},
@@ -42,9 +44,8 @@ func TestAuthenticate(t *testing.T) {
 		"error on unexisting users":                             {username: "no such user", wantErrType: pam.ErrPamAuth},
 		"error on invalid password":                             {username: "invalid credentials", wantErrType: pam.ErrPamAuth},
 		"error on offline with user online user not in cache":   {conf: "forceoffline.conf", initialCache: "db_with_expired_users", wantErrType: pam.ErrPamAuth},
-		"error on offline with purged user account":             {username: "purgeduser@domain.com", initialCache: "db_with_expired_users", wantErrType: pam.ErrPamAuth},
-		"error on offline with expired user account":            {conf: "forceoffline.conf", initialCache: "db_with_expired_users", username: "expireduser@domain.com", wantErrType: pam.ErrPamAuth},
-		"error on offline with unpurged old user account":       {conf: "forceoffline-expire-right-away.conf", initialCache: "db_with_expired_users", username: "purgeduser@domain.com", wantErrType: pam.ErrPamAuth},
+		"error on offline with expired user":                    {conf: "forceoffline.conf", initialCache: "db_with_expired_users", username: "expireduser@domain.com", wantErrType: pam.ErrPamAuth},
+		"error on offline with purged user":                     {conf: "forceoffline-expire-right-away.conf", initialCache: "db_with_expired_users", username: "purgeduser@domain.com", wantErrType: pam.ErrPamAuth},
 		"error on offline with offline authentication disabled": {conf: "forceoffline-offline-auth-disabled.conf", initialCache: "users_in_db", username: "myuser@domain.com", wantErrType: pam.ErrPamAuth},
 		"error on server error":                                 {username: "unreadable server response", wantErrType: pam.ErrPamAuth},
 		"error on cache can't be created/opened":                {wrongCacheOwnership: true, wantErrType: pam.ErrPamSystem},

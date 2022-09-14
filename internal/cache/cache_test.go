@@ -357,10 +357,11 @@ func TestCanAuthenticate(t *testing.T) {
 
 		wantErr bool
 	}{
-		"can authenticate one user":                     {userPasswords: map[string]string{"myuser@domain.com": "my password"}},
-		"handle separately multiple users and password": {userPasswords: map[string]string{"myuser@domain.com": "my password", "otheruser@domain.com": "other password"}},
-		"can authenticate even with shadow file RO":     {userPasswords: map[string]string{"myuser@domain.com": "my password"}, shadowMode: &cache.ShadowROMode},
-		"can authenticate even with very old user":      {userPasswords: map[string]string{"purgeduser@domain.com": "my password"}, withoutCredentialsExpiration: true, initialCache: "db_with_expired_users"},
+		"can authenticate one user":                                         {userPasswords: map[string]string{"myuser@domain.com": "my password"}},
+		"handle separately multiple users and password":                     {userPasswords: map[string]string{"myuser@domain.com": "my password", "otheruser@domain.com": "other password"}},
+		"can authenticate even with shadow file RO":                         {userPasswords: map[string]string{"myuser@domain.com": "my password"}, shadowMode: &cache.ShadowROMode},
+		"can authenticate even with expired user if expiration is disabled": {userPasswords: map[string]string{"expireduser@domain.com": "my password"}, withoutCredentialsExpiration: true, initialCache: "db_with_expired_users"},
+		"can authenticate even with purged user if expiration is disabled":  {userPasswords: map[string]string{"purgeduser@domain.com": "my password"}, withoutCredentialsExpiration: true, initialCache: "db_with_expired_users"},
 
 		// error cases
 		"error on wrong password":                         {userPasswords: map[string]string{"myuser@domain.com": "wrong password"}, wantErr: true},
