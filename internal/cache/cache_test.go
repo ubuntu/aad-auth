@@ -428,13 +428,20 @@ func TestUpdateUserAttribute(t *testing.T) {
 			t.Parallel()
 
 			if tc.username == "" {
-				tc.username = "futureuser@domain.com"
+				tc.username = "myuser@domain.com"
 			}
 
 			cacheDir := t.TempDir()
-			cacheDB := "db_with_expired_users"
+			cacheDB := "users_in_db"
 			testutils.PrepareDBsForTests(t, cacheDir, cacheDB)
 			c := testutils.NewCacheForTests(t, cacheDir)
+
+			var wantTime time.Time
+			if tc.username != "nonexistentuser@domain.com" {
+				user, err := c.GetUserByName(context.Background(), tc.username)
+				require.NoError(t, err, "Expected no error but got one.")
+				wantTime = user.LastOnlineAuth
+			}
 
 			err := c.UpdateUserAttribute(context.Background(), tc.username, tc.attribute, tc.value)
 			if tc.wantErr {
@@ -446,9 +453,11 @@ func TestUpdateUserAttribute(t *testing.T) {
 			user, err := c.GetUserByName(context.Background(), tc.username)
 			require.NoError(t, err, "Setup: GetUserByName should not have returned an error but has")
 
+			require.Equal(t, wantTime, user.LastOnlineAuth, "Expected last_online_auth to not change.")
+
 			got, err := user.IniString()
 			require.NoError(t, err, "Setup: failed to get user representation as ini")
-			got = testutils.TimestampToUnixZero(t, got, user.LastOnlineAuth)
+			got = testutils.TimestampToWildcard(t, got, user.LastOnlineAuth)
 
 			want := testutils.LoadWithUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "expected output to match golden file")
@@ -486,11 +495,11 @@ func TestQueryPasswdAttribute(t *testing.T) {
 			start := time.Now()
 
 			if tc.username == "" {
-				tc.username = "futureuser@domain.com"
+				tc.username = "myuser@domain.com"
 			}
 
 			cacheDir := t.TempDir()
-			cacheDB := "db_with_expired_users"
+			cacheDB := "users_in_db"
 			testutils.PrepareDBsForTests(t, cacheDir, cacheDB)
 			c := testutils.NewCacheForTests(t, cacheDir)
 
@@ -506,8 +515,10 @@ func TestQueryPasswdAttribute(t *testing.T) {
 				i, ok := value.(int64)
 				require.True(t, ok, "Value must be an int64")
 
-				wantTime := testutils.ParseTimeWildcard("FUTURE_TIME")
-				require.True(t, testutils.TimeBetweenOrEquals(time.Unix(i, 0), start, wantTime), "Got time does not match wanted time")
+				gotTime := time.Unix(i, 0)
+				start = start.Add(-48 * time.Hour)
+				end := testutils.ParseTimeWildcard("RECENT_TIME")
+				require.True(t, testutils.TimeBetweenOrEquals(gotTime, start, end), "Got time does not match wanted time")
 				return
 			}
 

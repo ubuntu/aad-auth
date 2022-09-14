@@ -23,9 +23,9 @@ func TestUserShellCompletion(t *testing.T) {
 		"get all users, short flag":            {args: "user -n"},
 		"get all users, long flag":             {args: "user --name"},
 		"get attributes for user":              {args: "user"},
-		"get attributes for overridden user":   {args: "user --name futureuser@domain.com"},
+		"get attributes for overridden user":   {args: "user --name myuser@domain.com"},
 		"default completion for last argument": {args: "user gecos"},
-		"default completion, overridden user":  {args: "user gecos --name futureuser@domain.com"},
+		"default completion, overridden user":  {args: "user gecos --name myuser@domain.com"},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -124,13 +124,13 @@ func TestUserSetAttribute(t *testing.T) {
 		badPerms bool
 		wantErr  bool
 	}{
-		"set gecos":                 {args: "user --name futureuser@domain.com gecos newvalue"},
-		"set home":                  {args: "user --name futureuser@domain.com home newvalue"},
-		"set shell":                 {args: "user --name futureuser@domain.com shell newvalue"},
+		"set gecos":                 {args: "user --name myuser@domain.com gecos newvalue"},
+		"set home":                  {args: "user --name myuser@domain.com home newvalue"},
+		"set shell":                 {args: "user --name myuser@domain.com shell newvalue"},
 		"set shell on default user": {args: "user shell newvalue"},
 
 		// error cases
-		"set bad_attribute":    {args: "user --name futureuser@domain.com bad_attribute newvalue", wantErr: true},
+		"set bad_attribute":    {args: "user --name myuser@domain.com bad_attribute newvalue", wantErr: true},
 		"set nonexistent user": {args: "user --name nouser@domain.com gecos newvalue", wantErr: true},
 	}
 	for name, tc := range tests {
@@ -143,23 +143,24 @@ func TestUserSetAttribute(t *testing.T) {
 
 			// Fallback when a username is not provided
 			if usernameIndex == -1 {
-				username = "futureuser@domain.com"
+				username = "myuser@domain.com"
 			}
 
 			cacheDir := t.TempDir()
-			cacheDB := "db_with_expired_users"
+			cacheDB := "users_in_db"
 			testutils.PrepareDBsForTests(t, cacheDir, cacheDB)
 			cache := testutils.NewCacheForTests(t, cacheDir)
-			c := cli.New(cli.WithCache(cache), cli.WithCurrentUser("futureuser@domain.com"))
+			c := cli.New(cli.WithCache(cache), cli.WithCurrentUser("myuser@domain.com"))
 
 			// Gets the user time before running the cli
 			var wantTime time.Time
-			aux, err := cache.GetUserByName(context.Background(), username)
-			if err == nil {
+			if username != "nouser@domain.com" {
+				aux, err := cache.GetUserByName(context.Background(), username)
+				require.NoError(t, err, "Expected no error but got one.")
 				wantTime = aux.LastOnlineAuth
 			}
 
-			_, err = testutils.RunApp(t, c, args...)
+			_, err := testutils.RunApp(t, c, args...)
 			if tc.wantErr {
 				require.Error(t, err, "expected command to return an error")
 				return
@@ -174,7 +175,7 @@ func TestUserSetAttribute(t *testing.T) {
 
 			got, err := user.IniString()
 			require.NoError(t, err, "Setup: failed to get user representation as ini")
-			got = testutils.TimestampToUnixZero(t, got, user.LastOnlineAuth)
+			got = testutils.TimestampToWildcard(t, got, user.LastOnlineAuth)
 
 			want := testutils.LoadWithUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "expected output to match golden file")
@@ -278,11 +279,11 @@ func TestUserMutuallyExclusiveFlags(t *testing.T) {
 		expectedErr string
 	}{
 		"both --name and --all": {
-			args:        "user --name futureuser@domain.com --all",
+			args:        "user --name myuser@domain.com --all",
 			expectedErr: "if any flags in the group [name all] are set none of the others can be",
 		},
 		"both -n and -a": {
-			args:        "user -n futureuser@domain.com -a",
+			args:        "user -n myuser@domain.com -a",
 			expectedErr: "if any flags in the group [name all] are set none of the others can be",
 		},
 		"both --move-home and --all": {
@@ -311,7 +312,7 @@ func TestUserMutuallyExclusiveFlags(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			cacheDir := t.TempDir()
-			cacheDB := "db_with_expired_users"
+			cacheDB := "users_in_db"
 			testutils.PrepareDBsForTests(t, cacheDir, cacheDB)
 			cache := testutils.NewCacheForTests(t, cacheDir)
 
