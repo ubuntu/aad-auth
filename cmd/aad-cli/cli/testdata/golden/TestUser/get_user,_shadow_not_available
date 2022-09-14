@@ -1,9 +1,9 @@
-login            = futureuser@domain.com
+login            = myuser@domain.com
 password         = x
-uid              = 80938656
-gid              = 80938656
-gecos            = Future User
-home             = /home/futureuser@domain.com
+uid              = 1929326240
+gid              = 1929326240
+gecos            = My User
+home             = /home/myuser@domain.com
 shell            = /bin/bash
-last_online_auth = 2658836168
+last_online_auth = SOME_TIME
 shadow_password  =

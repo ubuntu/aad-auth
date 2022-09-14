@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
@@ -22,9 +23,9 @@ func TestUserShellCompletion(t *testing.T) {
 		"get all users, short flag":            {args: "user -n"},
 		"get all users, long flag":             {args: "user --name"},
 		"get attributes for user":              {args: "user"},
-		"get attributes for overridden user":   {args: "user --name futureuser@domain.com"},
+		"get attributes for overridden user":   {args: "user --name myuser@domain.com"},
 		"default completion for last argument": {args: "user gecos"},
-		"default completion, overridden user":  {args: "user gecos --name futureuser@domain.com"},
+		"default completion, overridden user":  {args: "user gecos --name myuser@domain.com"},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -56,23 +57,23 @@ func TestUser(t *testing.T) {
 		wantErr bool
 	}{
 		"get all users":                  {args: "--all"},
-		"get user":                       {args: "--name futureuser@domain.com"},
-		"get user, shadow not available": {args: "--name futureuser@domain.com", shadowNotAvailable: true},
+		"get user":                       {args: "--name myuser@domain.com"},
+		"get user, shadow not available": {args: "--name myuser@domain.com", shadowNotAvailable: true},
 
-		"get login":            {args: "--name futureuser@domain.com login"},
-		"get password":         {args: "--name futureuser@domain.com password"},
-		"get uid":              {args: "--name futureuser@domain.com uid"},
-		"get gid":              {args: "--name futureuser@domain.com gid"},
-		"get gecos":            {args: "--name futureuser@domain.com gecos"},
-		"get home":             {args: "--name futureuser@domain.com home"},
-		"get shell":            {args: "--name futureuser@domain.com shell"},
-		"get last_online_auth": {args: "--name futureuser@domain.com last_online_auth"},
-		"get shadow_password":  {args: "--name futureuser@domain.com shadow_password"},
+		"get login":            {args: "--name myuser@domain.com login"},
+		"get password":         {args: "--name myuser@domain.com password"},
+		"get uid":              {args: "--name myuser@domain.com uid"},
+		"get gid":              {args: "--name myuser@domain.com gid"},
+		"get gecos":            {args: "--name myuser@domain.com gecos"},
+		"get home":             {args: "--name myuser@domain.com home"},
+		"get shell":            {args: "--name myuser@domain.com shell"},
+		"get last_online_auth": {args: "--name myuser@domain.com last_online_auth"},
+		"get shadow_password":  {args: "--name myuser@domain.com shadow_password"},
 
 		// error cases
 		"get nonexistent user":                      {args: "--name nouser@domain.com", wantErr: true},
-		"get bad_attribute":                         {args: "--name futureuser@domain.com bad_attribute", wantErr: true},
-		"get shadow_password, shadow not available": {args: "--name futureuser@domain.com shadow_password", shadowNotAvailable: true, wantErr: true},
+		"get bad_attribute":                         {args: "--name myuser@domain.com bad_attribute", wantErr: true},
+		"get shadow_password, shadow not available": {args: "--name myuser@domain.com shadow_password", shadowNotAvailable: true, wantErr: true},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -81,7 +82,7 @@ func TestUser(t *testing.T) {
 			args = append(args, strings.Split(tc.args, " ")...)
 
 			cacheDir := t.TempDir()
-			cacheDB := "db_with_old_users"
+			cacheDB := "users_in_db"
 			testutils.PrepareDBsForTests(t, cacheDir, cacheDB)
 
 			shadowMode := -1
@@ -102,13 +103,14 @@ func TestUser(t *testing.T) {
 				username := args[slices.Index(args, "--name")+1]
 				user, err := cache.GetUserByName(context.Background(), username)
 				require.NoError(t, err, "Setup: failed to get user from cache")
-				// Timestamps get serialized as RFC3339 which includes timezone
-				// information.
-				// We replace this with the unix timestamp to make
-				// the comparison easier.
-				got = testutils.TimestampToUnix(t, got, user.LastOnlineAuth)
-			}
 
+				if len(args) < 4 || slices.Contains(args, "last_online_auth") {
+					tmp := strings.Index(got, user.LastOnlineAuth.Format(time.RFC3339))
+					require.NotEqual(t, -1, tmp, "Expected to find the correct time")
+				}
+
+				got = testutils.TimestampToWildcard(t, got, user.LastOnlineAuth)
+			}
 			want := testutils.LoadWithUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "expected output to match golden file")
 		})
@@ -122,13 +124,13 @@ func TestUserSetAttribute(t *testing.T) {
 		badPerms bool
 		wantErr  bool
 	}{
-		"set gecos":                 {args: "user --name futureuser@domain.com gecos newvalue"},
-		"set home":                  {args: "user --name futureuser@domain.com home newvalue"},
-		"set shell":                 {args: "user --name futureuser@domain.com shell newvalue"},
+		"set gecos":                 {args: "user --name myuser@domain.com gecos newvalue"},
+		"set home":                  {args: "user --name myuser@domain.com home newvalue"},
+		"set shell":                 {args: "user --name myuser@domain.com shell newvalue"},
 		"set shell on default user": {args: "user shell newvalue"},
 
 		// error cases
-		"set bad_attribute":    {args: "user --name futureuser@domain.com bad_attribute newvalue", wantErr: true},
+		"set bad_attribute":    {args: "user --name myuser@domain.com bad_attribute newvalue", wantErr: true},
 		"set nonexistent user": {args: "user --name nouser@domain.com gecos newvalue", wantErr: true},
 	}
 	for name, tc := range tests {
@@ -141,14 +143,22 @@ func TestUserSetAttribute(t *testing.T) {
 
 			// Fallback when a username is not provided
 			if usernameIndex == -1 {
-				username = "futureuser@domain.com"
+				username = "myuser@domain.com"
 			}
 
 			cacheDir := t.TempDir()
-			cacheDB := "db_with_old_users"
+			cacheDB := "users_in_db"
 			testutils.PrepareDBsForTests(t, cacheDir, cacheDB)
 			cache := testutils.NewCacheForTests(t, cacheDir)
-			c := cli.New(cli.WithCache(cache), cli.WithCurrentUser("futureuser@domain.com"))
+			c := cli.New(cli.WithCache(cache), cli.WithCurrentUser("myuser@domain.com"))
+
+			// Gets the user time before running the cli
+			var wantTime time.Time
+			if username != "nouser@domain.com" {
+				aux, err := cache.GetUserByName(context.Background(), username)
+				require.NoError(t, err, "Expected no error but got one.")
+				wantTime = aux.LastOnlineAuth
+			}
 
 			_, err := testutils.RunApp(t, c, args...)
 			if tc.wantErr {
@@ -159,9 +169,13 @@ func TestUserSetAttribute(t *testing.T) {
 
 			user, err := cache.GetUserByName(context.Background(), username)
 			require.NoError(t, err, "Setup: failed to get user from cache")
+
+			// Handles time comparison separately
+			require.Equal(t, wantTime, user.LastOnlineAuth, "Expected last_online_auth to not have changed")
+
 			got, err := user.IniString()
 			require.NoError(t, err, "Setup: failed to get user representation as ini")
-			got = testutils.TimestampToUnix(t, got, user.LastOnlineAuth)
+			got = testutils.TimestampToWildcard(t, got, user.LastOnlineAuth)
 
 			want := testutils.LoadWithUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "expected output to match golden file")
@@ -192,7 +206,7 @@ func TestUserMoveHomeDirectory(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			tmpDir := t.TempDir()
 			cacheDir := filepath.Join(tmpDir, "cache")
-			testutils.PrepareDBsForTests(t, cacheDir, "db_with_old_users")
+			testutils.PrepareDBsForTests(t, cacheDir, "db_with_expired_users")
 			cache := testutils.NewCacheForTests(t, cacheDir)
 
 			// Set up test filesystem structure
@@ -265,11 +279,11 @@ func TestUserMutuallyExclusiveFlags(t *testing.T) {
 		expectedErr string
 	}{
 		"both --name and --all": {
-			args:        "user --name futureuser@domain.com --all",
+			args:        "user --name myuser@domain.com --all",
 			expectedErr: "if any flags in the group [name all] are set none of the others can be",
 		},
 		"both -n and -a": {
-			args:        "user -n futureuser@domain.com -a",
+			args:        "user -n myuser@domain.com -a",
 			expectedErr: "if any flags in the group [name all] are set none of the others can be",
 		},
 		"both --move-home and --all": {
@@ -298,7 +312,7 @@ func TestUserMutuallyExclusiveFlags(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			cacheDir := t.TempDir()
-			cacheDB := "db_with_old_users"
+			cacheDB := "users_in_db"
 			testutils.PrepareDBsForTests(t, cacheDir, cacheDB)
 			cache := testutils.NewCacheForTests(t, cacheDir)
 

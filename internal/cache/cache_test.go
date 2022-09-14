@@ -221,26 +221,26 @@ func TestCleanupDB(t *testing.T) {
 				opts = append(opts, cache.WithOfflineCredentialsExpiration(*tc.offlineCredentialsExpirationTime))
 			}
 
-			testutils.PrepareDBsForTests(t, cacheDir, "db_with_old_users")
+			testutils.PrepareDBsForTests(t, cacheDir, "db_with_expired_users")
 
 			// This triggers a database cleanup if offlineCredentialsExpirationTime is not 0
 			c, err := cache.New(context.Background(), opts...)
 			require.NoError(t, err, "Should be able to create a cache and clean up")
 			t.Cleanup(func() { c.Close(context.Background()) })
 
-			_, errUserVeryOld := c.GetUserByName(context.Background(), "veryolduser@domain.com")
-			_, errUserMiddleOld := c.GetUserByName(context.Background(), "middleolduser@domain.com")
-			_, errUserRecentFuture := c.GetUserByName(context.Background(), "futureuser@domain.com")
+			_, errUserPurged := c.GetUserByName(context.Background(), "purgeduser@domain.com")
+			_, errUserExpired := c.GetUserByName(context.Background(), "expireduser@domain.com")
+			_, errUserValid := c.GetUserByName(context.Background(), "futureuser@domain.com")
 
 			if tc.wantKeepOldUsers {
-				assert.NoError(t, errUserVeryOld, "Very old user should not be cleaned up due to duration being 0")
-				assert.NoError(t, errUserMiddleOld, "Not that old user should not be cleaned up due to duration being 0")
+				assert.NoError(t, errUserPurged, "Very old user should not be cleaned up due to duration being 0")
+				assert.NoError(t, errUserExpired, "Not that old user should not be cleaned up due to duration being 0")
 			} else {
-				assert.Error(t, errUserVeryOld, "Very old user should be cleaned up")
-				assert.Error(t, errUserMiddleOld, "Not that old user should be cleaned up")
+				assert.Error(t, errUserPurged, "Very old user should be cleaned up")
+				assert.NoError(t, errUserExpired, "Expired user should not be cleaned up")
 			}
 
-			assert.NoError(t, errUserRecentFuture, "Really recent of future user should not be cleaned up")
+			assert.NoError(t, errUserValid, "Really recent of valid user should not be cleaned up")
 		})
 	}
 }
@@ -347,11 +347,11 @@ func TestCanAuthenticate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		userPasswords  map[string]string
-		useoldaccounts bool
-		shadowMode     *int
-
-		wantErr bool
+		userPasswords                map[string]string
+		withoutCredentialsExpiration bool
+		shadowMode                   *int
+		initialCache                 string
+		wantErr                      bool
 	}{
 		"can authenticate one user":                     {userPasswords: map[string]string{"myuser@domain.com": "my password"}},
 		"handle separately multiple users and password": {userPasswords: map[string]string{"myuser@domain.com": "my password", "otheruser@domain.com": "other password"}},
@@ -361,7 +361,8 @@ func TestCanAuthenticate(t *testing.T) {
 		"error on wrong password":                         {userPasswords: map[string]string{"myuser@domain.com": "wrong password"}, wantErr: true},
 		"error on wrong user":                             {userPasswords: map[string]string{"does not exist user": "my password"}, wantErr: true},
 		"error on checking when can’t access shadow file": {userPasswords: map[string]string{"myuser@domain.com": "my password"}, shadowMode: &cache.ShadowNotAvailableMode, wantErr: true},
-		"do not let too old unpurged accounts to log in ": {userPasswords: map[string]string{"veryolduser@domain.com": "my password"}, useoldaccounts: true, wantErr: true},
+		"error on trying to authenticate expired user":    {userPasswords: map[string]string{"expireduser@domain.com": "my password"}, initialCache: "db_with_expired_users", wantErr: true},
+		"do not let too old unpurged accounts to log in ": {userPasswords: map[string]string{"purgeduser@domain.com": "my password"}, initialCache: "db_with_expired_users", withoutCredentialsExpiration: true, wantErr: true},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -376,10 +377,14 @@ func TestCanAuthenticate(t *testing.T) {
 			}
 
 			initialCache := "users_in_db"
-			if tc.useoldaccounts {
-				opts = append(opts, cache.WithOfflineCredentialsExpiration(0))
-				initialCache = "db_with_old_users"
+			if tc.initialCache != "" {
+				initialCache = tc.initialCache
 			}
+
+			if tc.withoutCredentialsExpiration {
+				opts = append(opts, cache.WithOfflineCredentialsExpiration(0))
+			}
+
 			testutils.PrepareDBsForTests(t, cacheDir, initialCache, opts...)
 
 			c := testutils.NewCacheForTests(t, cacheDir, opts...)
@@ -387,7 +392,7 @@ func TestCanAuthenticate(t *testing.T) {
 				err := c.CanAuthenticate(context.Background(), username, password)
 				if tc.wantErr {
 					require.Error(t, err, "CanAuthenticate should return an error but hasn't")
-					if username == "veryolduser@domain.com" {
+					if tc.initialCache == "db_with_expired_users" {
 						require.ErrorIs(t, err, cache.ErrOfflineCredentialsExpired, "CanAuthenticate should return a certain error type for expired unpurged users")
 					}
 					return
@@ -423,13 +428,20 @@ func TestUpdateUserAttribute(t *testing.T) {
 			t.Parallel()
 
 			if tc.username == "" {
-				tc.username = "futureuser@domain.com"
+				tc.username = "myuser@domain.com"
 			}
 
 			cacheDir := t.TempDir()
-			cacheDB := "db_with_old_users"
+			cacheDB := "users_in_db"
 			testutils.PrepareDBsForTests(t, cacheDir, cacheDB)
 			c := testutils.NewCacheForTests(t, cacheDir)
+
+			var wantTime time.Time
+			if tc.username != "nonexistentuser@domain.com" {
+				user, err := c.GetUserByName(context.Background(), tc.username)
+				require.NoError(t, err, "Expected no error but got one.")
+				wantTime = user.LastOnlineAuth
+			}
 
 			err := c.UpdateUserAttribute(context.Background(), tc.username, tc.attribute, tc.value)
 			if tc.wantErr {
@@ -440,9 +452,12 @@ func TestUpdateUserAttribute(t *testing.T) {
 
 			user, err := c.GetUserByName(context.Background(), tc.username)
 			require.NoError(t, err, "Setup: GetUserByName should not have returned an error but has")
+
+			require.Equal(t, wantTime, user.LastOnlineAuth, "Expected last_online_auth to not change.")
+
 			got, err := user.IniString()
 			require.NoError(t, err, "Setup: failed to get user representation as ini")
-			got = testutils.TimestampToUnix(t, got, user.LastOnlineAuth)
+			got = testutils.TimestampToWildcard(t, got, user.LastOnlineAuth)
 
 			want := testutils.LoadWithUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "expected output to match golden file")
@@ -477,12 +492,14 @@ func TestQueryPasswdAttribute(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			start := time.Now()
+
 			if tc.username == "" {
-				tc.username = "futureuser@domain.com"
+				tc.username = "myuser@domain.com"
 			}
 
 			cacheDir := t.TempDir()
-			cacheDB := "db_with_old_users"
+			cacheDB := "users_in_db"
 			testutils.PrepareDBsForTests(t, cacheDir, cacheDB)
 			c := testutils.NewCacheForTests(t, cacheDir)
 
@@ -494,6 +511,17 @@ func TestQueryPasswdAttribute(t *testing.T) {
 			assert.NoError(t, err, "QueryPasswdAttribute should not have returned an error but has")
 
 			got := fmt.Sprintf("%#v\n", value)
+			if tc.attribute == "last_online_auth" {
+				i, ok := value.(int64)
+				require.True(t, ok, "Value must be an int64")
+
+				gotTime := time.Unix(i, 0)
+				start = start.Add(-48 * time.Hour)
+				end := testutils.ParseTimeWildcard("RECENT_TIME")
+				require.True(t, testutils.TimeBetweenOrEquals(gotTime, start, end), "Got time does not match wanted time")
+				return
+			}
+
 			want := testutils.LoadWithUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "expected output to match golden file")
 		})

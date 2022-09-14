@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	osuser "os/user"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/ubuntu/aad-auth/internal/cache"
@@ -145,6 +146,15 @@ func runUser(ctx context.Context, args []string, c *cache.Cache, procFs, usernam
 		}
 
 		value, err = c.QueryPasswdAttribute(ctx, username, key)
+		if key == "last_online_auth" {
+			i, ok := value.(int64)
+			if !ok {
+				err = fmt.Errorf("failed to parse last_online_auth as the value isn't valid: %w", err)
+				break
+			}
+			value = time.Unix(i, 0).Format(time.RFC3339)
+		}
+
 	case 2:
 		// Set the value for the given key and exit
 		key, value = args[0], args[1]

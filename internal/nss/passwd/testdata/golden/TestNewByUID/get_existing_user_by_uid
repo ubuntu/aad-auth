@@ -2,6 +2,6 @@ name: myuser@domain.com
 passwd: x
 uid: 1929326240
 gid: 1929326240
-gecos: ""
+gecos: My User
 dir: /home/myuser@domain.com
 shell: /bin/bash

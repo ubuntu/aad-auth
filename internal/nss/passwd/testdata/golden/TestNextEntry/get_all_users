@@ -2,20 +2,20 @@
   passwd: x
   uid: 1929326240
   gid: 1929326240
-  gecos: ""
+  gecos: My User
   dir: /home/myuser@domain.com
   shell: /bin/bash
 - name: otheruser@domain.com
   passwd: x
   uid: 165119648
   gid: 165119648
-  gecos: ""
+  gecos: Other User
   dir: /home/otheruser@domain.com
   shell: /bin/bash
 - name: user@otherdomain.com
   passwd: x
   uid: 165119649
   gid: 165119649
-  gecos: ""
+  gecos: User
   dir: /home/user@otherdomain.com
   shell: /bin/bash

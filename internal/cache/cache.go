@@ -32,6 +32,8 @@ const (
 	shadowNotAvailableMode = iota
 	shadowROMode
 	shadowRWMode
+
+	defaultCredentialsExpiration int = 90
 )
 
 // Cache is the cache object, wrapping our database.
@@ -164,7 +166,7 @@ func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 
 		teardownDuration: 30 * time.Second,
 
-		offlineCredentialsExpiration: 90,
+		offlineCredentialsExpiration: defaultCredentialsExpiration,
 	}
 	// applied options
 	for _, opt := range opts {

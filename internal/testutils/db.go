@@ -262,11 +262,8 @@ func loadDumpIntoDB(t *testing.T, dumpPath, dbPath string) {
 			// Looping through the columns to ensure that the values will be ordered as supposed to.
 			for i, col := range table.Cols {
 				values[i] = row[col]
-				if col == "last_online_auth" && values[i] == "RECENT_TIME" {
-					// RECENT_TIME ensures that the values that will be inserted in the db will be adjusted based on the time the test was run.
-					// This way, we don't need to always initialize caches that don't clean old users from the database, since the last_online_auth
-					// for users will be updated when inserted into the db.
-					values[i] = time.Now().Add(-time.Hour * 48).Unix()
+				if col == "last_online_auth" {
+					values[i] = ParseTimeWildcard(row[col]).Unix()
 				}
 				s += "?,"
 			}
@@ -277,4 +274,30 @@ func loadDumpIntoDB(t *testing.T, dumpPath, dbPath string) {
 			require.NoError(t, err, "Expected to insert %#v into the db", row)
 		}
 	}
+}
+
+// ParseTimeWildcard parses some time wildcards that are contained in the dump files to ensure that the loaded dbs will always present the same
+// behavior when loaded for tests.
+func ParseTimeWildcard(value string) time.Time {
+	// c is a contant value, set to two days, that is used to ensure that the time is within some intervals.
+	c := time.Hour * 48
+	expirationDays := time.Duration(int64(cache.DefaultCredentialsExpiration) * 24 * int64(time.Hour))
+
+	parsedTime := time.Now()
+	var addend time.Duration
+	switch value {
+	case "RECENT_TIME":
+		addend = -c
+
+	case "PURGED_TIME":
+		addend = -((2 * expirationDays) + c)
+
+	case "EXPIRED_TIME":
+		addend = -(expirationDays + c)
+
+	case "FUTURE_TIME":
+		addend = c
+	}
+
+	return parsedTime.Add(addend)
 }
