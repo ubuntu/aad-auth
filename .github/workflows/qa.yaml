@@ -17,9 +17,18 @@ jobs:
           sudo DEBIAN_FRONTEND=noninteractive apt update
           sudo DEBIAN_FRONTEND=noninteractive apt install -y libpam-dev libglib2.0-dev gcc
       - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Get version of golanci-lint to use
+        id: cilint-version-fetch
+        # This handles "require foo version" and "require (\nfoo version\n)"" formats
+        run: echo "::set-output name=version::$(grep golangci-lint tools/go.mod | rev | cut -f1 -d' ' | rev)"
       - name: Code formatting, vet, static checker Security…
         uses: golangci/golangci-lint-action@v3
         with:
+          version: ${{ steps.cilint-version-fetch.outputs.version }}
           args: "--config .golangci-ci.yaml"
       - name: Module files are up to date
         run: |
