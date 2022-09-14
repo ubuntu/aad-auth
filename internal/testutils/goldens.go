@@ -4,7 +4,6 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -85,13 +84,12 @@ func LoadWithUpdateFromGolden(t *testing.T, data string) string {
 	return string(want)
 }
 
-// TimestampToUnixZero converts a given timestamp from its RFC3339 representation to unix zero time,
-// for the purpose of storing timezone-independent information.
-func TimestampToUnixZero(t *testing.T, s string, timestamp time.Time) string {
+// TimestampToWildcard converts a given timestamp from its RFC3339 representation to a time wildcard
+// in order to reduce diff noise in the tests.
+func TimestampToWildcard(t *testing.T, s string, timestamp time.Time) string {
 	t.Helper()
 
-	var zeroTime time.Time
-	return strings.ReplaceAll(s, timestamp.Format(time.RFC3339), strconv.FormatInt(zeroTime.Unix(), 10))
+	return strings.ReplaceAll(s, timestamp.Format(time.RFC3339), "SOME_TIME")
 }
 
 // InstallUpdateFlag install an update flag referenced in this package.

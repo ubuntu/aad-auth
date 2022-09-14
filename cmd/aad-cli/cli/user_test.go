@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -105,19 +104,12 @@ func TestUser(t *testing.T) {
 				user, err := cache.GetUserByName(context.Background(), username)
 				require.NoError(t, err, "Setup: failed to get user from cache")
 
-				if slices.Contains(args, "last_online_auth") {
-					i, err := strconv.ParseInt(strings.Trim(got, "\n"), 10, 64)
-					require.NoError(t, err, "Expected no error but got one")
-					require.Equal(t, user.LastOnlineAuth.Unix(), i)
-					return
+				if len(args) < 4 || slices.Contains(args, "last_online_auth") {
+					tmp := strings.Index(got, user.LastOnlineAuth.Format(time.RFC3339))
+					require.NotEqual(t, -1, tmp, "Expected to find the correct time")
 				}
 
-				if len(args) < 4 {
-					usrStr, err := user.IniString()
-					require.NoError(t, err, "Expected no error but got one")
-					require.Equal(t, strings.Trim(usrStr, " \n"), strings.Trim(got, "\n"), "Expected user to not change")
-					return
-				}
+				got = testutils.TimestampToWildcard(t, got, user.LastOnlineAuth)
 			}
 			want := testutils.LoadWithUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "expected output to match golden file")

@@ -261,17 +261,9 @@ func loadDumpIntoDB(t *testing.T, dumpPath, dbPath string) {
 			var s string
 			// Looping through the columns to ensure that the values will be ordered as supposed to.
 			for i, col := range table.Cols {
+				values[i] = row[col]
 				if col == "last_online_auth" {
 					values[i] = ParseTimeWildcard(row[col]).Unix()
-				} else {
-					values[i] = row[col]
-				}
-
-				if values[i] == "RECENT_TIME" {
-					// RECENT_TIME ensures that the values that will be inserted in the db will be adjusted based on the time the test was run.
-					// This way, we don't need to always initialize caches that don't clean old users from the database, since the last_online_auth
-					// for users will be updated when inserted into the db.
-					values[i] = time.Now().Add(-time.Hour * 48).Unix()
 				}
 				s += "?,"
 			}
