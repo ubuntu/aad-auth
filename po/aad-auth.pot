@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: internal/pam/pam.go:89 internal/pam/pam.go:100 internal/pam/pam.go:108
+#: internal/pam/pam.go:89 internal/pam/pam.go:103 internal/pam/pam.go:111
 msgid "%w. Denying access."
 msgstr ""
 
@@ -25,6 +25,12 @@ msgstr ""
 msgid ""
 "Machine is offline and cached credentials expired. Please try again when the "
 "machine is online."
+msgstr ""
+
+#: internal/pam/pam.go:101
+msgid ""
+"Machine is offline and offline authentication is disabled. Please try again "
+"when the machine is online."
 msgstr ""
 
 #: internal/pam/pam.go:63
@@ -35,35 +41,35 @@ msgstr ""
 msgid "Unhandled error of type: %v. Denying access."
 msgstr ""
 
-#: internal/cache/cache.go:149
+#: internal/cache/cache.go:151
 msgid "can't open/create cache: %w"
 msgstr ""
 
-#: internal/cache/passwddb.go:95
+#: internal/cache/passwddb.go:156
 msgid "error when getting uid %d from cache: %w"
 msgstr ""
 
-#: internal/cache/passwddb.go:59
+#: internal/cache/passwddb.go:97
 msgid "error when getting user %q from cache: %w"
 msgstr ""
 
-#: internal/cache/passwddb.go:142
+#: internal/cache/passwddb.go:203
 msgid "failed to close passwd iterator in db: %w"
 msgstr ""
 
-#: internal/cache/cache.go:196
+#: internal/cache/cache.go:198
 msgid "failed to find group id for group shadow: %w"
 msgstr ""
 
-#: internal/cache/passwddb.go:106
+#: internal/cache/passwddb.go:167
 msgid "failed to read passwd entry in db: %w"
 msgstr ""
 
-#: internal/cache/cache.go:200
+#: internal/cache/cache.go:202
 msgid "failed to read shadow group id: %w"
 msgstr ""
 
-#: internal/cache/passwddb.go:171
+#: internal/cache/passwddb.go:232
 msgid "failed to verify that %d is unique: %w"
 msgstr ""
 
@@ -75,11 +81,11 @@ msgstr ""
 msgid "no user found"
 msgstr ""
 
-#: pam/pam_c.go:61
+#: pam/pam_c.go:57
 #, c-format
 msgid "unknown option: %s\n"
 msgstr ""
 
-#: internal/cache/passwddb.go:176
+#: internal/cache/passwddb.go:237
 msgid "user already exists in cache"
 msgstr ""
