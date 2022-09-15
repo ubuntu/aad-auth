@@ -197,14 +197,16 @@ func TestCleanupDB(t *testing.T) {
 	t.Parallel()
 
 	var zeroDuration int
+	offlineAuthDisabled := -1
 
 	tests := map[string]struct {
 		offlineCredentialsExpirationTime *int
 
 		wantKeepOldUsers bool
 	}{
-		"clean up old users":     {},
-		"do not clean up anyone": {offlineCredentialsExpirationTime: &zeroDuration, wantKeepOldUsers: true},
+		"clean up old users":                             {},
+		"clean up old users with default cleanup policy": {offlineCredentialsExpirationTime: &offlineAuthDisabled},
+		"do not clean up anyone":                         {offlineCredentialsExpirationTime: &zeroDuration, wantKeepOldUsers: true},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -351,18 +353,22 @@ func TestCanAuthenticate(t *testing.T) {
 		withoutCredentialsExpiration bool
 		shadowMode                   *int
 		initialCache                 string
-		wantErr                      bool
+		disabledOfflineAuth          bool
+
+		wantErr bool
 	}{
-		"can authenticate one user":                     {userPasswords: map[string]string{"myuser@domain.com": "my password"}},
-		"handle separately multiple users and password": {userPasswords: map[string]string{"myuser@domain.com": "my password", "otheruser@domain.com": "other password"}},
-		"can authenticate even with shadow file RO":     {userPasswords: map[string]string{"myuser@domain.com": "my password"}, shadowMode: &cache.ShadowROMode},
+		"can authenticate one user":                                         {userPasswords: map[string]string{"myuser@domain.com": "my password"}},
+		"handle separately multiple users and password":                     {userPasswords: map[string]string{"myuser@domain.com": "my password", "otheruser@domain.com": "other password"}},
+		"can authenticate even with shadow file RO":                         {userPasswords: map[string]string{"myuser@domain.com": "my password"}, shadowMode: &cache.ShadowROMode},
+		"can authenticate even with expired user if expiration is disabled": {userPasswords: map[string]string{"expireduser@domain.com": "my password"}, withoutCredentialsExpiration: true, initialCache: "db_with_expired_users"},
+		"can authenticate even with purged user if expiration is disabled":  {userPasswords: map[string]string{"purgeduser@domain.com": "my password"}, withoutCredentialsExpiration: true, initialCache: "db_with_expired_users"},
 
 		// error cases
 		"error on wrong password":                         {userPasswords: map[string]string{"myuser@domain.com": "wrong password"}, wantErr: true},
 		"error on wrong user":                             {userPasswords: map[string]string{"does not exist user": "my password"}, wantErr: true},
 		"error on checking when can’t access shadow file": {userPasswords: map[string]string{"myuser@domain.com": "my password"}, shadowMode: &cache.ShadowNotAvailableMode, wantErr: true},
 		"error on trying to authenticate expired user":    {userPasswords: map[string]string{"expireduser@domain.com": "my password"}, initialCache: "db_with_expired_users", wantErr: true},
-		"do not let too old unpurged accounts to log in ": {userPasswords: map[string]string{"purgeduser@domain.com": "my password"}, initialCache: "db_with_expired_users", withoutCredentialsExpiration: true, wantErr: true},
+		"error on offline authentication disabled":        {userPasswords: map[string]string{"myuser@domain.com": "my password"}, disabledOfflineAuth: true, wantErr: true},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -385,6 +391,10 @@ func TestCanAuthenticate(t *testing.T) {
 				opts = append(opts, cache.WithOfflineCredentialsExpiration(0))
 			}
 
+			if tc.disabledOfflineAuth {
+				opts = append(opts, cache.WithOfflineCredentialsExpiration(-1))
+			}
+
 			testutils.PrepareDBsForTests(t, cacheDir, initialCache, opts...)
 
 			c := testutils.NewCacheForTests(t, cacheDir, opts...)
@@ -394,6 +404,10 @@ func TestCanAuthenticate(t *testing.T) {
 					require.Error(t, err, "CanAuthenticate should return an error but hasn't")
 					if tc.initialCache == "db_with_expired_users" {
 						require.ErrorIs(t, err, cache.ErrOfflineCredentialsExpired, "CanAuthenticate should return a certain error type for expired unpurged users")
+					}
+
+					if tc.disabledOfflineAuth {
+						require.ErrorIs(t, err, cache.ErrOfflineAuthDisabled, "CanAuthenticate should return a certain error type for disabled offline authentication")
 					}
 					return
 				}

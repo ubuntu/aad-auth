@@ -26,6 +26,8 @@ var (
 	ErrNoEnt = errors.New("no entries")
 	// ErrOfflineCredentialsExpired is returned when the user offline credentials is expired.
 	ErrOfflineCredentialsExpired = errors.New("offline credentials expired")
+	// ErrOfflineAuthDisabled is returned when offline authentication is disabled by using a negative value in aad.conf.
+	ErrOfflineAuthDisabled = errors.New("offline authentication is disabled")
 )
 
 const (
@@ -33,7 +35,8 @@ const (
 	shadowROMode
 	shadowRWMode
 
-	defaultCredentialsExpiration int = 90
+	defaultCredentialsExpiration int    = 90
+	expirationPurgeMultiplier    uint64 = 2
 )
 
 // Cache is the cache object, wrapping our database.
@@ -123,9 +126,6 @@ func WithTeardownDuration(d time.Duration) func(o *options) error {
 // Note that users will be purged from cache when exceeding twice this time.
 func WithOfflineCredentialsExpiration(days int) func(o *options) error {
 	return func(o *options) error {
-		if days < 0 {
-			return nil
-		}
 		o.offlineCredentialsExpiration = days
 		return nil
 	}
@@ -210,11 +210,19 @@ func New(ctx context.Context, opts ...Option) (c *Cache, err error) {
 
 	logger.Debug(ctx, "Shadow db mode: %v", shadowMode)
 
-	if shadowMode == shadowRWMode {
-		offlineCredentialsExpirationDuration := time.Duration(2 * uint64(o.offlineCredentialsExpiration) * 24 * uint64(time.Hour))
-		if err := cleanUpDB(ctx, db, offlineCredentialsExpirationDuration); err != nil {
+	if shadowMode == shadowRWMode && o.offlineCredentialsExpiration != 0 {
+		d := o.offlineCredentialsExpiration
+		if o.offlineCredentialsExpiration < 0 {
+			d = defaultCredentialsExpiration
+		}
+		days := uint64(d) * expirationPurgeMultiplier
+
+		maxCacheEntryDuration := time.Duration(days * 24 * uint64(time.Hour))
+		if err := cleanUpDB(ctx, db, maxCacheEntryDuration); err != nil {
 			return nil, err
 		}
+	} else if o.offlineCredentialsExpiration == 0 {
+		logger.Debug(ctx, "Cache won't be cleaned up as credentials expiration is set to 0")
 	}
 
 	// reset shadowGid to initial value as the detection may have changed it after initialization, to retest
@@ -303,15 +311,22 @@ func (c *Cache) CanAuthenticate(ctx context.Context, username, password string) 
 		return errors.New("shadow database is not available for reading")
 	}
 
+	if c.offlineCredentialsExpiration < 0 {
+		return ErrOfflineAuthDisabled
+	}
+
 	user, err := c.GetUserByName(ctx, username)
 	if err != nil {
 		return err
 	}
 
 	// ensure that we checked credential online recently.
-	logger.Debug(ctx, "Last online login was: %s. Current time: %s. Revalidation needed every %d days", user.LastOnlineAuth, time.Now(), c.offlineCredentialsExpiration)
-	if time.Now().After(user.LastOnlineAuth.Add(time.Duration(uint64(c.offlineCredentialsExpiration) * 24 * uint64(time.Hour)))) {
-		return ErrOfflineCredentialsExpired
+	logger.Debug(ctx, "Last online login was: %s. Current time: %s.", user.LastOnlineAuth, time.Now())
+	if c.offlineCredentialsExpiration > 0 {
+		logger.Debug(ctx, "Online revalidation needed every %d days", c.offlineCredentialsExpiration)
+		if time.Now().After(user.LastOnlineAuth.Add(time.Duration(uint64(c.offlineCredentialsExpiration) * 24 * uint64(time.Hour)))) {
+			return ErrOfflineCredentialsExpired
+		}
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.ShadowPasswd), []byte(password)); err != nil {
