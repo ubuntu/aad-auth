@@ -120,6 +120,30 @@ Copyright: 2011-2019 Canonical Ltd.
            2006-2011 Kirill Simonov
 License: MIT
 
+Files: vendor/github.com/inconshreveable/*
+Copyright: 2014 Alan Shreve
+License: Apache-2.0
+
+Files: vendor/github.com/muesli/*
+Copyright: 2022 Christian Muehlhaeuser
+License: MIT
+
+Files: vendor/github.com/sirupsen/logrus/*
+Copyright: 2014 Simon Eskildsen
+License: MIT
+
+Files: vendor/github.com/sirupsen/logrus/alt_exit.go
+Copyright: 2012 Miki Tebeka <miki.tebeka@gmail.com>.
+License: MIT
+
+Files: vendor/github.com/spf13/cobra/*
+Copyright: 2013 Steve Francia <spf@spf13.com>.
+License: Apache-2.0
+
+Files: vendor/github.com/spf13/pflag/*
+Copyright: Copyright: 2012 The Go Authors. / 2012 Alex Ogier.
+License: BSD-3
+
 License: Apache-2.0
  Unless required by applicable law or agreed to in writing, software
  distributed under the License is distributed on an "AS IS" BASIS,
