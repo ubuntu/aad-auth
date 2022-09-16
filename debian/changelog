@@ -1,3 +1,22 @@
+aad-auth (0.3) kinetic; urgency=medium
+
+  [ Gabriel Nagy ]
+  * Add aad-cli binary package (LP: #1989413)
+    - this is a CLI that allows managing various aspects of the AAD
+      integration, such as:
+      - editing the configuration file in a safe way
+      - querying cached users/groups attributes
+      - updating cached user attributes (shell/homedir)
+  * Update debian/copyright with the latest vendored dependencies
+
+  [ Denison Barbosa ]
+  * Improve consistency of offline credentials expiration
+    - a negative value disables offline authentication, and 0 prevents
+    the cache clean up process, allowing offline login for an
+    undetermined amount of time
+
+ -- Gabriel Nagy <gabriel.nagy@canonical.com>  Fri, 16 Sep 2022 15:37:40 +0300
+
 aad-auth (0.2) kinetic; urgency=medium
 
   [ Didier Roche ]
