@@ -3,7 +3,7 @@ module github.com/ubuntu/aad-auth
 go 1.18
 
 require (
-	github.com/AzureAD/microsoft-authentication-library-for-go v0.6.1
+	github.com/AzureAD/microsoft-authentication-library-for-go v0.7.0
 	github.com/go-ini/ini v1.67.0
 	github.com/mattn/go-sqlite3 v1.14.15
 	github.com/stretchr/testify v1.8.0
