@@ -11,6 +11,7 @@ use crate::{debug, LOGPREFIX};
 pub struct AADPasswd;
 
 impl PasswdHooks for AADPasswd {
+    // get_all_entries retrieves all the password entries from the cache database.
     fn get_all_entries() -> Response<Vec<Passwd>> {
         debug!("get_all_entries for passwd");
 
@@ -20,9 +21,10 @@ impl PasswdHooks for AADPasswd {
         };
 
         let r = result_vec_cache_passwd_to_result_vec_nss_passwd(c.get_all_passwd());
-        return cache_result_to_nss_status(r);
+        cache_result_to_nss_status(r)
     }
 
+    // get_entry_by_uid retrieves a password entry by user id.
     fn get_entry_by_uid(uid: uid_t) -> Response<Passwd> {
         debug!("get_entry_by_uid for passwd for uid: {}", uid);
 
@@ -32,9 +34,10 @@ impl PasswdHooks for AADPasswd {
         };
 
         let r = result_cache_passwd_to_result_nss_passwd(c.get_passwd_from_uid(uid));
-        return cache_result_to_nss_status(r);
+        cache_result_to_nss_status(r)
     }
 
+    // get_entry_by_name retrieves a password entry by user name.
     fn get_entry_by_name(name: String) -> Response<Passwd> {
         debug!("get_entry_by_name for passwd for name: {}", name);
 
@@ -44,10 +47,11 @@ impl PasswdHooks for AADPasswd {
         };
 
         let r = result_cache_passwd_to_result_nss_passwd(c.get_passwd_from_name(&name));
-        return cache_result_to_nss_status(r);
+        cache_result_to_nss_status(r)
     }
 }
 
+// cache_passwd_to_nss_passwd matches a cache password object to an NSS type.
 fn cache_passwd_to_nss_passwd(entry: CachePasswd) -> Passwd {
     debug!("found record: {:?}", entry);
 
@@ -62,6 +66,7 @@ fn cache_passwd_to_nss_passwd(entry: CachePasswd) -> Passwd {
     }
 }
 
+// result_cache_passwd_to_result_nss_passwd matches errors code between the cache object and NSS.
 fn result_cache_passwd_to_result_nss_passwd(
     entry: Result<CachePasswd, CacheError>,
 ) -> Result<Passwd, CacheError> {
@@ -71,6 +76,7 @@ fn result_cache_passwd_to_result_nss_passwd(
     }
 }
 
+// result_vec_cache_passwd_to_result_vec_nss_passwd converts a list of cache password entries to a list of NSS password entries.
 fn result_vec_cache_passwd_to_result_vec_nss_passwd(
     entry: Result<Vec<CachePasswd>, CacheError>,
 ) -> Result<Vec<Passwd>, CacheError> {

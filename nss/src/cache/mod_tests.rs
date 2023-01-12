@@ -10,18 +10,22 @@ use crate::CacheDB;
 
 use serde_yaml::to_string;
 
+// get_current_module_path returns the path to the current module.
 fn get_current_module_path() -> String {
     let mut path = PathBuf::from(file!());
     path.pop();
     let path = path.to_str().unwrap();
 
     // Remove the base directory between the workspace and project
-    let path = path.split("/").skip(1).collect::<Vec<&str>>().join("/");
+    let path = path.split('/').skip(1).collect::<Vec<&str>>().join("/");
 
     path + "/"
 }
 
+// current_test_name returns a tuple of (parent_test_name, sub_test_name).
+// The detection is based on thread name, and so, does not work when RUST_TEST_THREADS=1
 fn current_test_name() -> (String, String) {
+    #[allow(clippy::or_fun_call)]
     if env::var("RUST_TEST_THREADS").unwrap_or("".to_string()) == "1" {
         panic!("Tests could not run with RUST_TEST_THREADS=1")
     }
@@ -52,7 +56,7 @@ fn test_get_passwd_from_uid(uid: u32, want_err: bool) {
     .expect("Setup: could not copy existing database");
 
     let c = CacheDB::new()
-        .with_db_path(&cache_dir.path().to_str().unwrap())
+        .with_db_path(cache_dir.path().to_str().unwrap())
         .build()
         .expect("Setup: could not create cache object");
 

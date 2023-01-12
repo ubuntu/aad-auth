@@ -18,6 +18,8 @@ macro_rules! error {
     }
 }
 
+// init_logger initialize the logger with a default level set to info
+// log level can be set to debug by setting the environment variable NSS_AAD_DEBUG
 #[ctor]
 fn init_logger() {
     let formatter = Formatter3164 {
@@ -36,8 +38,9 @@ fn init_logger() {
     };
 
     let mut level = log::LevelFilter::Info;
+    #[allow(clippy::or_fun_call)]
     let show_debug = env::var("NSS_AAD_DEBUG").unwrap_or("".to_string());
-    if show_debug != "" {
+    if !show_debug.is_empty() {
         level = log::LevelFilter::Debug;
     }
     if let Err(e) = log::set_boxed_logger(Box::new(BasicLogger::new(logger)))
