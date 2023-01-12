@@ -3,9 +3,13 @@ use rusqlite::{params, Connection, OpenFlags, Rows, Statement};
 use log::debug;
 use std::path::Path;
 
-const DB_PATH: &str = "/var/lib/aad/cache";
+#[cfg(test)]
+mod mod_tests;
 
-#[derive(Debug)]
+const DB_PATH: &str = "/var/lib/aad/cache";
+use serde::Serialize;
+
+#[derive(Debug, Serialize)]
 pub struct Passwd {
     pub name: String,
     pub passwd: String,
