@@ -1,5 +1,6 @@
-use ctor::ctor;
 use std::env;
+
+use ctor::ctor;
 use syslog::{BasicLogger, Facility, Formatter3164};
 
 pub const LOGPREFIX: &str = "nss_aad:";

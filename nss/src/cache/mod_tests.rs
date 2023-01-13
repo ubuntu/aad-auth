@@ -1,14 +1,13 @@
+use std::path::PathBuf;
+use std::{env, fs, io::Write};
+
 use core::panic;
 use goldenfile::Mint;
-use std::env;
-use std::path::PathBuf;
-use std::{fs, io::Write};
+use serde_yaml::to_string;
 use tempdir::TempDir;
 use test_case::test_case;
 
 use crate::CacheDB;
-
-use serde_yaml::to_string;
 
 // get_current_module_path returns the path to the current module.
 fn get_current_module_path() -> String {

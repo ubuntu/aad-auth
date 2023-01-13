@@ -4,9 +4,7 @@ use libnss::interop::Response;
 use libnss::passwd::{Passwd, PasswdHooks};
 
 use crate::cache::{CacheError, Passwd as CachePasswd};
-use crate::{cache_result_to_nss_status, new_cache};
-
-use crate::{debug, LOGPREFIX};
+use crate::{cache_result_to_nss_status, debug, new_cache, LOGPREFIX};
 
 pub struct AADPasswd;
 

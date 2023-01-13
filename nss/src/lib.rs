@@ -1,8 +1,8 @@
+use std::env;
+
 #[macro_use]
 extern crate lazy_static; // used by libnss_*_hooks macros
-
-use libnss::interop::Response;
-use libnss::libnss_passwd_hooks;
+use libnss::{interop::Response, libnss_passwd_hooks};
 
 mod passwd;
 use passwd::AADPasswd;
@@ -11,10 +11,8 @@ libnss_passwd_hooks!(aad, AADPasswd);
 mod cache;
 use crate::cache::{CacheDB, CacheError};
 
-use crate::logs::LOGPREFIX;
 mod logs;
-
-use std::env;
+use crate::logs::LOGPREFIX;
 
 // cache_result_to_nss_status converts our internal CacheError to a nss-compatible Response.
 fn cache_result_to_nss_status<T>(r: Result<T, CacheError>) -> Response<T> {

@@ -1,13 +1,14 @@
+use std::path::Path;
+
 use rusqlite::{params, Connection, OpenFlags, Rows, Statement};
+use serde::Serialize;
 
 use log::debug;
-use std::path::Path;
 
 #[cfg(test)]
 mod mod_tests;
 
 const DB_PATH: &str = "/var/lib/aad/cache";
-use serde::Serialize;
 
 // Passwd struct represents a password entry in the cache database.
 #[derive(Debug, Serialize)]
