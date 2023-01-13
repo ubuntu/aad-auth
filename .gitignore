@@ -6,6 +6,7 @@
 *.so
 *.so.*
 *.dylib
+target/
 
 # Editor exclusions
 .vsls.json
