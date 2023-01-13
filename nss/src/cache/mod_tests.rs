@@ -33,12 +33,12 @@ fn current_test_name() -> (String, String) {
     let parts: Vec<&str> = cur_thread.name().unwrap().split("::").collect();
     (
         parts[parts.len() - 2].to_string(),
-        parts[parts.len() - 1].to_string(),
+        parts[parts.len() - 1].to_string().to_lowercase(),
     )
 }
 
-#[test_case(2408865428, false  ; "get existing user")]
-#[test_case(4242, true  ; "error on non existing user")]
+#[test_case(2408865428, false  ; "Get existing user")]
+#[test_case(4242, true  ; "Error on non existing user")]
 fn test_get_passwd_from_uid(uid: u32, want_err: bool) {
     let test_name = current_test_name();
 
