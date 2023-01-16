@@ -11,7 +11,7 @@ pub fn get_module_path(path: &str) -> String {
     // Remove the base directory between the workspace and project
     let path = path.split('/').skip(1).collect::<Vec<&str>>().join("/");
 
-    path + "/"
+    path
 }
 
 // current_test_name returns a tuple of (parent_test_name, sub_test_name).
@@ -36,7 +36,8 @@ pub fn golden_mint(module_path: &str) -> Mint {
     let (family_name, _) = current_test_name();
     Mint::new(
         Path::new(module_path)
-            .join("testdata/golden/")
-            .join(&family_name),
+            .join("testdata")
+            .join(&family_name)
+            .join("golden"),
     )
 }
