@@ -49,3 +49,6 @@ fn new_cache() -> Result<CacheDB, CacheError> {
 
     c.build()
 }
+
+#[cfg(test)]
+mod testutils;
