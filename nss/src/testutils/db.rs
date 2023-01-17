@@ -1,7 +1,8 @@
-use crate::{cache::Passwd, testutils::get_module_path};
+use crate::cache::Passwd;
 use log::debug;
 use rusqlite::Connection;
 use std::{fs::read_to_string, path::Path};
+use time;
 
 #[derive(Debug)]
 pub enum DBError {
@@ -14,36 +15,42 @@ pub enum DBError {
 // prepare_db_for_tests creates an instance of the database and initializes it with a inital state
 // if requested.
 pub fn prepare_db_for_tests(db_path: &str, initial_state: Option<&str>) -> Result<(), DBError> {
-    create_db_for_tests(db_path)?;
+    create_dbs_for_tests(&db_path)?;
 
     if let Some(state) = initial_state {
-        let states_path = Path::new(&get_module_path(file!()))
+        let states_path = Path::new(&super::get_module_path(file!()))
             .join("states")
             .join(state);
 
-        load_passwd_dump_into_db(db_path, &states_path.join("passwd.dump"))?;
+        load_passwd_dump_into_db(&db_path, &states_path.join("passwd.dump"))?;
     }
 
     Ok(())
 }
 
 // create_db_for_tests creates a database for testing purposes.
-fn create_db_for_tests(db_path: &str) -> Result<(), DBError> {
+fn create_dbs_for_tests(db_path: &str) -> Result<(), DBError> {
     debug!("Creating dabatase for tests");
 
-    if Path::new(&db_path).exists() {
-        return Ok(());
-    }
+    for db in ["passwd", "shadow"] {
+        if Path::new(&db_path).join(db).exists() {
+            continue;
+        }
 
-    let conn = get_db_connection(db_path)?;
+        let sql_path = Path::new(&super::get_module_path(file!()))
+            .join("sql")
+            .join(db.to_owned() + ".sql");
 
-    for db_name in ["passwd", "shadow"] {
-        let sql_path = get_module_path(file!()) + "/sql/" + db_name + ".sql";
-
-        let sql = match read_to_string(Path::new(&sql_path)) {
+        let sql = match read_to_string(&sql_path) {
             Ok(s) => s,
             Err(e) => return Err(DBError::CreationError(e.to_string())),
         };
+
+        let conn = match db {
+            "passwd" => get_passwd_connection(db_path),
+            "shadow" => get_shadow_connection(db_path),
+            _ => Err(DBError::ConnError(String::new())),
+        }?;
 
         if let Err(e) = conn.execute_batch(&sql) {
             return Err(DBError::CreationError(e.to_string()));
@@ -60,7 +67,7 @@ fn load_passwd_dump_into_db(db_path: &str, dump_path: &Path) -> Result<(), DBErr
         &dump_path.as_os_str()
     );
 
-    let conn = get_db_connection(db_path)?;
+    let conn = get_passwd_connection(db_path)?;
 
     let mut reader = match csv::Reader::from_path(dump_path) {
         Ok(r) => r,
@@ -86,7 +93,7 @@ fn load_passwd_dump_into_db(db_path: &str, dump_path: &Path) -> Result<(), DBErr
             record.gecos,
             record.home,
             record.shell,
-            "0",
+            parse_time_wildcard("RECENT_TIME"),
         )) {
             return Err(DBError::LoadDumpError(e.to_string()));
         }
@@ -99,7 +106,7 @@ fn load_passwd_dump_into_db(db_path: &str, dump_path: &Path) -> Result<(), DBErr
 pub fn dump_passwd_db(db_path: &str, dump_path: &Path) -> Result<(), DBError> {
     debug!("Dumping passwd table to {:?}", &dump_path.as_os_str());
 
-    let conn = get_db_connection(db_path)?;
+    let conn = get_passwd_connection(db_path)?;
 
     let mut stmt = match conn.prepare("SELECT * FROM passwd") {
         Ok(stmt) => stmt,
@@ -138,11 +145,44 @@ pub fn dump_passwd_db(db_path: &str, dump_path: &Path) -> Result<(), DBError> {
     }
 }
 
-// get_db_connection returns a connection to the specified database.
-fn get_db_connection(db_path: &str) -> Result<Connection, DBError> {
-    debug!("Connecting to db in {}", &db_path);
+// parse_time_wildcard parses some time wildcards that are contained in the dump files to ensure that
+// the loaded dbs will always present the same behavior when loaded for tests.
+fn parse_time_wildcard(value: &str) -> i64 {
+    // c is a contant value, set to two days, that is used to ensure that the time is within some intervals.
+    let c = time::Duration::days(2);
 
-    match Connection::open(db_path) {
+    let expiration_days = time::Duration::days(90);
+
+    let addend: time::Duration = match value {
+        "RECENT_TIME" => -c,
+        "PURGED_TIME" => (-2 * expiration_days) + c,
+        "EXPIRED_TIME" => -expiration_days + c,
+        "FUTURE_TIME" => c,
+        _ => time::Duration::ZERO,
+    };
+
+    let now = time::OffsetDateTime::now_utc();
+
+    let parsed_value = now + addend;
+
+    return parsed_value.unix_timestamp();
+}
+
+// get_passwd_connection returns a connection to the passwd database located in the specified path.
+fn get_passwd_connection(db_path: &str) -> Result<Connection, DBError> {
+    debug!("Connecting to passwd.db in {}", &db_path);
+
+    match Connection::open(&Path::new(db_path).join("passwd.db")) {
+        Ok(conn) => Ok(conn),
+        Err(e) => Err(DBError::ConnError(e.to_string())),
+    }
+}
+
+// get_shadow_connection returns a connection to the shadow database located in the specified path.
+fn get_shadow_connection(db_path: &str) -> Result<Connection, DBError> {
+    debug!("Connecting to shadow.db in {}", &db_path);
+
+    match Connection::open(&Path::new(db_path).join("shadow.db")) {
         Ok(conn) => Ok(conn),
         Err(e) => Err(DBError::ConnError(e.to_string())),
     }
