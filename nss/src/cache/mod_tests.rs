@@ -1,5 +1,4 @@
-use std::path::Path;
-use std::{fs, io::Write};
+use std::io::Write;
 
 use serde_yaml::to_string;
 use tempdir::TempDir;
@@ -8,7 +7,7 @@ use test_case::test_case;
 use crate::testutils;
 use crate::CacheDB;
 
-#[test_case(2408865428, false  ; "Get existing user")]
+#[test_case(165119649, false  ; "Get existing user")]
 #[test_case(4242, true  ; "Error on non existing user")]
 fn test_get_passwd_from_uid(uid: u32, want_err: bool) {
     let module_path = testutils::get_module_path(file!());
@@ -18,12 +17,12 @@ fn test_get_passwd_from_uid(uid: u32, want_err: bool) {
 
     let passwd_db = cache_dir.path().join("passwd.db");
 
-    // TODO: unmarshall dbs from cache_dumps
-    fs::copy(
-        Path::new(&module_path).join("../../../cache/passwd.db"),
-        passwd_db,
-    )
-    .expect("Setup: could not copy existing database");
+    if let Some(passwd_str_path) = passwd_db.to_str() {
+        let state = "users_in_db";
+        if let Err(e) = testutils::prepare_db_for_tests(passwd_str_path, Some(&state)) {
+            panic!("Setup: Failed to prepare db for tests: {:?}", e);
+        }
+    }
 
     let c = CacheDB::new()
         .with_db_path(cache_dir.path().to_str().unwrap())
