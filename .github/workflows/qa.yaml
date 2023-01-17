@@ -48,10 +48,10 @@ jobs:
           go build -ldflags='-s -w' -buildmode=c-shared -o pam_aad.so ./pam
 
           # Build NSS CLI executable
-          go build -o aad-auth ./nss/aad-auth
+          go build -o aad-auth ./nss-go/aad-auth
 
           # Build NSS C library
-          make -C nss/ libnss_aad.so.2
+          make -C nss-go/ libnss_aad.so.2
 
         if: ${{ always() }}
 
@@ -77,3 +77,41 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: /tmp/coverage.out
+
+  rust:
+    name: Rust Actions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+          components: rustfmt, clippy
+      - name: Audit dependencies security
+        uses: actions-rs/audit-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Annotate clippy warnings
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features
+      - name: Run tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-features
+        env:
+          CARGO_INCREMENTAL: '0'
+          # Flags needed to capture test coverage
+          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+          RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+      - name: Rust coverage
+        id: rust-coverage
+        uses: actions-rs/grcov@v0.1
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ${{ steps.rust-coverage.outputs.report }}
