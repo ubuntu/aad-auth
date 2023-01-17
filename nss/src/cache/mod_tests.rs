@@ -1,25 +1,21 @@
 use std::io::Write;
 
 use serde_yaml::to_string;
-use tempdir::TempDir;
+use tempfile::TempDir;
 use test_case::test_case;
 
 use crate::testutils;
 use crate::CacheDB;
 
-#[test_case(165119649, false  ; "Get existing user")]
-#[test_case(4242, true  ; "Error on non existing user")]
-fn test_get_passwd_from_uid(uid: u32, want_err: bool) {
+#[test_case(165119649, Some("users_in_db"), false  ; "Get existing user")]
+#[test_case(4242, Some("users_in_db"), true  ; "Error on non existing user")]
+fn test_get_passwd_from_uid(uid: u32, initial_state: Option<&str>, want_err: bool) {
     let module_path = testutils::get_module_path(file!());
 
-    let cache_dir =
-        TempDir::new("test-aad-auth").expect("Setup: could not create temporary cache directory");
+    let cache_dir = TempDir::new().expect("Setup: could not create temporary cache directory");
 
-    let passwd_db = cache_dir.path().join("passwd.db");
-
-    if let Some(passwd_str_path) = passwd_db.to_str() {
-        let state = "users_in_db";
-        if let Err(e) = testutils::prepare_db_for_tests(passwd_str_path, Some(&state)) {
+    if let Some(cache_str_path) = cache_dir.path().to_str() {
+        if let Err(e) = testutils::prepare_db_for_tests(cache_str_path, initial_state) {
             panic!("Setup: Failed to prepare db for tests: {:?}", e);
         }
     }
