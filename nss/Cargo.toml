@@ -21,11 +21,12 @@ paste = "^1"
 rusqlite = "0.28.0"
 serde = { version = "^1", features = ["derive"] }
 syslog = "^6"
+time = "0.3.17"
 
 [dev-dependencies]
 goldenfile = "^1.4"
 serde_yaml = "0.9.16"
-tempdir = "0.3.7"
+tempfile = "3.3.0"
 test-case = "^2.2"
 
 [profile.release]
