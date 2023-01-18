@@ -1,7 +1,6 @@
-use crate::cache::Passwd;
 use log::debug;
-use rusqlite::Connection;
-use std::{fs::read_to_string, path::Path};
+use rusqlite::{self, Connection};
+use std::{collections::HashMap, fs, path::Path};
 use time;
 
 #[derive(Debug)]
@@ -9,10 +8,10 @@ pub enum DBError {
     ConnError(String),
     CreationError(String),
     LoadDumpError(String),
-    SaveDumpError(String),
+    ParseDumpError(String),
 }
 
-// prepare_db_for_tests creates an instance of the database and initializes it with a inital state
+// prepare_db_for_tests creates instances of the databases and initializes it with a inital state
 // if requested.
 pub fn prepare_db_for_tests(db_path: &str, initial_state: Option<&str>) -> Result<(), DBError> {
     create_dbs_for_tests(&db_path)?;
@@ -22,7 +21,9 @@ pub fn prepare_db_for_tests(db_path: &str, initial_state: Option<&str>) -> Resul
             .join("states")
             .join(state);
 
-        load_passwd_dump_into_db(&db_path, &states_path.join("passwd.dump"))?;
+        for db in ["passwd", "shadow"] {
+            load_dump_into_db(&db_path, &db, &states_path.join(format!("{db}.db.dump")))?;
+        }
     }
 
     Ok(())
@@ -33,15 +34,11 @@ fn create_dbs_for_tests(db_path: &str) -> Result<(), DBError> {
     debug!("Creating dabatase for tests");
 
     for db in ["passwd", "shadow"] {
-        if Path::new(&db_path).join(db).exists() {
-            continue;
-        }
-
         let sql_path = Path::new(&super::get_module_path(file!()))
             .join("sql")
             .join(db.to_owned() + ".sql");
 
-        let sql = match read_to_string(&sql_path) {
+        let sql = match fs::read_to_string(&sql_path) {
             Ok(s) => s,
             Err(e) => return Err(DBError::CreationError(e.to_string())),
         };
@@ -60,89 +57,101 @@ fn create_dbs_for_tests(db_path: &str) -> Result<(), DBError> {
     Ok(())
 }
 
-// load_passwd_dump_into_db reads a CSV dump file and loads its contents into the passwd table.
-fn load_passwd_dump_into_db(db_path: &str, dump_path: &Path) -> Result<(), DBError> {
+#[derive(Debug)]
+struct Table {
+    name: String,
+    col_names: Vec<String>,
+    rows: Vec<HashMap<String, String>>,
+}
+
+fn read_dump_as_tables(dump_path: &Path) -> Result<HashMap<String, Table>, DBError> {
+    let mut tables: HashMap<String, Table> = HashMap::new();
+
+    let dump_file = match fs::read_to_string(dump_path) {
+        Ok(content) => content,
+        Err(e) => return Err(DBError::ParseDumpError(e.to_string())),
+    };
+
+    let data: Vec<&str> = dump_file.split_terminator("\n\n").collect();
+    for table in data {
+        let lines: Vec<&str> = table.lines().collect();
+        if lines.len() == 0 {
+            break;
+        }
+
+        let mut table = Table {
+            name: String::default(),
+            col_names: Vec::new(),
+            rows: Vec::new(),
+        };
+
+        // lines[0] is the table name
+        table.name = lines[0].to_string();
+
+        // lines[1] is the columns names
+        for name in lines[1].split(",") {
+            table.col_names.push(name.to_string());
+        }
+
+        // lines[2..] are the table rows
+        for i in 2..lines.len() {
+            let mut row: HashMap<String, String> = HashMap::new();
+
+            let tmp: Vec<&str> = lines[i].split(",").collect();
+            for pos in 0..tmp.len() {
+                row.insert(table.col_names[pos].clone(), tmp[pos].to_string());
+            }
+
+            table.rows.push(row);
+        }
+        tables.insert(table.name.clone(), table);
+    }
+
+    Ok(tables)
+}
+
+// load_dump_into_db reads a CSV dump file and loads its contents into the specified database.
+fn load_dump_into_db(db_path: &str, db_name: &str, dump_path: &Path) -> Result<(), DBError> {
     debug!(
         "Loading passwd dump from {:?} into db",
         &dump_path.as_os_str()
     );
 
-    let conn = get_passwd_connection(db_path)?;
+    let conn = match db_name {
+        "passwd" => get_passwd_connection(db_path),
+        "shadow" => get_shadow_connection(db_path),
+        _ => Err(DBError::ConnError(String::new())),
+    }?;
 
-    let mut reader = match csv::Reader::from_path(dump_path) {
-        Ok(r) => r,
-        Err(e) => return Err(DBError::LoadDumpError(e.to_string())),
-    };
+    let tables = read_dump_as_tables(dump_path)?;
+    for (name, table) in tables {
+        let s = vec!["?,"; table.col_names.len()].concat();
 
-    let mut stmt = match conn.prepare("INSERT INTO passwd VALUES (?, ?, ?, ?, ?, ?, ?, ?)") {
-        Ok(stmt) => stmt,
-        Err(e) => return Err(DBError::LoadDumpError(e.to_string())),
-    };
-
-    for item in reader.deserialize() {
-        let record: Passwd = match item {
-            Ok(r) => r,
+        let stmt_str = format!("INSERT INTO {name} VALUES ({})", s.trim_end_matches(","));
+        let mut stmt = match conn.prepare(&stmt_str) {
+            Ok(stmt) => stmt,
             Err(e) => return Err(DBError::LoadDumpError(e.to_string())),
         };
 
-        if let Err(e) = stmt.execute((
-            record.name,
-            record.passwd,
-            record.uid,
-            record.gid,
-            record.gecos,
-            record.home,
-            record.shell,
-            parse_time_wildcard("RECENT_TIME"),
-        )) {
-            return Err(DBError::LoadDumpError(e.to_string()));
+        for row in table.rows {
+            let mut values: Vec<String> = Vec::new();
+
+            for name in table.col_names.iter() {
+                if *name == "last_online_auth" {
+                    // Parses wildcards in order to load the correct time into the db.
+                    values.push(parse_time_wildcard(&row[name]).to_string());
+                    continue;
+                }
+                values.push(row[name].to_string());
+            }
+
+            if let Err(e) = stmt.execute(rusqlite::params_from_iter(values)) {
+                return Err(DBError::LoadDumpError(e.to_string()));
+            };
         }
     }
 
     Ok(())
-}
-
-// dump_passwd_db queries the passwd table in the db and dumps its contents into the specified path.
-pub fn dump_passwd_db(db_path: &str, dump_path: &Path) -> Result<(), DBError> {
-    debug!("Dumping passwd table to {:?}", &dump_path.as_os_str());
-
-    let conn = get_passwd_connection(db_path)?;
-
-    let mut stmt = match conn.prepare("SELECT * FROM passwd") {
-        Ok(stmt) => stmt,
-        Err(e) => return Err(DBError::SaveDumpError(e.to_string())),
-    };
-
-    let mut rows = match stmt.query([]) {
-        Ok(rows) => rows,
-        Err(e) => return Err(DBError::SaveDumpError(e.to_string())),
-    };
-
-    let mut dump_writer = match csv::Writer::from_path(dump_path) {
-        Ok(writer) => writer,
-        Err(e) => return Err(DBError::SaveDumpError(e.to_string())),
-    };
-
-    while let Ok(Some(row)) = rows.next() {
-        let entry = Passwd {
-            name: row.get(0).expect("invalid name"),
-            passwd: row.get(1).expect("invalid passwd"),
-            uid: row.get(2).expect("invalid uid"),
-            gid: row.get(3).expect("invalid gid"),
-            gecos: row.get(4).expect("invalid gecos"),
-            home: row.get(5).expect("invalid home"),
-            shell: row.get(6).expect("invalid shell"),
-        };
-
-        if let Err(e) = dump_writer.serialize(&entry) {
-            return Err(DBError::SaveDumpError(e.to_string()));
-        }
-    }
-
-    match dump_writer.flush() {
-        Ok(_) => Ok(()),
-        Err(e) => Err(DBError::SaveDumpError(e.to_string())),
-    }
 }
 
 // parse_time_wildcard parses some time wildcards that are contained in the dump files to ensure that
@@ -151,6 +160,7 @@ fn parse_time_wildcard(value: &str) -> i64 {
     // c is a contant value, set to two days, that is used to ensure that the time is within some intervals.
     let c = time::Duration::days(2);
 
+    // TODO: Change after defining default expiration days in the cache module
     let expiration_days = time::Duration::days(90);
 
     let addend: time::Duration = match value {
@@ -162,10 +172,9 @@ fn parse_time_wildcard(value: &str) -> i64 {
     };
 
     let now = time::OffsetDateTime::now_utc();
-
     let parsed_value = now + addend;
 
-    return parsed_value.unix_timestamp();
+    parsed_value.unix_timestamp()
 }
 
 // get_passwd_connection returns a connection to the passwd database located in the specified path.
@@ -182,6 +191,7 @@ fn get_passwd_connection(db_path: &str) -> Result<Connection, DBError> {
 fn get_shadow_connection(db_path: &str) -> Result<Connection, DBError> {
     debug!("Connecting to shadow.db in {}", &db_path);
 
+    // TODO: Fix permissions and checks after implementing shadow module.
     match Connection::open(&Path::new(db_path).join("shadow.db")) {
         Ok(conn) => Ok(conn),
         Err(e) => Err(DBError::ConnError(e.to_string())),
