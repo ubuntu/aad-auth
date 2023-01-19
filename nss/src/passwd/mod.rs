@@ -4,7 +4,7 @@ use libnss::interop::Response;
 use libnss::passwd::{Passwd, PasswdHooks};
 
 use crate::cache::{CacheError, Passwd as CachePasswd};
-use crate::{cache_result_to_nss_status, debug, new_cache, LOGPREFIX};
+use crate::{debug, LOGPREFIX};
 
 pub struct AADPasswd;
 
@@ -13,39 +13,39 @@ impl PasswdHooks for AADPasswd {
     fn get_all_entries() -> Response<Vec<Passwd>> {
         debug!("get_all_entries for passwd");
 
-        let c = match new_cache() {
+        let c = match super::new_cache() {
             Ok(c) => c,
-            Err(e) => return cache_result_to_nss_status(Err(e)),
+            Err(e) => return super::cache_result_to_nss_status(Err(e)),
         };
 
         let r = result_vec_cache_passwd_to_result_vec_nss_passwd(c.get_all_passwd());
-        cache_result_to_nss_status(r)
+        super::cache_result_to_nss_status(r)
     }
 
     // get_entry_by_uid retrieves a password entry by user id.
     fn get_entry_by_uid(uid: uid_t) -> Response<Passwd> {
         debug!("get_entry_by_uid for passwd for uid: {}", uid);
 
-        let c = match new_cache() {
+        let c = match super::new_cache() {
             Ok(c) => c,
-            Err(e) => return cache_result_to_nss_status(Err(e)),
+            Err(e) => return super::cache_result_to_nss_status(Err(e)),
         };
 
         let r = result_cache_passwd_to_result_nss_passwd(c.get_passwd_from_uid(uid));
-        cache_result_to_nss_status(r)
+        super::cache_result_to_nss_status(r)
     }
 
     // get_entry_by_name retrieves a password entry by user name.
     fn get_entry_by_name(name: String) -> Response<Passwd> {
         debug!("get_entry_by_name for passwd for name: {}", name);
 
-        let c = match new_cache() {
+        let c = match super::new_cache() {
             Ok(c) => c,
-            Err(e) => return cache_result_to_nss_status(Err(e)),
+            Err(e) => return super::cache_result_to_nss_status(Err(e)),
         };
 
         let r = result_cache_passwd_to_result_nss_passwd(c.get_passwd_from_name(&name));
-        cache_result_to_nss_status(r)
+        super::cache_result_to_nss_status(r)
     }
 }
 
