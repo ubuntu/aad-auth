@@ -11,29 +11,31 @@ pub enum DBError {
     ParseDumpError(String),
 }
 
-// prepare_db_for_tests creates instances of the databases and initializes it with a inital state
-// if requested.
-pub fn prepare_db_for_tests(db_path: &str, initial_state: Option<&str>) -> Result<(), DBError> {
-    create_dbs_for_tests(&db_path)?;
+const DB_NAMES: [&str; 2] = ["passwd", "shadow"];
+
+/// Creates instances of the databases and initializes it with a inital state if requested.
+pub fn prepare_db_for_tests(cache_dir: &Path, initial_state: Option<&str>) -> Result<(), DBError> {
+    create_dbs_for_tests(&cache_dir)?;
 
     if let Some(state) = initial_state {
         let states_path = Path::new(&super::get_module_path(file!()))
             .join("states")
             .join(state);
 
-        for db in ["passwd", "shadow"] {
-            load_dump_into_db(&db_path, &db, &states_path.join(format!("{db}.db.dump")))?;
+        for db in DB_NAMES {
+            let db_path = cache_dir.join(db.to_owned() + ".db");
+            load_dump_into_db(&&states_path.join(format!("{db}.db.dump")), &db_path)?;
         }
     }
 
     Ok(())
 }
 
-// create_db_for_tests creates a database for testing purposes.
-fn create_dbs_for_tests(db_path: &str) -> Result<(), DBError> {
+/// Creates a database for testing purposes.
+fn create_dbs_for_tests(cache_dir: &Path) -> Result<(), DBError> {
     debug!("Creating dabatase for tests");
 
-    for db in ["passwd", "shadow"] {
+    for db in DB_NAMES {
         let sql_path = Path::new(&super::get_module_path(file!()))
             .join("sql")
             .join(db.to_owned() + ".sql");
@@ -43,11 +45,7 @@ fn create_dbs_for_tests(db_path: &str) -> Result<(), DBError> {
             Err(e) => return Err(DBError::CreationError(e.to_string())),
         };
 
-        let conn = match db {
-            "passwd" => get_passwd_connection(db_path),
-            "shadow" => get_shadow_connection(db_path),
-            _ => Err(DBError::ConnError(String::new())),
-        }?;
+        let conn = get_db_connection(&cache_dir.join(db.to_owned() + ".db"))?;
 
         if let Err(e) = conn.execute_batch(&sql) {
             return Err(DBError::CreationError(e.to_string()));
@@ -57,13 +55,19 @@ fn create_dbs_for_tests(db_path: &str) -> Result<(), DBError> {
     Ok(())
 }
 
+/// Represents a database table.
 #[derive(Debug)]
 struct Table {
+    /// Name of the database table.
     name: String,
+    /// Name of the table columns.
     col_names: Vec<String>,
-    rows: Vec<HashMap<String, String>>,
+    /// 2D Vector with the table contents.
+    rows: Vec<Vec<String>>,
 }
 
+/// Reads the content of the csv-like file located in the specified path
+/// and parses it into a struct of Map<String, Table>.
 fn read_dump_as_tables(dump_path: &Path) -> Result<HashMap<String, Table>, DBError> {
     let mut tables: HashMap<String, Table> = HashMap::new();
 
@@ -75,9 +79,6 @@ fn read_dump_as_tables(dump_path: &Path) -> Result<HashMap<String, Table>, DBErr
     let data: Vec<&str> = dump_file.split_terminator("\n\n").collect();
     for table in data {
         let lines: Vec<&str> = table.lines().collect();
-        if lines.len() == 0 {
-            break;
-        }
 
         let mut table = Table {
             name: String::default(),
@@ -95,11 +96,11 @@ fn read_dump_as_tables(dump_path: &Path) -> Result<HashMap<String, Table>, DBErr
 
         // lines[2..] are the table rows
         for i in 2..lines.len() {
-            let mut row: HashMap<String, String> = HashMap::new();
+            let mut row = Vec::new();
 
             let tmp: Vec<&str> = lines[i].split(",").collect();
             for pos in 0..tmp.len() {
-                row.insert(table.col_names[pos].clone(), tmp[pos].to_string());
+                row.push(tmp[pos].to_string());
             }
 
             table.rows.push(row);
@@ -110,18 +111,14 @@ fn read_dump_as_tables(dump_path: &Path) -> Result<HashMap<String, Table>, DBErr
     Ok(tables)
 }
 
-// load_dump_into_db reads a CSV dump file and loads its contents into the specified database.
-fn load_dump_into_db(db_path: &str, db_name: &str, dump_path: &Path) -> Result<(), DBError> {
+/// Reads a CSV dump file and loads its contents into the specified database.
+fn load_dump_into_db(dump_path: &Path, db_path: &Path) -> Result<(), DBError> {
     debug!(
         "Loading passwd dump from {:?} into db",
         &dump_path.as_os_str()
     );
 
-    let conn = match db_name {
-        "passwd" => get_passwd_connection(db_path),
-        "shadow" => get_shadow_connection(db_path),
-        _ => Err(DBError::ConnError(String::new())),
-    }?;
+    let conn = get_db_connection(db_path)?;
 
     let tables = read_dump_as_tables(dump_path)?;
     for (name, table) in tables {
@@ -134,15 +131,12 @@ fn load_dump_into_db(db_path: &str, db_name: &str, dump_path: &Path) -> Result<(
         };
 
         for row in table.rows {
-            let mut values: Vec<String> = Vec::new();
-
-            for name in table.col_names.iter() {
-                if *name == "last_online_auth" {
+            let mut values = row;
+            for pos in 0..table.col_names.len() {
+                if table.col_names[pos] == "last_online_auth" {
                     // Parses wildcards in order to load the correct time into the db.
-                    values.push(parse_time_wildcard(&row[name]).to_string());
-                    continue;
+                    values[pos] = parse_time_wildcard(&values[pos]).to_string();
                 }
-                values.push(row[name].to_string());
             }
 
             if let Err(e) = stmt.execute(rusqlite::params_from_iter(values)) {
@@ -154,8 +148,8 @@ fn load_dump_into_db(db_path: &str, db_name: &str, dump_path: &Path) -> Result<(
     Ok(())
 }
 
-// parse_time_wildcard parses some time wildcards that are contained in the dump files to ensure that
-// the loaded dbs will always present the same behavior when loaded for tests.
+/// Parses some time wildcards that are contained in the dump files to ensure that
+/// the loaded dbs will always present the same behavior when loaded for tests.
 fn parse_time_wildcard(value: &str) -> i64 {
     // c is a contant value, set to two days, that is used to ensure that the time is within some intervals.
     let c = time::Duration::days(2);
@@ -177,22 +171,12 @@ fn parse_time_wildcard(value: &str) -> i64 {
     parsed_value.unix_timestamp()
 }
 
-// get_passwd_connection returns a connection to the passwd database located in the specified path.
-fn get_passwd_connection(db_path: &str) -> Result<Connection, DBError> {
-    debug!("Connecting to passwd.db in {}", &db_path);
-
-    match Connection::open(&Path::new(db_path).join("passwd.db")) {
-        Ok(conn) => Ok(conn),
-        Err(e) => Err(DBError::ConnError(e.to_string())),
-    }
-}
-
-// get_shadow_connection returns a connection to the shadow database located in the specified path.
-fn get_shadow_connection(db_path: &str) -> Result<Connection, DBError> {
-    debug!("Connecting to shadow.db in {}", &db_path);
+/// Retuns a connection to the database `db_path`.
+fn get_db_connection(db_path: &Path) -> Result<Connection, DBError> {
+    debug!("Connecting to db in {:?}", &db_path.as_os_str());
 
     // TODO: Fix permissions and checks after implementing shadow module.
-    match Connection::open(&Path::new(db_path).join("shadow.db")) {
+    match Connection::open(&db_path) {
         Ok(conn) => Ok(conn),
         Err(e) => Err(DBError::ConnError(e.to_string())),
     }
