@@ -14,10 +14,8 @@ fn test_get_passwd_from_uid(uid: u32, initial_state: Option<&str>, want_err: boo
 
     let cache_dir = TempDir::new().expect("Setup: could not create temporary cache directory");
 
-    if let Some(cache_str_path) = cache_dir.path().to_str() {
-        if let Err(e) = testutils::prepare_db_for_tests(cache_str_path, initial_state) {
-            panic!("Setup: Failed to prepare db for tests: {:?}", e);
-        }
+    if let Err(e) = testutils::prepare_db_for_tests(&cache_dir.path(), initial_state) {
+        panic!("Setup: Failed to prepare db for tests: {:?}", e);
     }
 
     let c = CacheDB::new()
