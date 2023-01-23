@@ -31,23 +31,22 @@ fn init_logger() {
     };
 
     let logger = match syslog::unix(formatter) {
-        Err(e) => {
-            println!("cannot connect to syslog: {:?}", e);
+        Err(err) => {
+            println!("cannot connect to syslog: {:?}", err);
             return;
         }
         Ok(l) => l,
     };
 
     let mut level = log::LevelFilter::Info;
-    #[allow(clippy::or_fun_call)]
-    let show_debug = env::var("NSS_AAD_DEBUG").unwrap_or("".to_string());
+    let show_debug = env::var("NSS_AAD_DEBUG").unwrap_or_default();
     if !show_debug.is_empty() {
         level = log::LevelFilter::Debug;
     }
-    if let Err(e) = log::set_boxed_logger(Box::new(BasicLogger::new(logger)))
+    if let Err(err) = log::set_boxed_logger(Box::new(BasicLogger::new(logger)))
         .map(|()| log::set_max_level(level))
     {
-        eprintln!("cannot set log level: {:?}", e);
+        eprintln!("cannot set log level: {:?}", err);
     };
 
     crate::debug!("Log level set to {:?}", level);

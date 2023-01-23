@@ -18,13 +18,13 @@ use crate::logs::LOGPREFIX;
 fn cache_result_to_nss_status<T>(r: Result<T, CacheError>) -> Response<T> {
     match r {
         Ok(t) => Response::Success(t),
-        Err(e) => match e {
-            CacheError::DatabaseError(e) => {
-                error!("database error: {}", e);
+        Err(err) => match err {
+            CacheError::DatabaseError(err) => {
+                error!("database error: {}", err);
                 Response::Unavail
             }
-            CacheError::QueryError(e) => {
-                error!("query error: {}", e);
+            CacheError::QueryError(err) => {
+                error!("query error: {}", err);
                 Response::Unavail
             }
             CacheError::NoRecord => {
@@ -40,8 +40,7 @@ fn new_cache() -> Result<CacheDB, CacheError> {
     let mut c = CacheDB::new();
 
     if cfg!(feature = "integration_tests") {
-        #[allow(clippy::or_fun_call)]
-        let cache_dir = env::var("NSS_AAD_CACHEDIR").unwrap_or("".to_string());
+        let cache_dir = env::var("NSS_AAD_CACHEDIR").unwrap_or_default();
         if !cache_dir.is_empty() {
             c.with_db_path(&cache_dir);
         }

@@ -9,13 +9,13 @@ use crate::CacheDB;
 
 #[test_case(165119649, Some("users_in_db"), false  ; "Get existing user")]
 #[test_case(4242, Some("users_in_db"), true  ; "Error on non existing user")]
-fn test_get_passwd_from_uid(uid: u32, initial_state: Option<&str>, want_err: bool) {
+fn test_get_passwd_by_uid(uid: u32, initial_state: Option<&str>, want_err: bool) {
     let module_path = testutils::get_module_path(file!());
 
     let cache_dir = TempDir::new().expect("Setup: could not create temporary cache directory");
 
-    if let Err(e) = testutils::prepare_db_for_tests(cache_dir.path(), initial_state) {
-        panic!("Setup: Failed to prepare db for tests: {:?}", e);
+    if let Err(err) = testutils::prepare_db_for_tests(cache_dir.path(), initial_state) {
+        panic!("Setup: Failed to prepare db for tests: {:?}", err);
     }
 
     let c = CacheDB::new()
@@ -23,12 +23,12 @@ fn test_get_passwd_from_uid(uid: u32, initial_state: Option<&str>, want_err: boo
         .build()
         .expect("Setup: could not create cache object");
 
-    let got = c.get_passwd_from_uid(uid);
-    if let Err(e) = got {
+    let got = c.get_passwd_by_uid(uid);
+    if let Err(err) = got {
         assert!(
             want_err,
             "get_passwd_from_uid should not have returned an error but did: {:?}",
-            e,
+            err,
         );
         return;
     }

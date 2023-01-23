@@ -1,7 +1,7 @@
 use std::env;
 use std::path::PathBuf;
 
-// get_module_path returns the relative path to the module from the given file path.
+/// get_module_path returns the relative path to the module from the given file path.
 pub fn get_module_path(path: &str) -> String {
     let mut path = PathBuf::from(path);
     path.pop();
@@ -13,12 +13,12 @@ pub fn get_module_path(path: &str) -> String {
     path
 }
 
-// current_test_name returns a tuple of (family_name, sub_test_name).
-// Note that it can be called on tests without subtests too.
-// The detection is based on thread name, and so, does not work when RUST_TEST_THREADS=1.
+/// current_test_name returns a tuple of (family_name, sub_test_name).
+/// Note that it can be called on tests without subtests too.
+///
+/// The detection is based on thread name, and so, does not work when RUST_TEST_THREADS=1.
 pub fn current_test_name() -> (String, Option<String>) {
-    #[allow(clippy::or_fun_call)]
-    if env::var("RUST_TEST_THREADS").unwrap_or("".to_string()) == "1" {
+    if env::var("RUST_TEST_THREADS").unwrap_or_default() == "1" {
         panic!("Tests could not run with RUST_TEST_THREADS=1")
     }
 
