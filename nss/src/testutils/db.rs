@@ -1,8 +1,16 @@
+use crate::cache::{PASSWD_PERMS, SHADOW_PERMS};
 use log::debug;
 use rusqlite::{self, Connection};
-use std::{collections::HashMap, fs, path::Path};
+use std::{
+    collections::HashMap,
+    ffi::CString,
+    fs::{self, Permissions},
+    os::unix::prelude::PermissionsExt,
+    path::Path,
+};
 use time::{Duration, OffsetDateTime};
 
+/// Error enum represents the error codes that can be returned by this module.
 #[derive(Debug)]
 pub enum Error {
     Connection(String),
@@ -13,11 +21,28 @@ pub enum Error {
 
 const DB_NAMES: [&str; 2] = ["passwd", "shadow"];
 
+/// OptionalArgs represents optional arguments that can be provided to prepare_db_for_tests.
+#[derive(Default)]
+pub struct OptionalArgs<'a> {
+    /// initial_state defines a path containing dump files to be loaded into the databases.
+    pub initial_state: Option<&'a str>,
+    /// root_uid defines the uid to be used as root_uid when setting the database file permissions.
+    /// If None, the current user id is used instead.
+    pub root_uid: Option<u32>,
+    /// root_gid defines the gid to be used as root_gid when setting the database file permissions.
+    /// If None, the current user gid is used instead.
+    pub root_gid: Option<u32>,
+    /// shadow_gid defines the gid to be used as shadow_gid when setting the database file permissions.
+    /// If None, the current user gid is used instead.
+    pub shadow_gid: Option<u32>,
+}
+
 /// prepare_db_for_tests creates instances of the databases and initializes it with a inital state if requested.
-pub fn prepare_db_for_tests(cache_dir: &Path, initial_state: Option<&str>) -> Result<(), Error> {
+pub fn prepare_db_for_tests(cache_dir: &Path, opts: OptionalArgs) -> Result<(), Error> {
     create_dbs_for_tests(cache_dir)?;
 
-    if let Some(state) = initial_state {
+    // Loads saved state into the database.
+    if let Some(state) = opts.initial_state {
         let states_path = Path::new(&super::get_module_path(file!()))
             .join("states")
             .join(state);
@@ -25,6 +50,50 @@ pub fn prepare_db_for_tests(cache_dir: &Path, initial_state: Option<&str>) -> Re
         for db in DB_NAMES {
             let db_path = cache_dir.join(db.to_owned() + ".db");
             load_dump_into_db(&states_path.join(format!("{db}.db.dump")), &db_path)?;
+        }
+    }
+
+    // Fix database permissions
+    for db in DB_NAMES {
+        // TODO: Investigate using Go-like optional arguments
+        let (mut uid, mut gid) = (users::get_current_uid(), users::get_current_gid());
+        let mut shadow_gid = users::get_group_by_name("shadow").unwrap().gid();
+        if let Some(id) = opts.root_uid {
+            uid = id;
+        }
+        if let Some(id) = opts.root_gid {
+            gid = id;
+        }
+        if let Some(id) = opts.shadow_gid {
+            shadow_gid = id;
+        }
+
+        let db_path = cache_dir.join(db.to_owned() + ".db");
+        let (perm, gid) = match db {
+            "passwd" => (PASSWD_PERMS, gid),
+            "shadow" => (SHADOW_PERMS, shadow_gid),
+            _ => (0o000000, gid),
+        };
+
+        // libc functions are unstable and, thus, require a unsafe block.
+        unsafe {
+            // Sets the correct ownership for the db files after loading the dumps.
+            // Need to use unsafe libc function while https://doc.rust-lang.org/std/os/unix/fs/fn.chown.html
+            // is still in nightly.
+            let c_path = CString::new(db_path.to_str().unwrap()).unwrap();
+            match libc::chown(c_path.as_ptr(), uid, gid) {
+                ok if ok <= 0 => (),
+                err if err > 0 => {
+                    return Err(Error::Creation(format!(
+                        "failed to change ownership of {db_path:?}: {err}"
+                    )))
+                }
+                _ => (),
+            };
+        }
+
+        if let Err(err) = fs::set_permissions(db_path, Permissions::from_mode(perm)) {
+            return Err(Error::Creation(err.to_string()));
         }
     }
 
@@ -176,7 +245,6 @@ fn parse_time_wildcard(value: &str) -> i64 {
 fn get_db_connection(db_path: &Path) -> Result<Connection, Error> {
     debug!("Connecting to db in {:?}", &db_path.as_os_str());
 
-    // TODO: Fix permissions and checks after implementing shadow module.
     match Connection::open(db_path) {
         Ok(conn) => Ok(conn),
         Err(err) => Err(Error::Connection(err.to_string())),
