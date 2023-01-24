@@ -1,4 +1,9 @@
-use std::path::Path;
+use std::{
+    fs::{self, Permissions},
+    os::unix::fs::MetadataExt,
+    os::unix::fs::PermissionsExt,
+    path::{Path, PathBuf},
+};
 
 use rusqlite::{Connection, OpenFlags, Rows, Statement};
 use serde::Serialize;
@@ -9,6 +14,29 @@ use log::debug;
 mod mod_tests;
 
 const DB_PATH: &str = "/var/lib/aad/cache";
+const PASSWD_DB: &str = "passwd.db"; // root:root 644
+const SHADOW_DB: &str = "shadow.db"; // root:shadow 640
+
+/// ShadowMode enum represents the status of the shadow database.
+#[derive(PartialEq, PartialOrd, Debug, Clone, Copy)]
+pub enum ShadowMode {
+    Unavailable,
+    ReadOnly,
+}
+
+impl From<i32> for ShadowMode {
+    /// from converts a i32 value to ShadowMode entry.
+    fn from(value: i32) -> Self {
+        match value {
+            0 => Self::Unavailable,
+            1 => Self::ReadOnly,
+            _ => {
+                debug!("Provided shadow mode {value} is not available, using 0 instead");
+                Self::Unavailable
+            }
+        }
+    }
+}
 
 /// Passwd struct represents a password entry in the cache database.
 #[derive(Debug, Serialize)]
@@ -42,41 +70,156 @@ pub enum CacheError {
 /// CacheDB struct represents the cache database.
 pub struct CacheDB {
     conn: Connection,
+    shadow_mode: ShadowMode,
 }
 
 /// CacheDBBuilder struct is the struct for the builder pattern and change the parameters of the cache.
 pub struct CacheDBBuilder {
-    db_path: Option<String>,
+    db_path: String,
+    root_uid: u32,
+    root_gid: u32,
+    shadow_gid: i32,
 }
 
+impl Default for CacheDBBuilder {
+    /// default sets the default values for the CacheDBBuilder.
+    fn default() -> Self {
+        Self {
+            db_path: DB_PATH.to_string(),
+            root_uid: 0,
+            root_gid: 0,
+            shadow_gid: -1,
+        }
+    }
+}
+
+/// DbFileInfo struct represents the expected ownership and permissions for the database file.
+struct DbFileInfo {
+    path: PathBuf,
+    expected_uid: u32,
+    expected_gid: u32,
+    expected_perms: Permissions,
+}
+
+#[allow(dead_code)]
 impl CacheDBBuilder {
     /// with_db_path overrides the path to the cache database.
     pub fn with_db_path(&mut self, db_path: &str) -> &mut Self {
         debug!("using custom db path: {}", db_path);
-        self.db_path = Some(db_path.to_string());
+        self.db_path = db_path.to_string();
+        self
+    }
+
+    /// with_root_uid overrides the default root uid for the cache database.
+    pub fn with_root_uid(&mut self, uid: u32) -> &mut Self {
+        debug!("using custom root uid '{uid}'");
+        self.root_uid = uid;
+        self
+    }
+
+    /// with_root_gid overrides the default root gid for the cache database.
+    pub fn with_root_gid(&mut self, gid: u32) -> &mut Self {
+        debug!("using custom root gid '{gid}'");
+        self.root_gid = gid;
+        self
+    }
+
+    /// with_shadow_gid overrides the default shadow gid for the cache database.
+    pub fn with_shadow_gid(&mut self, shadow_gid: i32) -> &mut Self {
+        debug!("using custom shadow gid '{shadow_gid}'");
+        self.shadow_gid = shadow_gid;
         self
     }
 
     /// build initializes and opens a connection to the cache database.
-    pub fn build(&self) -> Result<CacheDB, CacheError> {
-        let mut db_path = DB_PATH.to_string();
-        if let Some(path_override) = &self.db_path {
-            db_path = path_override.to_string();
+    pub fn build(&mut self) -> Result<CacheDB, CacheError> {
+        debug!("opening database connection from {}", self.db_path);
+
+        if self.shadow_gid < 0 {
+            let gid = match users::get_group_by_name("shadow") {
+                Some(group) => group.gid(),
+                None => {
+                    return Err(CacheError::DatabaseError(
+                        "failed to find group id for group 'shadow'".to_string(),
+                    ))
+                }
+            };
+            self.shadow_gid = gid as i32;
         }
 
-        let passwd_db = Path::new(&db_path).join("passwd.db");
+        let db_path = Path::new(&self.db_path);
+        let db_files: Vec<DbFileInfo> = vec![
+            DbFileInfo {
+                // PASSWD
+                path: db_path.join(PASSWD_DB),
+                expected_uid: self.root_uid,
+                expected_gid: self.root_gid,
+                expected_perms: Permissions::from_mode(0o644),
+            },
+            DbFileInfo {
+                // SHADOW
+                path: db_path.join(SHADOW_DB),
+                expected_uid: self.root_uid,
+                expected_gid: self.shadow_gid as u32,
+                expected_perms: Permissions::from_mode(0o640),
+            },
+        ];
+        Self::check_file_permissions(&db_files)?;
+
+        let passwd_db = &db_path.join(PASSWD_DB);
         let passwd_db = passwd_db.to_str().unwrap();
-
-        debug!("opening database connection from {}", passwd_db);
-
         let conn = match Connection::open_with_flags(passwd_db, OpenFlags::SQLITE_OPEN_READ_ONLY) {
             Ok(conn) => conn,
             Err(err) => return Err(CacheError::DatabaseError(err.to_string())),
         };
 
-        // TODO: attach shadow if root. Handle file permissions…
+        let shadow_db = &db_path.join(SHADOW_DB);
+        let mut shadow_mode = ShadowMode::Unavailable;
+        if fs::metadata(shadow_db).is_ok() {
+            shadow_mode = ShadowMode::ReadOnly;
+        }
 
-        Ok(CacheDB { conn })
+        // Attaches shadow to the connection if the shadow db is at least ReadOnly for the current user.
+        if shadow_mode >= ShadowMode::ReadOnly {
+            let shadow_db = shadow_db.to_str().unwrap();
+
+            let stmt_str = format!("attach database '{}' as shadow;", shadow_db);
+            if let Err(err) = conn.execute_batch(&stmt_str) {
+                return Err(CacheError::DatabaseError(err.to_string()));
+            };
+        }
+
+        Ok(CacheDB { conn, shadow_mode })
+    }
+
+    /// check_file_permissions checks the database files and compares the current ownership and
+    /// permissions with the expected ones.
+    fn check_file_permissions(files: &Vec<DbFileInfo>) -> Result<(), CacheError> {
+        debug!("Checking db file permissions");
+        for file in files {
+            let stat = match fs::metadata(&file.path) {
+                Ok(stat) => stat,
+                Err(err) => return Err(CacheError::DatabaseError(err.to_string())),
+            };
+
+            // Checks permissions
+            if stat.permissions().mode() & file.expected_perms.mode() == 1 {
+                return Err(CacheError::DatabaseError(format!(
+                    "invalid permissions for {}",
+                    file.path.to_str().unwrap()
+                )));
+            }
+
+            // Checks ownership
+            if stat.uid() != file.expected_uid || stat.gid() != file.expected_gid {
+                return Err(CacheError::DatabaseError(format!(
+                    "invalid ownership for {}",
+                    file.path.to_str().unwrap()
+                )));
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -84,7 +227,9 @@ impl CacheDB {
     /// new creates a new CacheDBBuilder object.
     #[allow(clippy::new_ret_no_self)] // builder pattern
     pub fn new() -> CacheDBBuilder {
-        CacheDBBuilder { db_path: None }
+        CacheDBBuilder {
+            ..Default::default()
+        }
     }
 
     /* Passwd */
