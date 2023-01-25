@@ -22,6 +22,15 @@ pub struct Passwd {
     pub shell: String,
 }
 
+/// Group struct represents a group entry in the cache database.
+#[derive(Debug, Serialize)]
+pub struct Group {
+    pub name: String,
+    pub passwd: String,
+    pub gid: u32,
+    pub members: Vec<String>,
+}
+
 /// CacheError enum represents the list of errors supported by the cache.
 #[derive(Debug)]
 pub enum CacheError {
@@ -125,6 +134,78 @@ impl CacheDB {
         Ok(Self::rows_to_passwd_entries(rows))
     }
 
+    /* Group */
+    /// get_group_by_gid queries the database for a group entry with matching gid.
+    pub fn get_group_by_gid(self: &CacheDB, gid: u32) -> Result<Group, CacheError> {
+        // Nested query to avoid the case where the user is not found,
+        // then all the values are NULL due to the call to GROUP_CONCAT
+        let mut stmt = self.prepare_statement(
+            "
+            SELECT * FROM (
+                SELECT g.name, g.password, g.gid, group_concat(p.login, ',') as members
+                FROM groups g, uid_gid u, passwd p
+                WHERE g.gid = ?
+                AND u.gid = g.gid
+                AND p.uid = u.uid
+            ) WHERE name IS NOT NULL
+            ",
+        )?;
+
+        let rows = match stmt.query([gid]) {
+            Ok(rows) => rows,
+            Err(err) => return Err(CacheError::QueryError(err.to_string())),
+        };
+
+        let mut entries = Self::rows_to_group_entries(rows);
+        Self::expect_one_row(&mut entries)
+    }
+
+    /// get_group_by_name queries the database for a group with matching name.
+    pub fn get_group_by_name(self: &CacheDB, name: &str) -> Result<Group, CacheError> {
+        // Nested query to avoid the case where the user is not found,
+        // then all the values are NULL due to the call to GROUP_CONCAT
+        let mut stmt = self.prepare_statement(
+            "
+            SELECT * FROM (
+                SELECT g.name, g.password, g.gid, group_concat(p.login, ',') as members
+                FROM groups g, uid_gid u, passwd p
+                WHERE g.name = ?
+                AND u.gid = g.gid
+                AND p.uid = u.uid
+            ) WHERE name IS NOT NULL
+            ",
+        )?;
+
+        let rows = match stmt.query([name]) {
+            Ok(rows) => rows,
+            Err(err) => return Err(CacheError::QueryError(err.to_string())),
+        };
+
+        let mut entries = Self::rows_to_group_entries(rows);
+        Self::expect_one_row(&mut entries)
+    }
+
+    /// get_all_groups queries the database for all groups.
+    pub fn get_all_groups(self: &CacheDB) -> Result<Vec<Group>, CacheError> {
+        let mut stmt = self.prepare_statement(
+            "
+            SELECT * FROM (
+                SELECT g.name, g.password, g.gid, group_concat(p.login, ',') as members
+                FROM groups g, uid_gid u, passwd p
+                WHERE u.gid = g.gid
+                AND p.uid = u.uid
+            ) WHERE name IS NOT NULL
+            ",
+        )?;
+
+        let rows = match stmt.query([]) {
+            Ok(rows) => rows,
+            Err(err) => return Err(CacheError::QueryError(err.to_string())),
+        };
+
+        Ok(Self::rows_to_group_entries(rows))
+    }
+
     /* Common */
     /// prepare_statement prepares a statement and queries the database.
     fn prepare_statement(&self, stmt_str: &str) -> Result<Statement, CacheError> {
@@ -148,6 +229,28 @@ impl CacheDB {
                 shell: row.get(6).expect("invalid shell"),
             });
         }
+        entries
+    }
+
+    /// rows_to_group_entries converts SQL rows to a `Vec<Group>`.
+    fn rows_to_group_entries(mut rows: Rows) -> Vec<Group> {
+        let mut entries = Vec::new();
+        while let Ok(Some(row)) = rows.next() {
+            let mut members: Vec<String> = Vec::new();
+
+            let tmp: String = row.get(3).expect("invalid members");
+            for member in tmp.split(',') {
+                members.push(member.to_string());
+            }
+
+            entries.push(Group {
+                name: row.get(0).expect("invalid name"),
+                passwd: row.get(1).expect("invalid passwd"),
+                gid: row.get(2).expect("invalid gid"),
+                members,
+            })
+        }
+
         entries
     }
 
