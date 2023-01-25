@@ -39,18 +39,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
       - name: Run tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all-features
-      - name: Get code coverage
-        id: rust-coverage
-        uses: actions-rs/tarpaulin@v0.1
-        with:
-          out-type: Json
-          version: '0.23.1'
+        run: |
+          set -eu
+          set -x
+
+          export RUSTFLAGS='-Zprofile -Ccodegen-units=1 -Copt-level=0 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+          export RUSTDOCFLAGS='-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+          export CARGO_INCREMENTAL=0
+
+          cargo test -- --test-threads=4
+      - id: coverage
+        uses: actions-rs/grcov@v0.1
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          file: ${{ steps.coverage.outputs.report }}
