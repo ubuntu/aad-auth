@@ -24,7 +24,7 @@ impl PasswdHooks for AADPasswd {
 
     /// get_entry_by_uid retrieves a password entry by user id.
     fn get_entry_by_uid(uid: uid_t) -> Response<Passwd> {
-        debug!("get_entry_by_uid for passwd for uid: {}", uid);
+        debug!("get_entry_by_uid for passwd for uid: {uid}");
 
         let c = match super::new_cache() {
             Ok(c) => c,
@@ -37,7 +37,7 @@ impl PasswdHooks for AADPasswd {
 
     /// get_entry_by_name retrieves a password entry by user name.
     fn get_entry_by_name(name: String) -> Response<Passwd> {
-        debug!("get_entry_by_name for passwd for name: {}", name);
+        debug!("get_entry_by_name for passwd for name: {name}");
 
         let c = match super::new_cache() {
             Ok(c) => c,
@@ -68,10 +68,7 @@ fn cache_passwd_to_nss_passwd(entry: CachePasswd) -> Passwd {
 fn result_cache_passwd_to_result_nss_passwd(
     entry: Result<CachePasswd, CacheError>,
 ) -> Result<Passwd, CacheError> {
-    match entry {
-        Ok(entry) => Ok(cache_passwd_to_nss_passwd(entry)),
-        Err(err) => Err(err),
-    }
+    Ok(cache_passwd_to_nss_passwd(entry?))
 }
 
 /// result_vec_cache_passwd_to_result_vec_nss_passwd converts a list of `CacheDB::Passwd` entries
@@ -79,7 +76,7 @@ fn result_cache_passwd_to_result_nss_passwd(
 fn result_vec_cache_passwd_to_result_vec_nss_passwd(
     entry: Result<Vec<CachePasswd>, CacheError>,
 ) -> Result<Vec<Passwd>, CacheError> {
-    let mut v = vec![];
+    let mut v = Vec::new();
     for e in entry? {
         v.push(cache_passwd_to_nss_passwd(e));
     }
