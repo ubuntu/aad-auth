@@ -111,8 +111,8 @@ impl CacheDB {
         Self::expect_one_row(&mut entries)
     }
 
-    /// get_all_passwd queries the database for all passwd rows.
-    pub fn get_all_passwd(&self) -> Result<Vec<Passwd>, CacheError> {
+    /// get_all_passwds queries the database for all passwd rows.
+    pub fn get_all_passwds(&self) -> Result<Vec<Passwd>, CacheError> {
         let mut stmt = self.prepare_statement(
             "SELECT login, password, uid, gid, gecos, home, shell FROM passwd", // Last empty field is the shadow password
         )?;

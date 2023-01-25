@@ -18,7 +18,7 @@ impl PasswdHooks for AADPasswd {
             Err(err) => return super::cache_result_to_nss_status(Err(err)),
         };
 
-        let r = result_vec_cache_passwd_to_result_vec_nss_passwd(c.get_all_passwd());
+        let r = result_vec_cache_passwd_to_result_vec_nss_passwd(c.get_all_passwds());
         super::cache_result_to_nss_status(r)
     }
 
