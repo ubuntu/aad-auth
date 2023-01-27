@@ -20,7 +20,7 @@ fn test_get_passwd_by_uid(uid: u32, initial_state: Option<&str>, want_err: bool)
         ..Default::default()
     };
     if let Err(err) = testutils::prepare_db_for_tests(cache_dir.path(), opts) {
-        panic!("Setup: Failed to prepare db for tests: {:?}", err);
+        panic!("Setup: Failed to prepare db for tests: {err:?}");
     }
 
     let (current_uid, current_gid) = (users::get_current_uid(), users::get_current_gid());
@@ -36,8 +36,7 @@ fn test_get_passwd_by_uid(uid: u32, initial_state: Option<&str>, want_err: bool)
     if let Err(err) = got {
         assert!(
             want_err,
-            "get_passwd_from_uid should not have returned an error but did: {:?}",
-            err,
+            "get_passwd_from_uid should not have returned an error but did: {err:?}",
         );
         return;
     }
@@ -63,7 +62,7 @@ fn test_get_group_by_gid(gid: u32, initial_state: Option<&str>, want_err: bool) 
         ..Default::default()
     };
     if let Err(err) = testutils::prepare_db_for_tests(cache_dir.path(), opts) {
-        panic!("Setup: Failed to prepare db for tests: {:?}", err);
+        panic!("Setup: Failed to prepare db for tests: {err:?}");
     }
 
     let (current_uid, current_gid) = (users::get_current_uid(), users::get_current_gid());
@@ -79,8 +78,7 @@ fn test_get_group_by_gid(gid: u32, initial_state: Option<&str>, want_err: bool) 
     if let Err(err) = got {
         assert!(
             want_err,
-            "get_passwd_from_uid should not have returned an error but did: {:?}",
-            err,
+            "get_passwd_from_uid should not have returned an error but did: {err:?}",
         );
         return;
     }
@@ -106,7 +104,7 @@ fn test_get_shadow_by_name(name: &str, initial_state: Option<&str>, want_err: bo
         ..Default::default()
     };
     if let Err(err) = testutils::prepare_db_for_tests(cache_dir.path(), opts) {
-        panic!("Setup: Failed to prepare db for tests: {:?}", err)
+        panic!("Setup: Failed to prepare db for tests: {err:?}")
     }
 
     let (current_uid, current_gid) = (users::get_current_uid(), users::get_current_gid());
@@ -122,8 +120,7 @@ fn test_get_shadow_by_name(name: &str, initial_state: Option<&str>, want_err: bo
     if let Err(err) = got {
         assert!(
             want_err,
-            "get_shadow_by_name should not have returned an error but did: {:?}",
-            err,
+            "get_shadow_by_name should not have returned an error but did: {err:?}",
         );
         return;
     }
