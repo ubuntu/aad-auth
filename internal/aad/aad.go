@@ -34,7 +34,7 @@ type aadErr struct {
 }
 
 type publicClient interface {
-	AcquireTokenByUsernamePassword(ctx context.Context, scopes []string, username string, password string) (public.AuthResult, error)
+	AcquireTokenByUsernamePassword(ctx context.Context, scopes []string, username string, password string, opts ...public.AcquireByUsernamePasswordOption) (public.AuthResult, error)
 }
 
 // AAD holds the authentication mechanism (real or mock).
