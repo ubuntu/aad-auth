@@ -32,7 +32,7 @@ fn init_logger() {
 
     let logger = match syslog::unix(formatter) {
         Err(err) => {
-            println!("cannot connect to syslog: {:?}", err);
+            println!("cannot connect to syslog: {err:?}");
             return;
         }
         Ok(l) => l,
@@ -46,7 +46,7 @@ fn init_logger() {
     if let Err(err) = log::set_boxed_logger(Box::new(BasicLogger::new(logger)))
         .map(|()| log::set_max_level(level))
     {
-        eprintln!("cannot set log level: {:?}", err);
+        eprintln!("cannot set log level: {err:?}");
     };
 
     crate::debug!("Log level set to {:?}", level);

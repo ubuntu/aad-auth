@@ -1,0 +1,8 @@
+name: myuser@domain.com
+passwd: $2a$10$R4ieqs.yZJuN1MSp2xhevemo5XnGK5oZ/RnMgWM67cpC3I10no97q
+last_pwd_change: -1
+min_pwd_age: -1
+max_pwd_age: -1
+pwd_warn_period: -1
+pwd_inactivity: -1
+expiration_date: -1
