@@ -1,3 +1,7 @@
+use faccess::PathExt;
+use log::debug;
+use rusqlite::{Connection, OpenFlags, Rows, Statement};
+use serde::Serialize;
 use std::{
     fmt::Debug,
     fs::{self, Permissions},
@@ -5,11 +9,6 @@ use std::{
     os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
 };
-
-use rusqlite::{Connection, OpenFlags, Rows, Statement};
-use serde::Serialize;
-
-use log::debug;
 
 #[cfg(test)]
 mod mod_tests;
@@ -194,7 +193,7 @@ impl CacheDBBuilder {
 
         let shadow_db = &db_path.join(SHADOW_DB);
         let mut shadow_mode = ShadowMode::Unavailable;
-        if fs::metadata(shadow_db).is_ok() {
+        if shadow_db.readable() {
             shadow_mode = ShadowMode::ReadOnly;
         }
 
