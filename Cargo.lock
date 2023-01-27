@@ -80,6 +80,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "faccess"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "59ae66425802d6a903e268ae1a08b8c38ba143520f227a205edf4e9c7e3e26d5"
+dependencies = [
+ "bitflags",
+ "libc",
+ "winapi",
+]
+
+[[package]]
 name = "fallible-iterator"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -234,6 +245,7 @@ name = "nss_aad"
 version = "0.1.0"
 dependencies = [
  "ctor",
+ "faccess",
  "goldenfile",
  "lazy_static",
  "libc",

@@ -23,6 +23,7 @@ serde = { version = "^1", features = ["derive"] }
 syslog = "^6"
 time = "0.3.17"
 users = "0.11.0"
+faccess = "0.2.4"
 
 [dev-dependencies]
 goldenfile = "^1.4"
