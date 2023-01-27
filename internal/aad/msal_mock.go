@@ -34,7 +34,7 @@ type publicClientMock struct {
 	forceOffline bool
 }
 
-func (m publicClientMock) AcquireTokenByUsernamePassword(ctx context.Context, scopes []string, username string, password string) (public.AuthResult, error) {
+func (m publicClientMock) AcquireTokenByUsernamePassword(ctx context.Context, scopes []string, username string, password string, opts ...public.AcquireByUsernamePasswordOption) (public.AuthResult, error) {
 	r := public.AuthResult{}
 	callErr := msalErrors.CallErr{
 		Resp: &http.Response{},
