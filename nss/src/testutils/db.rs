@@ -1,5 +1,3 @@
-use crate::cache::{PASSWD_PERMS, SHADOW_PERMS};
-use log::debug;
 use rusqlite::{self, Connection};
 use std::{
     collections::HashMap,
@@ -9,6 +7,11 @@ use std::{
     path::Path,
 };
 use time::{Duration, OffsetDateTime};
+
+use crate::{
+    cache::{PASSWD_PERMS, SHADOW_PERMS},
+    debug, LOGPREFIX,
+};
 
 /// Error enum represents the error codes that can be returned by this module.
 #[derive(Debug)]
