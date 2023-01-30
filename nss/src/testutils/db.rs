@@ -10,7 +10,7 @@ use time::{Duration, OffsetDateTime};
 
 use crate::{
     cache::{PASSWD_PERMS, SHADOW_PERMS},
-    debug, LOGPREFIX,
+    debug, init_logger,
 };
 
 /// Error enum represents the error codes that can be returned by this module.
@@ -42,6 +42,7 @@ pub struct OptionalArgs<'a> {
 
 /// prepare_db_for_tests creates instances of the databases and initializes it with a inital state if requested.
 pub fn prepare_db_for_tests(cache_dir: &Path, opts: OptionalArgs) -> Result<(), Error> {
+    init_logger();
     create_dbs_for_tests(cache_dir)?;
 
     // Loads saved state into the database.
