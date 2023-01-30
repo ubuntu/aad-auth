@@ -1,5 +1,4 @@
 use faccess::PathExt;
-use log::debug;
 use rusqlite::{Connection, OpenFlags, Rows, Statement};
 use serde::Serialize;
 use std::{
@@ -9,6 +8,8 @@ use std::{
     os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
 };
+
+use crate::{debug, LOGPREFIX};
 
 #[cfg(test)]
 mod mod_tests;
