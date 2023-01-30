@@ -20,7 +20,7 @@ mod cache;
 use crate::cache::{CacheDB, CacheError};
 
 mod logs;
-use crate::logs::LOGPREFIX;
+use logs::init_logger;
 
 // cache_result_to_nss_status converts our internal CacheError to a nss-compatible Response.
 fn cache_result_to_nss_status<T>(r: Result<T, CacheError>) -> Response<T> {
