@@ -3,14 +3,17 @@ use libc::uid_t;
 use libnss::interop::Response;
 use libnss::passwd::{Passwd, PasswdHooks};
 
-use crate::cache::{CacheError, Passwd as CachePasswd};
-use crate::{debug, LOGPREFIX};
+use crate::{
+    cache::{CacheError, Passwd as CachePasswd},
+    debug, init_logger,
+};
 
 pub struct AADPasswd;
 
 impl PasswdHooks for AADPasswd {
     /// get_all_entries retrieves all the password entries from the cache database.
     fn get_all_entries() -> Response<Vec<Passwd>> {
+        init_logger();
         debug!("get_all_entries for passwd");
 
         let c = match super::new_cache() {
@@ -24,6 +27,7 @@ impl PasswdHooks for AADPasswd {
 
     /// get_entry_by_uid retrieves a password entry by user id.
     fn get_entry_by_uid(uid: uid_t) -> Response<Passwd> {
+        init_logger();
         debug!("get_entry_by_uid for passwd for uid: {uid}");
 
         let c = match super::new_cache() {
@@ -37,6 +41,7 @@ impl PasswdHooks for AADPasswd {
 
     /// get_entry_by_name retrieves a password entry by user name.
     fn get_entry_by_name(name: String) -> Response<Passwd> {
+        init_logger();
         debug!("get_entry_by_name for passwd for name: {name}");
 
         let c = match super::new_cache() {
