@@ -44,12 +44,15 @@ jobs:
         with:
           command: test
           args: --all-features
-      - name: Get code coverage
-        id: rust-coverage
-        uses: actions-rs/tarpaulin@v0.1
-        with:
-          out-type: Json
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+      # TODO: Right now, tarpaulin is having some problems that we'll have to debug in the future.
+      #       Since codecov does not support private repositories, we should just keep checking the
+      #       coverage locally and fix this action before opening the repository again.
+      # - name: Get code coverage
+      #   id: rust-coverage
+      #   uses: actions-rs/tarpaulin@v0.1
+      #   with:
+      #     out-type: Json
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@v3
+      #   with:
+      #     token: ${{ secrets.CODECOV_TOKEN }}
