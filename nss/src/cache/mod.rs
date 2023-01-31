@@ -8,6 +8,7 @@ use std::{
     os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
 };
+use time::{Duration, OffsetDateTime};
 
 use crate::debug;
 
@@ -15,6 +16,8 @@ use crate::debug;
 mod mod_tests;
 
 const DB_PATH: &str = "/var/lib/aad/cache";
+pub const OFFLINE_CREDENTIALS_EXPIRATION: i32 = 90;
+pub const EXPIRATION_PURGE_MULTIPLIER: i32 = 2;
 
 const PASSWD_DB: &str = "passwd.db"; // Ownership: root:root
 pub const PASSWD_PERMS: u32 = 0o644;
@@ -25,8 +28,24 @@ pub const SHADOW_PERMS: u32 = 0o640;
 /// ShadowMode enum represents the status of the shadow database.
 #[derive(PartialEq, PartialOrd, Debug, Clone, Copy)]
 pub enum ShadowMode {
+    AutoDetect = -1,
     Unavailable,
     ReadOnly,
+    ReadWrite,
+}
+impl From<i32> for ShadowMode {
+    fn from(value: i32) -> Self {
+        match value {
+            -1 => ShadowMode::AutoDetect,
+            0 => ShadowMode::Unavailable,
+            1 => ShadowMode::ReadOnly,
+            2 => ShadowMode::ReadWrite,
+            other => {
+                debug!("Unrecognized mode {other}, using 0 instead");
+                ShadowMode::Unavailable
+            }
+        }
+    }
 }
 
 /// Passwd struct represents a password entry in the cache database.
@@ -90,19 +109,35 @@ pub enum CacheError {
 pub struct CacheDB {
     conn: Connection,
     shadow_mode: ShadowMode,
+
+    /// offline_credentials_expiration is the number of days a user will be allowed to login without
+    /// online authentication.
+    ///
+    /// Users that have not authenticated online for more than this ammount of days will be prevented
+    /// from offline authentication and purged from the cache if the days without online authentication
+    /// exceed twice this ammount.
+    offline_credentials_expiration: i32,
 }
 
 /// CacheDBBuilder struct is the struct for the builder pattern and change the parameters of the cache.
 pub struct CacheDBBuilder {
     /// db_path is the path in which the databases will be created.
     db_path: String,
-
+    /// offline_credentials_expiration is the number of days a user will be allowed to login without
+    /// online authentication.
+    ///
+    /// Users that have not authenticated online for more than this ammount of days will be prevented
+    /// from offline authentication and purged from the cache if the days without online authentication
+    /// exceed twice this ammount.
+    offline_credentials_expiration: i32,
     /// root_uid is the uid of the database owner.
     root_uid: u32,
     /// root_gid is the gid of the owner group.
     root_gid: u32,
     /// shadow_gid is the gid to be used by the shadow group.
     shadow_gid: Option<u32>,
+    /// shadow_mode is the manual access level to be used by the shadow database (for tests)
+    shadow_mode: ShadowMode,
 }
 
 /// DbFileInfo struct represents the expected ownership and permissions for the database file.
@@ -148,6 +183,25 @@ impl CacheDBBuilder {
         self
     }
 
+    // This is a function to be used in tests, so we need to annotate it.
+    #[cfg(test)]
+    /// with_shadow_mode overrides the default access level for the shadow database.
+    pub fn with_shadow_mode(&mut self, shadow_mode: i32) -> &mut Self {
+        debug!("using custom shadow mode '{shadow_mode}'");
+        self.shadow_mode = ShadowMode::from(shadow_mode);
+        self
+    }
+
+    // This is a function to be used in tests, so we need to annotate it.
+    #[cfg(test)]
+    /// with_offline_credentials_expiration overrides the default ammount of time a user can authenticate
+    /// without online verification.
+    pub fn with_offline_credentials_expiration(&mut self, value: i32) -> &mut Self {
+        debug!("using custom credentials expiration '{value}'");
+        self.offline_credentials_expiration = value;
+        self
+    }
+
     /// build initializes and opens a connection to the cache database.
     pub fn build(&mut self) -> Result<CacheDB, CacheError> {
         debug!("opening database connection from {}", self.db_path);
@@ -185,18 +239,29 @@ impl CacheDBBuilder {
         ];
         Self::check_file_permissions(&db_files)?;
 
+        let shadow_db = &db_path.join(SHADOW_DB);
+        let mut shadow_mode = self.shadow_mode;
+        if shadow_mode == ShadowMode::AutoDetect {
+            shadow_mode = ShadowMode::Unavailable;
+            if shadow_db.readable() {
+                shadow_mode = ShadowMode::ReadOnly;
+            }
+            if shadow_db.writable() {
+                shadow_mode = ShadowMode::ReadWrite;
+            }
+        }
+
+        let open_flags = match shadow_mode {
+            ShadowMode::ReadWrite => OpenFlags::SQLITE_OPEN_READ_WRITE,
+            _ => OpenFlags::SQLITE_OPEN_READ_ONLY,
+        };
+
         let passwd_db = &db_path.join(PASSWD_DB);
         let passwd_db = passwd_db.to_str().unwrap();
-        let conn = match Connection::open_with_flags(passwd_db, OpenFlags::SQLITE_OPEN_READ_ONLY) {
+        let conn = match Connection::open_with_flags(passwd_db, open_flags) {
             Ok(conn) => conn,
             Err(err) => return Err(CacheError::DatabaseError(err.to_string())),
         };
-
-        let shadow_db = &db_path.join(SHADOW_DB);
-        let mut shadow_mode = ShadowMode::Unavailable;
-        if shadow_db.readable() {
-            shadow_mode = ShadowMode::ReadOnly;
-        }
 
         // Attaches shadow to the connection if the shadow db is at least ReadOnly for the current user.
         if shadow_mode >= ShadowMode::ReadOnly {
@@ -208,7 +273,19 @@ impl CacheDBBuilder {
             };
         }
 
-        Ok(CacheDB { conn, shadow_mode })
+        let mut c = CacheDB {
+            conn,
+            shadow_mode,
+            offline_credentials_expiration: self.offline_credentials_expiration,
+        };
+
+        if shadow_mode >= ShadowMode::ReadWrite {
+            if let Err(err) = c.cleanup_expired_entries() {
+                return Err(CacheError::DatabaseError(err.to_string()));
+            }
+        }
+
+        Ok(c)
     }
 
     /// check_file_permissions checks the database files and compares the current ownership and
@@ -255,9 +332,11 @@ impl CacheDB {
     pub fn new() -> CacheDBBuilder {
         CacheDBBuilder {
             db_path: DB_PATH.to_string(),
+            offline_credentials_expiration: OFFLINE_CREDENTIALS_EXPIRATION,
             root_uid: 0,
             root_gid: 0,
             shadow_gid: None,
+            shadow_mode: ShadowMode::AutoDetect,
         }
     }
 
@@ -297,7 +376,7 @@ impl CacheDB {
     /// get_all_passwds queries the database for all passwd rows.
     pub fn get_all_passwds(&self) -> Result<Vec<Passwd>, CacheError> {
         let mut stmt = self.prepare_statement(
-            "SELECT login, password, uid, gid, gecos, home, shell FROM passwd", // Last empty field is the shadow password
+            "SELECT login, password, uid, gid, gecos, home, shell FROM passwd ORDER BY login", // Last empty field is the shadow password
         )?;
 
         let rows = match stmt.query([]) {
@@ -368,7 +447,9 @@ impl CacheDB {
                 FROM groups g, uid_gid u, passwd p
                 WHERE u.gid = g.gid
                 AND p.uid = u.uid
+                GROUP BY g.name
             ) WHERE name IS NOT NULL
+            ORDER BY name
             ",
         )?;
 
@@ -421,6 +502,7 @@ impl CacheDB {
             SELECT p.login, s.password, s.last_pwd_change, s.min_pwd_age, s.max_pwd_age, s.pwd_warn_period, s.pwd_inactivity, s.expiration_date
             FROM passwd p, shadow.shadow s
             WHERE p.uid = s.uid
+            ORDER BY p.login
             "
         )?;
 
@@ -511,5 +593,43 @@ impl CacheDB {
             Some(entry) => Ok(entry),
             None => Err(CacheError::NoRecord),
         }
+    }
+
+    /// cleanup_expired_entries purges all the expired entries from the database.
+    fn cleanup_expired_entries(&mut self) -> Result<(), rusqlite::Error> {
+        if self.offline_credentials_expiration == 0 {
+            debug!("Offline expiration is 0, cache will not be cleaned");
+            return Ok(());
+        }
+
+        let tx = self.conn.transaction()?;
+
+        let days = Duration::days(
+            (EXPIRATION_PURGE_MULTIPLIER * self.offline_credentials_expiration).into(),
+        );
+        let purge_time = (OffsetDateTime::now_utc() - days).unix_timestamp();
+
+        // Shadow cleanup
+        tx.execute(
+            "DELETE FROM shadow.shadow WHERE uid IN (
+                SELECT uid FROM passwd WHERE last_online_auth < ?
+            )",
+            [purge_time],
+        )?;
+
+        // Passwd cleanup
+        tx.execute(
+            "DELETE FROM passwd WHERE last_online_auth < ?",
+            [purge_time],
+        )?;
+
+        // Group cleanup
+        tx.execute(
+            "DELETE FROM groups WHERE gid NOT IN (SELECT DISTINCT gid FROM uid_gid)",
+            [],
+        )?;
+
+        tx.commit()?;
+        Ok(())
     }
 }
