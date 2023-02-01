@@ -9,7 +9,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{debug, LOGPREFIX};
+use crate::debug;
 
 #[cfg(test)]
 mod mod_tests;

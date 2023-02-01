@@ -1,14 +1,17 @@
 use libnss::interop::Response;
 use libnss::shadow::{Shadow, ShadowHooks};
 
-use crate::cache::{CacheError, Shadow as CacheShadow};
-use crate::{debug, LOGPREFIX};
+use crate::{
+    cache::{CacheError, Shadow as CacheShadow},
+    debug, init_logger,
+};
 
 pub struct AADShadow;
 
 impl ShadowHooks for AADShadow {
     /// get_all_entries retrieves all the shadow entries from the cache database.
     fn get_all_entries() -> Response<Vec<Shadow>> {
+        init_logger();
         debug!("get_all_entries for shadow");
 
         let c = match super::new_cache() {
@@ -22,6 +25,7 @@ impl ShadowHooks for AADShadow {
 
     /// get_entry_by_name retrieves a shadow entry by user name.
     fn get_entry_by_name(name: String) -> Response<Shadow> {
+        init_logger();
         debug!("get_entry_by_name for shadow for name: {name}");
 
         let c = match super::new_cache() {
