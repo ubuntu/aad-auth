@@ -149,6 +149,8 @@ struct DbFileInfo {
 }
 
 impl CacheDBBuilder {
+    // This is a function to be used in tests, so we need to annotate it.
+    #[cfg(any(feature = "integration-tests", test))]
     /// with_db_path overrides the path to the cache database.
     pub fn with_db_path(&mut self, db_path: &str) -> &mut Self {
         debug!("using custom db path: {}", db_path);
@@ -157,7 +159,7 @@ impl CacheDBBuilder {
     }
 
     // This is a function to be used in tests, so we need to annotate it.
-    #[cfg(test)]
+    #[cfg(any(feature = "integration-tests", test))]
     /// with_root_uid overrides the default root uid for the cache database.
     pub fn with_root_uid(&mut self, uid: u32) -> &mut Self {
         debug!("using custom root uid '{uid}'");
@@ -166,7 +168,7 @@ impl CacheDBBuilder {
     }
 
     // This is a function to be used in tests, so we need to annotate it.
-    #[cfg(test)]
+    #[cfg(any(feature = "integration-tests", test))]
     /// with_root_gid overrides the default root gid for the cache database.
     pub fn with_root_gid(&mut self, gid: u32) -> &mut Self {
         debug!("using custom root gid '{gid}'");
@@ -175,7 +177,7 @@ impl CacheDBBuilder {
     }
 
     // This is a function to be used in tests, so we need to annotate it.
-    #[cfg(test)]
+    #[cfg(any(feature = "integration-tests", test))]
     /// with_shadow_gid overrides the default shadow gid for the cache database.
     pub fn with_shadow_gid(&mut self, shadow_gid: u32) -> &mut Self {
         debug!("using custom shadow gid '{shadow_gid}'");
@@ -184,7 +186,7 @@ impl CacheDBBuilder {
     }
 
     // This is a function to be used in tests, so we need to annotate it.
-    #[cfg(test)]
+    #[cfg(any(feature = "integration-tests", test))]
     /// with_shadow_mode overrides the default access level for the shadow database.
     pub fn with_shadow_mode(&mut self, shadow_mode: i32) -> &mut Self {
         debug!("using custom shadow mode '{shadow_mode}'");
