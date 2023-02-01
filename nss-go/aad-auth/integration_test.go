@@ -161,21 +161,10 @@ func TestMain(m *testing.M) {
 	defer cleanup()
 
 	libPath = filepath.Join(tmpDir, "libnss_aad.so.2")
-	execPath = filepath.Join(tmpDir, "aad-auth")
-
-	// Builds the NSS Go CLI.
-	// #nosec:G204 - we control the command arguments in tests
-	cmd := exec.Command("go", "build", "-tags", "integrationtests", "-o", execPath)
-	if err = cmd.Run(); err != nil {
-		cleanup()
-		fmt.Fprintf(os.Stderr, "Can not build nss Go module: %v", err)
-		os.Exit(1)
-	}
-
 	// Builds the NSS Library.
-	if err = buildNSSCLib(); err != nil {
+	if err = buildRustNSSLib(); err != nil {
 		cleanup()
-		fmt.Fprintf(os.Stderr, "Can not build nss C library: %v", err)
+		fmt.Fprintf(os.Stderr, "Can not build rust nss library: %v", err)
 		os.Exit(1)
 	}
 
