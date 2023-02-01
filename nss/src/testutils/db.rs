@@ -9,7 +9,9 @@ use std::{
 use time::{Duration, OffsetDateTime};
 
 use crate::{
-    cache::{PASSWD_PERMS, SHADOW_PERMS},
+    cache::{
+        EXPIRATION_PURGE_MULTIPLIER, OFFLINE_CREDENTIALS_EXPIRATION, PASSWD_PERMS, SHADOW_PERMS,
+    },
     debug, init_logger,
 };
 
@@ -225,23 +227,19 @@ fn load_dump_into_db(dump_path: &Path, db_path: &Path) -> Result<(), Error> {
 /// parse_time_wildcard parses some time wildcards that are contained in the dump files
 /// to ensure that the loaded dbs will always present the same behavior when loaded for tests.
 fn parse_time_wildcard(value: &str) -> i64 {
+    let expiration_days = Duration::days(OFFLINE_CREDENTIALS_EXPIRATION.into());
+
     // c is a contant value, set to two days, that is used to ensure that the time is within some intervals.
     let c = Duration::days(2);
-
-    // TODO: Change after defining default expiration days in the cache module
-    let expiration_days = Duration::days(90);
-
     let addend: Duration = match value {
-        "RECENT_TIME" => -c,
-        "PURGED_TIME" => (-2 * expiration_days) + c,
-        "EXPIRED_TIME" => -expiration_days + c,
+        "RECENT_TIME" => -1 * c,
+        "EXPIRED_TIME" => -1 * (expiration_days + c),
+        "PURGED_TIME" => -1 * ((EXPIRATION_PURGE_MULTIPLIER * expiration_days) + c),
         "FUTURE_TIME" => c,
         _ => Duration::ZERO,
     };
 
-    let now = OffsetDateTime::now_utc();
-    let parsed_value = now + addend;
-
+    let parsed_value = OffsetDateTime::now_utc() + addend;
     parsed_value.unix_timestamp()
 }
 
