@@ -44,14 +44,15 @@ fn cache_shadow_to_nss_shadow(entry: CacheShadow) -> Shadow {
 
     Shadow {
         name: entry.name,
-        passwd: entry.passwd,
+        // we want to prevent pam_unix using this field to use a cached account without calling pam_aad.
+        passwd: "*".to_string(),
         last_change: entry.last_pwd_change,
         change_min_days: entry.min_pwd_age,
         change_max_days: entry.max_pwd_age,
         change_warn_days: entry.pwd_warn_period,
         change_inactive_days: entry.pwd_inactivity,
         expire_date: entry.expiration_date,
-        reserved: 0,
+        reserved: u64::MAX,
     }
 }
 
