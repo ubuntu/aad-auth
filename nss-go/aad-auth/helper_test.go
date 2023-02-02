@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-var libPath, execPath string
+var libPath string
 
 // outNSSCommandForLib returns the specific part for the nss command, filtering originOut.
 // It uses the locally build aad nss module for the integration tests.
@@ -57,33 +57,26 @@ func createTempDir() (tmp string, cleanup func(), err error) {
 	}, nil
 }
 
-func buildNSSCLib() error {
-	// Gets the .c files required to build the NSS C library.
-	cFiles, err := filepath.Glob("../*.c")
+// buildRustNSSLib builds the NSS library with the feature integration-tests enabled and copies the
+// compiled file to libPath.
+func buildRustNSSLib() error {
+	aadPath, err := filepath.Abs("../..")
 	if err != nil {
-		return fmt.Errorf("error when fetching the required c files: %w", err)
+		return err
+	}
+	// Builds the nss library.
+	args := []string{"build", "--features", "integration-tests"}
+	cmd := exec.Command("cargo", args...)
+	cmd.Dir = aadPath
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("could not build rust nss library (%s): %w", out, err)
 	}
 
-	// Gets the cflags and ldflags.
-	flags := []string{"-g", "-Wall", "-Wextra"}
-	out, err := exec.Command("pkg-config", "--cflags", "--libs", "glib-2.0").CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("could not get the required cflags (%s): %w", out, err)
-	}
-	flags = append(flags, strings.Fields(string(out))...)
-
-	// Assembles the flags required to build the NSS library.
-	c := []string{fmt.Sprintf(`-DSCRIPTPATH="%s"`, execPath)}
-	c = append(c, "-DINTEGRATIONTESTS=1")
-	c = append(c, cFiles...)
-	c = append(c, flags...)
-	c = append(c, "-fPIC", "-shared", "-Wl,-soname,libnss_aad.so.2", "-o", libPath)
-
-	// #nosec:G204 - we control the command arguments in tests.
-	cmd := exec.Command("gcc", c...)
-	out, err = cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("can not build nss library (%s): %w", out, err)
+	// Moves the compiled library to the expected path.
+	args = []string{filepath.Join(aadPath, "target", "debug", "libnss_aad.so"), libPath}
+	cmd = exec.Command("cp", args...)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("could not copy the compiled rust nss library (%s): %w", out, err)
 	}
 
 	return nil

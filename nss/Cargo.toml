@@ -8,6 +8,9 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib"]
 
+[features]
+integration-tests = []
+
 [dependencies]
 ctor = "0.1.26"
 libnss = "0.4.0"
@@ -28,3 +31,6 @@ goldenfile = "^1.4"
 serde_yaml = "0.9.16"
 tempfile = "3.3.0"
 test-case = "^2.2"
+
+[build-dependencies]
+cc = "^1"

@@ -33,7 +33,13 @@ impl ShadowHooks for AADShadow {
             Err(err) => return super::cache_result_to_nss_status(Err(err)),
         };
 
-        let r = result_cache_shadow_to_result_nss_shadow(c.get_shadow_by_name(&name));
+        let mut r = result_cache_shadow_to_result_nss_shadow(c.get_shadow_by_name(&name));
+
+        // we want to prevent pam_unix using this field to use a cached account without calling pam_aad.
+        if let Ok(entry) = &mut r {
+            entry.passwd = "*".to_string();
+        }
+
         super::cache_result_to_nss_status(r)
     }
 }
@@ -45,7 +51,7 @@ fn cache_shadow_to_nss_shadow(entry: CacheShadow) -> Shadow {
     Shadow {
         name: entry.name,
         // we want to prevent pam_unix using this field to use a cached account without calling pam_aad.
-        passwd: "*".to_string(),
+        passwd: entry.passwd,
         last_change: entry.last_pwd_change,
         change_min_days: entry.min_pwd_age,
         change_max_days: entry.max_pwd_age,
