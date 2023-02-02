@@ -21,13 +21,10 @@ syslog = "^6"
 time = "0.3.17"
 users = "0.11.0"
 faccess = "0.2.4"
-env_logger = { version = "0.10" }
+env_logger = "0.10"
 
 [dev-dependencies]
 goldenfile = "^1.4"
 serde_yaml = "0.9.16"
 tempfile = "3.3.0"
 test-case = "^2.2"
-
-[profile.release]
-lto = "fat"
