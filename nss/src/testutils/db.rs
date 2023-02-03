@@ -37,6 +37,10 @@ pub struct OptionalArgs {
     pub root_gid: u32,
     /// shadow_gid defines the gid to be used as shadow_gid when setting the database file permissions.
     pub shadow_gid: u32,
+    /// passwd_perms defines the unix permissions that will be set to the passwd database.
+    pub passwd_perms: u32,
+    /// shadow_perms defines the unix permissions that will be set to the shadow database.
+    pub shadow_perms: u32,
 }
 impl Default for OptionalArgs {
     fn default() -> Self {
@@ -46,6 +50,8 @@ impl Default for OptionalArgs {
             root_uid: uid,
             root_gid: gid,
             shadow_gid: gid,
+            passwd_perms: PASSWD_PERMS,
+            shadow_perms: SHADOW_PERMS,
         }
     }
 }
@@ -77,6 +83,18 @@ pub fn with_shadow_gid(gid: u32) -> OptionalArgFn {
     Box::new(move |o| o.shadow_gid = gid)
 }
 
+#[allow(dead_code)]
+/// with_passwd_perms overrides the default passwd permissions for the test database.
+pub fn with_passwd_perms(mode: u32) -> OptionalArgFn {
+    Box::new(move |o| o.passwd_perms = mode)
+}
+
+#[allow(dead_code)]
+/// with_shadow_perms overrides the default shadow permissions for the test database.
+pub fn with_shadow_perms(mode: u32) -> OptionalArgFn {
+    Box::new(move |o| o.shadow_perms = mode)
+}
+
 /// prepare_db_for_tests creates instances of the databases and initializes it with a inital state if requested.
 pub fn prepare_db_for_tests(cache_dir: &Path, opts: Vec<OptionalArgFn>) -> Result<(), Error> {
     init_logger();
@@ -106,8 +124,8 @@ pub fn prepare_db_for_tests(cache_dir: &Path, opts: Vec<OptionalArgFn>) -> Resul
     for db in DB_NAMES {
         let db_path = cache_dir.join(db.to_owned() + ".db");
         let (perm, gid) = match db {
-            "passwd" => (PASSWD_PERMS, args.root_gid),
-            "shadow" => (SHADOW_PERMS, args.shadow_gid),
+            "passwd" => (args.passwd_perms, args.root_gid),
+            "shadow" => (args.shadow_perms, args.shadow_gid),
             _ => (0o000000, args.root_gid),
         };
 
