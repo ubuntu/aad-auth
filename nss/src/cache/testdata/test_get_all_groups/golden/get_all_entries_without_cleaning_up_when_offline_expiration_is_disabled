@@ -1,0 +1,15 @@
+- name: expireduser@domain.com
+  passwd: x
+  gid: 2128709280
+  members:
+  - expireduser@domain.com
+- name: futureuser@domain.com
+  passwd: x
+  gid: 80938656
+  members:
+  - futureuser@domain.com
+- name: purgeduser@domain.com
+  passwd: x
+  gid: 3191309984
+  members:
+  - purgeduser@domain.com

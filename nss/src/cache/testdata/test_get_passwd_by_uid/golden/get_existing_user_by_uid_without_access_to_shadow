@@ -1,0 +1,7 @@
+name: user@otherdomain.com
+passwd: x
+uid: 165119649
+gid: 165119649
+gecos: User
+home: /home/user@otherdomain.com
+shell: /bin/bash
