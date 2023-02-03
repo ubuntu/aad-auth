@@ -1,5 +1,6 @@
 use rusqlite::{self, Connection};
 use std::{
+    boxed::Box,
     collections::HashMap,
     ffi::CString,
     fs::{self, Permissions},
@@ -27,28 +28,70 @@ pub enum Error {
 const DB_NAMES: [&str; 2] = ["passwd", "shadow"];
 
 /// OptionalArgs represents optional arguments that can be provided to prepare_db_for_tests.
-#[derive(Default)]
-pub struct OptionalArgs<'a> {
+pub struct OptionalArgs {
     /// initial_state defines a path containing dump files to be loaded into the databases.
-    pub initial_state: Option<&'a str>,
+    pub initial_state: Option<String>,
     /// root_uid defines the uid to be used as root_uid when setting the database file permissions.
-    /// If None, the current user id is used instead.
-    pub root_uid: Option<u32>,
+    pub root_uid: u32,
     /// root_gid defines the gid to be used as root_gid when setting the database file permissions.
-    /// If None, the current user gid is used instead.
-    pub root_gid: Option<u32>,
+    pub root_gid: u32,
     /// shadow_gid defines the gid to be used as shadow_gid when setting the database file permissions.
-    /// If None, the current user gid is used instead.
-    pub shadow_gid: Option<u32>,
+    pub shadow_gid: u32,
+}
+impl Default for OptionalArgs {
+    fn default() -> Self {
+        let (uid, gid) = (users::get_current_uid(), users::get_current_gid());
+        Self {
+            initial_state: None,
+            root_uid: uid,
+            root_gid: gid,
+            shadow_gid: gid,
+        }
+    }
+}
+
+/// OptionalArgFn represent a function that overrides a default value in the OptionalArgs struct.
+pub type OptionalArgFn = Box<dyn Fn(&mut OptionalArgs)>;
+
+#[allow(dead_code)]
+/// with_initial_state overrides the default initial state for the test database.
+pub fn with_initial_state(state: Option<String>) -> OptionalArgFn {
+    Box::new(move |o| o.initial_state = state.clone())
+}
+
+#[allow(dead_code)]
+/// with_root_uid overrides the default root_uid for the test database.
+pub fn with_root_uid(uid: u32) -> OptionalArgFn {
+    Box::new(move |o| o.root_uid = uid)
+}
+
+#[allow(dead_code)]
+/// with_root_uid overrides the default root_gid for the test database.
+pub fn with_root_gid(gid: u32) -> OptionalArgFn {
+    Box::new(move |o| o.root_gid = gid)
+}
+
+#[allow(dead_code)]
+/// with_root_uid overrides the default shadow_gid for the test database.
+pub fn with_shadow_gid(gid: u32) -> OptionalArgFn {
+    Box::new(move |o| o.shadow_gid = gid)
 }
 
 /// prepare_db_for_tests creates instances of the databases and initializes it with a inital state if requested.
-pub fn prepare_db_for_tests(cache_dir: &Path, opts: OptionalArgs) -> Result<(), Error> {
+pub fn prepare_db_for_tests(cache_dir: &Path, opts: Vec<OptionalArgFn>) -> Result<(), Error> {
     init_logger();
     create_dbs_for_tests(cache_dir)?;
 
+    let mut args = OptionalArgs {
+        ..Default::default()
+    };
+
+    for o in opts {
+        o(&mut args);
+    }
+
     // Loads saved state into the database.
-    if let Some(state) = opts.initial_state {
+    if let Some(state) = args.initial_state {
         let states_path = Path::new(&super::get_module_path(file!()))
             .join("states")
             .join(state);
@@ -61,24 +104,11 @@ pub fn prepare_db_for_tests(cache_dir: &Path, opts: OptionalArgs) -> Result<(), 
 
     // Fix database permissions
     for db in DB_NAMES {
-        // TODO: Investigate using Go-like optional arguments
-        let (mut uid, mut gid) = (users::get_current_uid(), users::get_current_gid());
-        let mut shadow_gid = users::get_group_by_name("shadow").unwrap().gid();
-        if let Some(id) = opts.root_uid {
-            uid = id;
-        }
-        if let Some(id) = opts.root_gid {
-            gid = id;
-        }
-        if let Some(id) = opts.shadow_gid {
-            shadow_gid = id;
-        }
-
         let db_path = cache_dir.join(db.to_owned() + ".db");
         let (perm, gid) = match db {
-            "passwd" => (PASSWD_PERMS, gid),
-            "shadow" => (SHADOW_PERMS, shadow_gid),
-            _ => (0o000000, gid),
+            "passwd" => (PASSWD_PERMS, args.root_gid),
+            "shadow" => (SHADOW_PERMS, args.shadow_gid),
+            _ => (0o000000, args.root_gid),
         };
 
         // libc functions are unstable and, thus, require a unsafe block.
@@ -87,7 +117,8 @@ pub fn prepare_db_for_tests(cache_dir: &Path, opts: OptionalArgs) -> Result<(), 
             // Need to use unsafe libc function while https://doc.rust-lang.org/std/os/unix/fs/fn.chown.html
             // is still in nightly.
             let c_path = CString::new(db_path.to_str().unwrap()).unwrap();
-            match libc::chown(c_path.as_ptr(), uid, gid) {
+            // In order to use libc::chown, we need to run the process with sudo privileges.
+            match libc::chown(c_path.as_ptr(), args.root_uid, gid) {
                 ok if ok <= 0 => (),
                 err if err > 0 => {
                     return Err(Error::Creation(format!(
