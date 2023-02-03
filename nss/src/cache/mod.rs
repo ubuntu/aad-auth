@@ -13,6 +13,7 @@ use time::{Duration, OffsetDateTime};
 use crate::debug;
 
 #[cfg(test)]
+#[allow(clippy::too_many_arguments)]
 mod mod_tests;
 
 const DB_PATH: &str = "/var/lib/aad/cache";
@@ -106,6 +107,7 @@ pub enum CacheError {
 }
 
 /// CacheDB struct represents the cache database.
+#[cfg_attr(test, derive(Debug))]
 pub struct CacheDB {
     conn: Connection,
     shadow_mode: ShadowMode,
