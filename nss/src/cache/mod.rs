@@ -344,6 +344,27 @@ impl CacheDB {
         }
     }
 
+    #[cfg(feature = "cache-options-for-tests")]
+    /// new_for_tests creates a new CacheDBBuilder object to be used in tests.
+    #[allow(clippy::new_ret_no_self)] // builder pattern
+    pub fn new_for_tests() -> CacheDBBuilder {
+        let mut builder = CacheDBBuilder {
+            db_path: std::env::var("NSS_AAD_CACHEDIR").unwrap(),
+            offline_credentials_expiration: OFFLINE_CREDENTIALS_EXPIRATION,
+            root_uid: users::get_current_uid(),
+            root_gid: users::get_current_gid(),
+            shadow_gid: Some(users::get_current_gid()),
+            shadow_mode: ShadowMode::AutoDetect,
+        };
+
+        if let Ok(v) = std::env::var("NSS_AAD_SHADOW_MODE") {
+            let tmp = v.parse::<i32>();
+            builder.shadow_mode = tmp.unwrap().into();
+        }
+
+        builder
+    }
+
     /* Passwd */
     /// get_passwd_by_uid queries the database for a passwd row with matching uid.
     pub fn get_passwd_by_uid(&self, uid: u32) -> Result<Passwd, CacheError> {
