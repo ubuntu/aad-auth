@@ -1,4 +1,0 @@
-|-
-    1:0
-    expireduser@domain.com:x:2128709280:2128709280:Expired User:/home/expireduser@domain.com:/bin/bash
-    futureuser@domain.com:x:80938656:80938656:Future User:/home/futureuser@domain.com:/bin/bash
