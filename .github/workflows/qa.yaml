@@ -42,17 +42,10 @@ jobs:
               exit 1
           fi
         if: ${{ always() }}
-      - name: Building
+      - name: Building PAM
         run: |
           # Build PAM library
           go build -ldflags='-s -w' -buildmode=c-shared -o pam_aad.so ./pam
-
-          # Build NSS CLI executable
-          go build -o aad-auth ./nss-go/aad-auth
-
-          # Build NSS C library
-          make -C nss-go/ libnss_aad.so.2
-
         if: ${{ always() }}
 
   tests:
