@@ -85,3 +85,6 @@ fn result_vec_cache_group_to_result_vec_nss_group(
 
     Ok(groups)
 }
+
+#[cfg(test)]
+mod mod_tests;
