@@ -88,3 +88,6 @@ fn result_vec_cache_passwd_to_result_vec_nss_passwd(
 
     Ok(v)
 }
+
+#[cfg(test)]
+mod mod_tests;

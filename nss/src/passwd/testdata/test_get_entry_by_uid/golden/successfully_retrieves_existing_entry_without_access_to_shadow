@@ -1,0 +1,7 @@
+dir: /home/myuser@domain.com
+gecos: My User
+gid: '1929326240'
+name: myuser@domain.com
+passwd: x
+shell: /bin/bash
+uid: '1929326240'
