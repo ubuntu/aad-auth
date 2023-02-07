@@ -10,6 +10,7 @@ crate-type = ["cdylib"]
 
 [features]
 integration-tests = []
+cache-options-for-tests = []
 
 [dependencies]
 ctor = "0.1.26"
@@ -27,6 +28,7 @@ faccess = "0.2.4"
 env_logger = "0.10"
 
 [dev-dependencies]
+nss_aad = { version = "*", path = ".", features = ["cache-options-for-tests"] }
 goldenfile = "^1.4"
 serde_yaml = "0.9.16"
 tempfile = "3.3.0"

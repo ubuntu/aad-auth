@@ -345,6 +345,7 @@ dependencies = [
  "libc",
  "libnss",
  "log",
+ "nss_aad",
  "paste 1.0.11",
  "rusqlite",
  "serde",
