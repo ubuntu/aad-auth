@@ -1,4 +1,4 @@
-libnss_aad.so.2 libnss-aad #MINVER#
+libnss_aad.so libnss-aad #MINVER#
  _nss_aad_endgrent@Base 0.1
  _nss_aad_endpwent@Base 0.1
  _nss_aad_endspent@Base 0.1
@@ -13,14 +13,3 @@ libnss_aad.so.2 libnss-aad #MINVER#
  _nss_aad_setgrent@Base 0.1
  _nss_aad_setpwent@Base 0.1
  _nss_aad_setspent@Base 0.1
- all_grp_entries@Base 0.1
- all_grp_entries_index@Base 0.1
- all_pwd_entries@Base 0.1
- all_pwd_entries_index@Base 0.1
- all_spwd_entries@Base 0.1
- all_spwd_entries_index@Base 0.1
- fetch_info@Base 0.1
- grp_search@Base 0.1
- pwd_search@Base 0.1
- run_aad_auth@Base 0.1
- spwd_search@Base 0.1
