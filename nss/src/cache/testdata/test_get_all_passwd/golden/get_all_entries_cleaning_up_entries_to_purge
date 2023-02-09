@@ -5,6 +5,7 @@
   gecos: Expired User
   home: /home/expireduser@domain.com
   shell: /bin/bash
+  shadow_passwd: ''
 - name: futureuser@domain.com
   passwd: x
   uid: 80938656
@@ -12,3 +13,4 @@
   gecos: Future User
   home: /home/futureuser@domain.com
   shell: /bin/bash
+  shadow_passwd: ''
