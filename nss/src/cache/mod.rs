@@ -58,6 +58,7 @@ pub struct Passwd {
     pub gecos: String,
     pub home: String,
     pub shell: String,
+    pub shadow_passwd: String,
 }
 
 /// Group struct represents a group entry in the cache database.
@@ -345,9 +346,13 @@ impl CacheDB {
     /* Passwd */
     /// get_passwd_by_uid queries the database for a passwd row with matching uid.
     pub fn get_passwd_by_uid(&self, uid: u32) -> Result<Passwd, CacheError> {
-        let mut stmt = self.prepare_statement(
-            "SELECT login, password, uid, gid, gecos, home, shell FROM passwd WHERE uid = ?", // Last empty field is the shadow password
-        )?;
+        let (mut v1, mut v2, mut v3) = (",''", "", "");
+        if self.shadow_mode >= ShadowMode::ReadOnly {
+            (v1, v2, v3) = (", s.password", ", shadow.shadow s", "AND p.uid = s.uid");
+        }
+
+        let stmt_str = format!("SELECT p.login, p.password, p.uid, p.gid, gecos, home, shell {v1} FROM passwd p {v2} WHERE p.uid = ? {v3}");
+        let mut stmt = self.prepare_statement(&stmt_str)?;
 
         let rows = match stmt.query([uid]) {
             Ok(rows) => rows,
@@ -361,9 +366,13 @@ impl CacheDB {
 
     /// get_passwd_by_name queries the database for a passwd row with matching name.
     pub fn get_passwd_by_name(&self, login: &str) -> Result<Passwd, CacheError> {
-        let mut stmt = self.prepare_statement(
-            "SELECT login, password, uid, gid, gecos, home, shell FROM passwd WHERE login = ?", // Last empty field is the shadow password
-        )?;
+        let (mut v1, mut v2, mut v3) = (",''", "", "");
+        if self.shadow_mode >= ShadowMode::ReadOnly {
+            (v1, v2, v3) = (", s.password", ", shadow.shadow s", "AND p.uid = s.uid");
+        }
+
+        let stmt_str = format!("SELECT p.login, p.password, p.uid, p.gid, gecos, home, shell {v1} FROM passwd p {v2} WHERE p.login = ? {v3}");
+        let mut stmt = self.prepare_statement(&stmt_str)?;
 
         let rows = match stmt.query([login]) {
             Ok(rows) => rows,
@@ -529,7 +538,7 @@ impl CacheDB {
     fn rows_to_passwd_entries(mut rows: Rows) -> Vec<Passwd> {
         let mut entries = Vec::new();
         while let Ok(Some(row)) = rows.next() {
-            entries.push(Passwd {
+            let mut p = Passwd {
                 name: row.get(0).expect("invalid name"),
                 passwd: row.get(1).expect("invalid passwd"),
                 uid: row.get(2).expect("invalid uid"),
@@ -537,7 +546,14 @@ impl CacheDB {
                 gecos: row.get(4).expect("invalid gecos"),
                 home: row.get(5).expect("invalid home"),
                 shell: row.get(6).expect("invalid shell"),
-            });
+                shadow_passwd: String::new(),
+            };
+
+            if let Ok(shadow_passwd) = row.get::<usize, String>(7) {
+                p.shadow_passwd = shadow_passwd;
+            }
+
+            entries.push(p);
         }
         entries
     }
