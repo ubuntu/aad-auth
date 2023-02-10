@@ -1,6 +1,6 @@
-use env_logger::{Builder, Target};
 use log::{LevelFilter, Metadata};
-use std::{env, io::Write};
+use simple_logger::SimpleLogger;
+use std::env;
 use syslog::{BasicLogger, Facility, Formatter3164};
 
 #[macro_export]
@@ -71,11 +71,6 @@ fn init_sys_logger(log_level: LevelFilter) {
 
 /// init_stderr_logger initializes a global log that prints the messages to stderr.
 fn init_stderr_logger(log_level: LevelFilter) {
-    Builder::new()
-        .format(|buf, msg| writeln!(buf, "{}", msg.args()))
-        .filter(None, log_level)
-        .target(Target::Stderr)
-        .init();
-
+    SimpleLogger::new().with_level(log_level).init().unwrap();
     debug!("Log output set to stderr");
 }
