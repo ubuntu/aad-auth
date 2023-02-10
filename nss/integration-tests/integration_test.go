@@ -160,7 +160,7 @@ func TestMain(m *testing.M) {
 	}
 	defer cleanup()
 
-	libPath = filepath.Join(tmpDir, "libnss_aad.so.2")
+	targetDir, libPath = tmpDir, filepath.Join(tmpDir, "libnss_aad.so.2")
 	// Builds the NSS Library.
 	if err = buildRustNSSLib(); err != nil {
 		cleanup()
