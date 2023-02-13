@@ -7,21 +7,25 @@ use test_case::test_case;
 use crate::testutils;
 use crate::CacheDB;
 
-#[test_case(None, None, None, None, None, None, -1, Some("users_in_db".to_string()), false; "Successfully opens cache with default values")]
-#[test_case(None, None, None, None, None, Some(0o550), 1, Some("users_in_db".to_string()), false; "Successfully opens cache when dir has no write perms")]
-#[test_case(Some(1234), None, None, None, None, None, -1, Some("users_in_db".to_string()), true; "Error when cache has invalid owner uid")]
-#[test_case(None, Some(1234), None, None, None, None, -1, Some("users_in_db".to_string()), true; "Error when cache has invalid owner gid")]
-#[test_case(None, None, Some(1234), None, None, None, -1, Some("users_in_db".to_string()), true; "Error when cache has invalid shadow gid")]
-#[test_case(None, None, None, Some(0o444), None, None, -1, Some("users_in_db".to_string()), true; "Error when passwd.db has invalid permissions")]
-#[test_case(None, None, None, None, Some(0o444), None, -1, Some("users_in_db".to_string()), true; "Error when shadow.db has invalid permissions")]
-#[test_case(None, None, None, None, None, Some(0o444), 2, Some("users_in_db".to_string()), true; "Error when cache dir has RO perms and shadow mode is RW")]
-#[test_case(None, None, None, None, None, Some(0o444), 2, None, true; "Error when cache dir has RO perms, shadow mode is RW and there is no cache")]
+#[test_case(None, None, None, None, None, None, None, None, -1, Some("users_in_db".to_string()), false; "Successfully opens cache with default values")]
+#[test_case(None, None, None, None, None, None, None, Some(0o550), 1, Some("users_in_db".to_string()), false; "Successfully opens cache when dir has no write perms")]
+#[test_case(None, None, None, None, Some(0o000), None, Some(0o000), None, -1, Some("users_in_db".to_string()), false; "Successfully opens cache without shadow if current user has no shadow access")]
+#[test_case(Some(1234), None, None, None, None, None, None, None, -1, Some("users_in_db".to_string()), true; "Error when cache has invalid owner uid")]
+#[test_case(None, Some(1234), None, None, None, None,None, None, -1, Some("users_in_db".to_string()), true; "Error when cache has invalid owner gid")]
+#[test_case(None, None, Some(1234), None, None, None, None, None, -1, Some("users_in_db".to_string()), true; "Error when cache has invalid shadow gid")]
+#[test_case(None, None, None, Some(0o444), None, None, None, None, -1, Some("users_in_db".to_string()), true; "Error when passwd.db has invalid permissions")]
+#[test_case(None, None, None, Some(0o000), None, Some(0o000), None, None, -1, Some("users_in_db".to_string()), true; "Error when current user has no access to passwd")]
+#[test_case(None, None, None, None, Some(0o444), None, None, None, -1, Some("users_in_db".to_string()), true; "Error when shadow.db has invalid permissions")]
+#[test_case(None, None, None, None, None, None, None, Some(0o444), 2, Some("users_in_db".to_string()), true; "Error when cache dir has RO perms and shadow mode is RW")]
+#[test_case(None, None, None, None, None, None, None, Some(0o444), 2, None, true; "Error when cache dir has RO perms, shadow mode is RW and there is no cache")]
 fn test_build(
     root_uid: Option<u32>,
     root_gid: Option<u32>,
     shadow_gid: Option<u32>,
-    passwd_perms: Option<u32>,
-    shadow_perms: Option<u32>,
+    passwd_creation_perms: Option<u32>,
+    shadow_creation_perms: Option<u32>,
+    passwd_expected_perms: Option<u32>,
+    shadow_expected_perms: Option<u32>,
     cache_dir_perms: Option<u32>,
     force_shadow_mode: i32,
     initial_state: Option<String>,
@@ -30,10 +34,10 @@ fn test_build(
     let cache_dir = TempDir::new().expect("Setup: could not create temporary cache directory");
 
     let mut opts = vec![testutils::with_initial_state(initial_state)];
-    if let Some(mode) = passwd_perms {
+    if let Some(mode) = passwd_creation_perms {
         opts.push(testutils::with_passwd_perms(mode));
     }
-    if let Some(mode) = shadow_perms {
+    if let Some(mode) = shadow_creation_perms {
         opts.push(testutils::with_shadow_perms(mode));
     }
 
@@ -64,6 +68,12 @@ fn test_build(
     }
     if let Some(gid) = shadow_gid {
         builder = builder.with_shadow_gid(gid);
+    }
+    if let Some(mode) = passwd_expected_perms {
+        builder = builder.with_passwd_perms(mode);
+    }
+    if let Some(mode) = shadow_expected_perms {
+        builder = builder.with_shadow_perms(mode);
     }
 
     let got = builder.build();
