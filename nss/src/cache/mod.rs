@@ -140,14 +140,18 @@ pub struct CacheDBBuilder {
     shadow_gid: Option<u32>,
     /// shadow_mode is the manual access level to be used by the shadow database (for tests)
     shadow_mode: ShadowMode,
+    /// passwd_perms is the default expected permissions for the passwd db file.
+    passwd_perms: Permissions,
+    /// shadow_perms is the default expected permissions for the shadow db file.
+    shadow_perms: Permissions,
 }
 
 /// DbFileInfo struct represents the expected ownership and permissions for the database file.
-struct DbFileInfo {
+struct DbFileInfo<'a> {
     path: PathBuf,
     expected_uid: u32,
     expected_gid: u32,
-    expected_perms: Permissions,
+    expected_perms: &'a Permissions,
 }
 
 impl CacheDBBuilder {
@@ -206,6 +210,24 @@ impl CacheDBBuilder {
         self
     }
 
+    // This is a function to be used in tests, so we need to annotate it.
+    #[cfg(test)]
+    /// with_passwd_perms overrides the default expected permissions for the passwd database.
+    pub fn with_passwd_perms(&mut self, value: u32) -> &mut Self {
+        debug!("using custom passwd permissions '{value}'");
+        self.passwd_perms = Permissions::from_mode(value);
+        self
+    }
+
+    // This is a function to be used in tests, so we need to annotate it.
+    #[cfg(test)]
+    /// with_shadow_perms overrides the default expected permissions for the shadow database.
+    pub fn with_shadow_perms(&mut self, value: u32) -> &mut Self {
+        debug!("using custom shadow permissions '{value}'");
+        self.shadow_perms = Permissions::from_mode(value);
+        self
+    }
+
     /// build initializes and opens a connection to the cache database.
     pub fn build(&mut self) -> Result<CacheDB, CacheError> {
         debug!("opening database connection from {}", self.db_path);
@@ -231,14 +253,14 @@ impl CacheDBBuilder {
                 path: db_path.join(PASSWD_DB),
                 expected_uid: self.root_uid,
                 expected_gid: self.root_gid,
-                expected_perms: Permissions::from_mode(PASSWD_PERMS),
+                expected_perms: &self.passwd_perms,
             },
             DbFileInfo {
                 // SHADOW
                 path: db_path.join(SHADOW_DB),
                 expected_uid: self.root_uid,
                 expected_gid: shadow_gid,
-                expected_perms: Permissions::from_mode(SHADOW_PERMS),
+                expected_perms: &self.shadow_perms,
             },
         ];
         Self::check_file_permissions(&db_files)?;
@@ -341,6 +363,8 @@ impl CacheDB {
             root_gid: 0,
             shadow_gid: None,
             shadow_mode: ShadowMode::AutoDetect,
+            passwd_perms: Permissions::from_mode(PASSWD_PERMS),
+            shadow_perms: Permissions::from_mode(SHADOW_PERMS),
         }
     }
 
@@ -355,6 +379,8 @@ impl CacheDB {
             root_gid: users::get_current_gid(),
             shadow_gid: Some(users::get_current_gid()),
             shadow_mode: ShadowMode::AutoDetect,
+            passwd_perms: Permissions::from_mode(PASSWD_PERMS),
+            shadow_perms: Permissions::from_mode(SHADOW_PERMS),
         };
 
         if let Ok(v) = std::env::var("NSS_AAD_SHADOW_MODE") {
