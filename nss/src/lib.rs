@@ -55,6 +55,12 @@ fn new_cache() -> Result<CacheDB, CacheError> {
     #[cfg(feature = "integration-tests")]
     override_cache_options(&mut c);
 
+    // #[cfg] annotations do not work with expressions due to https://github.com/rust-lang/rust/issues/15701.
+    // Therefore, we must use the cfg! macro. The doc states that:
+    //      all blocks in an if/else expression need to be valid when cfg! is used for the condition,
+    //      regardless of what cfg! is evaluating.
+    // This means we can't annotate the CacheDB::new_for_tests function, instead we'll need to lock
+    // its behavior under the same cfg! macro.
     if cfg!(test) {
         c = CacheDB::new_for_tests();
     }
