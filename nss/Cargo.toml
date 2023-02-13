@@ -10,6 +10,7 @@ crate-type = ["cdylib"]
 
 [features]
 integration-tests = []
+cache-options-for-tests = []
 
 [dependencies]
 ctor = "0.1.26"
@@ -30,6 +31,7 @@ simple_logger = { version = "4.0.0", default-features = false, features = [
 
 
 [dev-dependencies]
+nss_aad = { version = "*", path = ".", features = ["cache-options-for-tests"] }
 goldenfile = "^1.4"
 serde_yaml = "0.9.16"
 tempfile = "3.3.0"

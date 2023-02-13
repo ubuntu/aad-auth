@@ -81,3 +81,6 @@ fn result_vec_cache_shadow_to_result_vec_nss_shadow(
 
     Ok(v)
 }
+
+#[cfg(test)]
+mod mod_tests;

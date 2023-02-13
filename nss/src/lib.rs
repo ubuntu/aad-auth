@@ -55,6 +55,10 @@ fn new_cache() -> Result<CacheDB, CacheError> {
     #[cfg(feature = "integration-tests")]
     override_cache_options(&mut c);
 
+    if cfg!(test) {
+        c = CacheDB::new_for_tests();
+    }
+
     c.build()
 }
 
@@ -101,3 +105,6 @@ fn register_local_aad_nss_service_for_tests() {
 
 #[cfg(test)]
 mod testutils;
+
+#[cfg(test)]
+mod mod_tests;
