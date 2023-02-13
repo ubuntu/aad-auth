@@ -368,10 +368,15 @@ impl CacheDB {
         }
     }
 
-    #[cfg(feature = "cache-options-for-tests")]
     /// new_for_tests creates a new CacheDBBuilder object to be used in tests.
     #[allow(clippy::new_ret_no_self)] // builder pattern
     pub fn new_for_tests() -> CacheDBBuilder {
+        // If test profile is not enabled, this function will behave the same as new().
+        // For more information, the rationale on lib.rs/new_cache() function.
+        if !cfg!(test) {
+            return Self::new();
+        }
+
         let mut builder = CacheDBBuilder {
             db_path: std::env::var("NSS_AAD_CACHEDIR").unwrap(),
             offline_credentials_expiration: OFFLINE_CREDENTIALS_EXPIRATION,
