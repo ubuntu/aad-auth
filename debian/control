@@ -47,6 +47,7 @@ Description: ${source:Synopsis} module for NSS
 
 Package: aad-common
 Architecture: all
+Multi-Arch: foreign
 Enhances: libpam-aad, libnss-aad, aad-cli
 Depends: ${misc:Depends}
 Description: ${source:Synopsis} common files
