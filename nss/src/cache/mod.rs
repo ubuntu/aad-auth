@@ -101,7 +101,7 @@ impl Debug for Shadow {
 /// CacheError enum represents the list of errors supported by the cache.
 #[derive(Debug)]
 pub enum CacheError {
-    Unavail(String),
+    NoDatabases(String),
     DatabaseError(String),
     QueryError(String),
     NoRecord,
@@ -265,7 +265,8 @@ impl CacheDBBuilder {
             },
         ];
 
-        // Checks if the files exist before proceeding with the permission checks.
+        // Checks if at least one of db files exist. If none is found, then we consider it as first
+        // time access.
         let mut found = false;
         for file in &db_files {
             if file.path.exists() {
@@ -273,7 +274,7 @@ impl CacheDBBuilder {
             }
         }
         if !found {
-            return Err(CacheError::Unavail(format!(
+            return Err(CacheError::NoDatabases(format!(
                 "no aad-auth cache found at {db_path:?}"
             )));
         }

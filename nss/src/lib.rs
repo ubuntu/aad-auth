@@ -32,7 +32,7 @@ fn cache_result_to_nss_status<T>(r: Result<T, CacheError>) -> Response<T> {
     match r {
         Ok(t) => Response::Success(t),
         Err(err) => match err {
-            CacheError::Unavail(err) => {
+            CacheError::NoDatabases(err) => {
                 debug!("cache not found: {}", err);
                 Response::Unavail
             }
