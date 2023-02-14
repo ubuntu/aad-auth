@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-var libPath string
+var targetDir, libPath string
 
 // outNSSCommandForLib returns the specific part for the nss command, filtering originOut.
 // It uses the locally build aad nss module for the integration tests.
@@ -65,19 +65,23 @@ func buildRustNSSLib() error {
 		return err
 	}
 	// Builds the nss library.
-	args := []string{"build", "--features", "integration-tests"}
-	cmd := exec.Command("cargo", args...)
+	args := []string{"build", "--verbose", "--features", "integration-tests", "--target-dir", targetDir}
+
+	cargo := os.Getenv("CARGO_PATH")
+	if cargo == "" {
+		cargo = "cargo"
+	}
+	// #nosec:G204 - we control the command arguments in tests
+	cmd := exec.Command(cargo, args...)
 	cmd.Dir = aadPath
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("could not build rust nss library (%s): %w", out, err)
 	}
+	targetDir = filepath.Join(targetDir, os.Getenv("DEB_HOST_RUST_TYPE"))
 
-	// Moves the compiled library to the expected path.
-	args = []string{filepath.Join(aadPath, "target", "debug", "libnss_aad.so"), libPath}
-	cmd = exec.Command("cp", args...)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("could not copy the compiled rust nss library (%s): %w", out, err)
+	// Renames the compiled library to have the expected versioned name.
+	if err = os.Rename(filepath.Join(targetDir, "debug", "libnss_aad.so"), libPath); err != nil {
+		return fmt.Errorf("Setup: could not rename the Rust NSS library: %w", err)
 	}
-
 	return nil
 }
