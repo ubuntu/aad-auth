@@ -16,7 +16,7 @@ use crate::CacheDB;
 #[test_case(None, None, None, Some(0o000), None, Some(0o000), None, None, -1, Some("users_in_db".to_string()), true; "Error when current user has no access to passwd")]
 #[test_case(None, None, None, None, Some(0o444), None, None, None, -1, Some("users_in_db".to_string()), true; "Error when shadow.db has invalid permissions")]
 #[test_case(None, None, None, None, None, None, None, Some(0o444), 2, Some("users_in_db".to_string()), true; "Error when cache dir has RO perms and shadow mode is RW")]
-#[test_case(None, None, None, None, None, None, None, Some(0o444), 2, None, true; "Error when cache dir has RO perms, shadow mode is RW and there is no cache")]
+#[test_case(None, None, None, None, None, None, None, None, -1, Some("no_cache".to_string()), true; "Error when there is no cache")]
 fn test_build(
     root_uid: Option<u32>,
     root_gid: Option<u32>,
@@ -119,7 +119,7 @@ fn test_get_passwd_by_uid(
 
 #[test_case("myuser@domain.com", Some("users_in_db".to_string()), -1, false; "Get existing user by name")]
 #[test_case("myuser@domain.com", Some("users_in_db".to_string()), 0, false; "Get existing user by name without access to shadow")]
-#[test_case("does not exist", None, -1, true; "Error when user does not exist")]
+#[test_case("does not exist", Some("users_in_db".to_string()), -1, true; "Error when user does not exist")]
 fn test_get_passwd_by_name(
     name: &str,
     initial_state: Option<String>,
@@ -225,7 +225,7 @@ fn test_get_group_by_gid(
 
 #[test_case("myuser@domain.com", Some("users_in_db".to_string()), -1, false; "Get existing group by name")]
 #[test_case("myuser@domain.com", Some("users_in_db".to_string()), 0, false; "Get existing group by name without access to shadow")]
-#[test_case("does not exist", None, -1, true; "Error when group does not exist")]
+#[test_case("does not exist", Some("users_in_db".to_string()), -1, true; "Error when group does not exist")]
 fn test_get_group_by_name(
     name: &str,
     initial_state: Option<String>,
