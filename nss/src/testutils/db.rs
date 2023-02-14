@@ -6,6 +6,7 @@ use std::{
     os::unix::prelude::PermissionsExt,
     path::Path,
 };
+use tempfile::TempDir;
 use time::{Duration, OffsetDateTime};
 
 use crate::{
@@ -66,34 +67,47 @@ pub fn with_shadow_perms(mode: u32) -> OptionalArgFn {
     Box::new(move |o| o.shadow_perms = mode)
 }
 
-/// prepare_db_for_tests creates instances of the databases and initializes it with a inital state if requested.
-pub fn prepare_db_for_tests(cache_dir: &Path, opts: Vec<OptionalArgFn>) -> Result<(), Error> {
+/// prepare_db_for_tests creates instances of the databases and initializes it based on the initial_state.
+/// The following states are supported:
+/// - None: Does not create the databases;
+/// - Some(state): Creates the database(s) and load the contents from states/state/ into it.
+pub fn prepare_db_for_tests(opts: Vec<OptionalArgFn>) -> Result<Option<TempDir>, Error> {
     init_logger();
-    create_dbs_for_tests(cache_dir)?;
 
     let mut args = OptionalArgs {
         ..Default::default()
     };
-
     for o in opts {
         o(&mut args);
     }
 
-    // Loads saved state into the database.
-    if let Some(state) = args.initial_state {
-        let states_path = Path::new(&super::get_module_path(file!()))
-            .join("states")
-            .join(state);
-
-        for db in DB_NAMES {
-            let db_path = cache_dir.join(db.to_owned() + ".db");
-            load_dump_into_db(&states_path.join(format!("{db}.db.dump")), &db_path)?;
-        }
+    if args.initial_state.is_none() {
+        return Ok(None);
     }
 
-    // Fix database permissions
+    let state = args.initial_state.unwrap();
+    let states_path = Path::new(&super::get_module_path(file!()))
+        .join("states")
+        .join(&state);
+
+    let cache_dir = match TempDir::new() {
+        Ok(dir) => dir,
+        Err(err) => return Err(Error::Creation(err.to_string())),
+    };
+    let cache_path = cache_dir.path();
+
     for db in DB_NAMES {
-        let db_path = cache_dir.join(db.to_owned() + ".db");
+        let dump_path = states_path.join(format!("{db}.db.dump"));
+        if !dump_path.exists() {
+            continue;
+        }
+        create_db_for_tests(cache_path, db)?;
+
+        let db_path = cache_path.join(db.to_owned() + ".db");
+        load_dump_into_db(&states_path.join(format!("{db}.db.dump")), &db_path)?;
+
+        // Fix database permissions
+        let db_path = cache_path.join(db.to_owned() + ".db");
         let perm = match db {
             "passwd" => args.passwd_perms,
             "shadow" => args.shadow_perms,
@@ -105,28 +119,26 @@ pub fn prepare_db_for_tests(cache_dir: &Path, opts: Vec<OptionalArgFn>) -> Resul
         }
     }
 
-    Ok(())
+    Ok(Some(cache_dir))
 }
 
-/// create_dbs_for_tests creates a database for testing purposes.
-fn create_dbs_for_tests(cache_dir: &Path) -> Result<(), Error> {
+/// create_db_for_tests creates a database for testing purposes.
+fn create_db_for_tests(cache_dir: &Path, db: &str) -> Result<(), Error> {
     debug!("Creating dabatase for tests");
 
-    for db in DB_NAMES {
-        let sql_path = Path::new(&super::get_module_path(file!()))
-            .join("sql")
-            .join(db.to_owned() + ".sql");
+    let sql_path = Path::new(&super::get_module_path(file!()))
+        .join("sql")
+        .join(db.to_string() + ".sql");
 
-        let sql = match fs::read_to_string(sql_path) {
-            Ok(s) => s,
-            Err(err) => return Err(Error::Creation(err.to_string())),
-        };
+    let sql = match fs::read_to_string(sql_path) {
+        Ok(s) => s,
+        Err(err) => return Err(Error::Creation(err.to_string())),
+    };
 
-        let conn = get_db_connection(&cache_dir.join(db.to_owned() + ".db"))?;
+    let conn = get_db_connection(&cache_dir.join(db.to_string() + ".db"))?;
 
-        if let Err(err) = conn.execute_batch(&sql) {
-            return Err(Error::Creation(err.to_string()));
-        }
+    if let Err(err) = conn.execute_batch(&sql) {
+        return Err(Error::Creation(err.to_string()));
     }
 
     Ok(())
