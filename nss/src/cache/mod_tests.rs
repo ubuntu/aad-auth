@@ -1,7 +1,6 @@
 use std::fs::{self, Permissions};
 use std::os::unix::prelude::PermissionsExt;
 
-use tempfile::TempDir;
 use test_case::test_case;
 
 use crate::testutils;
@@ -17,7 +16,7 @@ use crate::CacheDB;
 #[test_case(None, None, None, Some(0o000), None, Some(0o000), None, None, -1, Some("users_in_db".to_string()), true; "Error when current user has no access to passwd")]
 #[test_case(None, None, None, None, Some(0o444), None, None, None, -1, Some("users_in_db".to_string()), true; "Error when shadow.db has invalid permissions")]
 #[test_case(None, None, None, None, None, None, None, Some(0o444), 2, Some("users_in_db".to_string()), true; "Error when cache dir has RO perms and shadow mode is RW")]
-#[test_case(None, None, None, None, None, None, None, Some(0o444), 2, None, true; "Error when cache dir has RO perms, shadow mode is RW and there is no cache")]
+#[test_case(None, None, None, None, None, None, None, None, -1, Some("no_cache".to_string()), true; "Error when there is no cache")]
 fn test_build(
     root_uid: Option<u32>,
     root_gid: Option<u32>,
@@ -31,8 +30,6 @@ fn test_build(
     initial_state: Option<String>,
     want_err: bool,
 ) {
-    let cache_dir = TempDir::new().expect("Setup: could not create temporary cache directory");
-
     let mut opts = vec![testutils::with_initial_state(initial_state)];
     if let Some(mode) = passwd_creation_perms {
         opts.push(testutils::with_passwd_perms(mode));
@@ -41,12 +38,12 @@ fn test_build(
         opts.push(testutils::with_shadow_perms(mode));
     }
 
-    if let Err(err) = testutils::prepare_db_for_tests(cache_dir.path(), opts) {
-        panic!("Setup: Failed to prepare db for tests: {err:?}");
-    }
+    let cache_dir = testutils::prepare_db_for_tests(opts)
+        .expect("Setup: failed to prepare db for tests")
+        .unwrap();
 
     if let Some(mode) = cache_dir_perms {
-        let r = fs::set_permissions(cache_dir.path(), Permissions::from_mode(mode));
+        let r = fs::set_permissions(&cache_dir, Permissions::from_mode(mode));
         r.unwrap_or_else(|_| {
             panic!("Setup: Failed to set requested permissions {mode} for cache_dir")
         });
@@ -95,12 +92,11 @@ fn test_get_passwd_by_uid(
     want_err: bool,
 ) {
     let module_path = testutils::get_module_path(file!());
-    let cache_dir = TempDir::new().expect("Setup: could not create temporary cache directory");
 
     let opts = vec![testutils::with_initial_state(initial_state)];
-    if let Err(err) = testutils::prepare_db_for_tests(cache_dir.path(), opts) {
-        panic!("Setup: Failed to prepare db for tests: {err:?}")
-    }
+    let cache_dir = testutils::prepare_db_for_tests(opts)
+        .expect("Setup: failed to prepare db for tests")
+        .unwrap();
 
     let (current_uid, current_gid) = (users::get_current_uid(), users::get_current_gid());
     let c = CacheDB::new()
@@ -123,7 +119,7 @@ fn test_get_passwd_by_uid(
 
 #[test_case("myuser@domain.com", Some("users_in_db".to_string()), -1, false; "Get existing user by name")]
 #[test_case("myuser@domain.com", Some("users_in_db".to_string()), 0, false; "Get existing user by name without access to shadow")]
-#[test_case("does not exist", None, -1, true; "Error when user does not exist")]
+#[test_case("does not exist", Some("users_in_db".to_string()), -1, true; "Error when user does not exist")]
 fn test_get_passwd_by_name(
     name: &str,
     initial_state: Option<String>,
@@ -131,12 +127,11 @@ fn test_get_passwd_by_name(
     want_err: bool,
 ) {
     let module_path = testutils::get_module_path(file!());
-    let cache_dir = TempDir::new().expect("Setup: could not create temporary cache directory");
 
     let opts = vec![testutils::with_initial_state(initial_state)];
-    if let Err(err) = testutils::prepare_db_for_tests(cache_dir.path(), opts) {
-        panic!("Setup: Failed to prepare db for tests: {err:?}");
-    }
+    let cache_dir = testutils::prepare_db_for_tests(opts)
+        .expect("Setup: failed to prepare db for tests")
+        .unwrap();
 
     let (uid, gid) = (users::get_current_uid(), users::get_current_gid());
     let c = CacheDB::new()
@@ -167,12 +162,10 @@ fn test_get_all_passwd(
     want_err: bool,
 ) {
     let module_path = testutils::get_module_path(file!());
-    let cache_dir = TempDir::new().expect("Could not create temporary directory");
-
     let opts = vec![testutils::with_initial_state(initial_state)];
-    if let Err(err) = testutils::prepare_db_for_tests(cache_dir.path(), opts) {
-        panic!("Setup: Failed to prepare db for tests: {err:?}")
-    }
+    let cache_dir = testutils::prepare_db_for_tests(opts)
+        .expect("Setup: failed to prepare db for tests")
+        .unwrap();
 
     let (current_uid, current_gid) = (users::get_current_uid(), users::get_current_gid());
     let c = CacheDB::new()
@@ -205,12 +198,11 @@ fn test_get_group_by_gid(
     want_err: bool,
 ) {
     let module_path = testutils::get_module_path(file!());
-    let cache_dir = TempDir::new().expect("Setup: could not create temporary cache directory");
 
     let opts = vec![testutils::with_initial_state(initial_state)];
-    if let Err(err) = testutils::prepare_db_for_tests(cache_dir.path(), opts) {
-        panic!("Setup: Failed to prepare db for tests: {err:?}")
-    }
+    let cache_dir = testutils::prepare_db_for_tests(opts)
+        .expect("Setup: failed to prepare db for tests")
+        .unwrap();
 
     let (current_uid, current_gid) = (users::get_current_uid(), users::get_current_gid());
     let c = CacheDB::new()
@@ -233,7 +225,7 @@ fn test_get_group_by_gid(
 
 #[test_case("myuser@domain.com", Some("users_in_db".to_string()), -1, false; "Get existing group by name")]
 #[test_case("myuser@domain.com", Some("users_in_db".to_string()), 0, false; "Get existing group by name without access to shadow")]
-#[test_case("does not exist", None, -1, true; "Error when group does not exist")]
+#[test_case("does not exist", Some("users_in_db".to_string()), -1, true; "Error when group does not exist")]
 fn test_get_group_by_name(
     name: &str,
     initial_state: Option<String>,
@@ -241,12 +233,11 @@ fn test_get_group_by_name(
     want_err: bool,
 ) {
     let module_path = testutils::get_module_path(file!());
-    let cache_dir = TempDir::new().expect("Setup: could not create temporary cache directory");
 
     let opts = vec![testutils::with_initial_state(initial_state)];
-    if let Err(err) = testutils::prepare_db_for_tests(cache_dir.path(), opts) {
-        panic!("Setup: Failed to prepare db for tests: {err:?}")
-    }
+    let cache_dir = testutils::prepare_db_for_tests(opts)
+        .expect("Setup: failed to prepare db for tests")
+        .unwrap();
 
     let (uid, gid) = (users::get_current_uid(), users::get_current_gid());
     let c = CacheDB::new()
@@ -277,12 +268,11 @@ fn test_get_all_groups(
     want_err: bool,
 ) {
     let module_path = testutils::get_module_path(file!());
-    let cache_dir = TempDir::new().expect("Could not create temporary directory");
 
     let opts = vec![testutils::with_initial_state(initial_state)];
-    if let Err(err) = testutils::prepare_db_for_tests(cache_dir.path(), opts) {
-        panic!("Setup: Failed to prepare db for tests: {err:?}")
-    }
+    let cache_dir = testutils::prepare_db_for_tests(opts)
+        .expect("Setup: failed to prepare db for tests")
+        .unwrap();
 
     let (uid, gid) = (users::get_current_uid(), users::get_current_gid());
     let c = CacheDB::new()
@@ -315,12 +305,11 @@ fn test_get_shadow_by_name(
     want_err: bool,
 ) {
     let module_path = testutils::get_module_path(file!());
-    let cache_dir = TempDir::new().expect("Setup: could not create temporary cache directory");
 
     let opts = vec![testutils::with_initial_state(initial_state)];
-    if let Err(err) = testutils::prepare_db_for_tests(cache_dir.path(), opts) {
-        panic!("Setup: Failed to prepare db for tests: {err:?}")
-    }
+    let cache_dir = testutils::prepare_db_for_tests(opts)
+        .expect("Setup: failed to prepare db for tests")
+        .unwrap();
 
     let (current_uid, current_gid) = (users::get_current_uid(), users::get_current_gid());
     let c = CacheDB::new()
@@ -352,12 +341,11 @@ fn test_get_all_shadows(
     want_err: bool,
 ) {
     let module_path = testutils::get_module_path(file!());
-    let cache_dir = TempDir::new().expect("Could not create temporary directory");
 
     let opts = vec![testutils::with_initial_state(initial_state)];
-    if let Err(err) = testutils::prepare_db_for_tests(cache_dir.path(), opts) {
-        panic!("Setup: Failed to prepare db for tests: {err:?}")
-    }
+    let cache_dir = testutils::prepare_db_for_tests(opts)
+        .expect("Setup: failed to prepare db for tests")
+        .unwrap();
 
     let (uid, gid) = (users::get_current_uid(), users::get_current_gid());
     let c = CacheDB::new()

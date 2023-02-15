@@ -7,28 +7,22 @@ use libnss::{
     interop::Response,
     shadow::{Shadow, ShadowHooks},
 };
-use tempfile::TempDir;
 use test_case::test_case;
 
-#[test_case(Some("users_in_db".to_string()), false, 1, NssStatus::Success; "Successfully retrieves all entries in RO mode")]
-#[test_case(Some("users_in_db".to_string()), false, 2, NssStatus::Success; "Successfully retrieves all entries in RW mode")]
-#[test_case(None, false, 1, NssStatus::Success; "Does not error out when cache is empty")]
-#[test_case(None, true, -1, NssStatus::Unavail; "Error when cache is not available")]
-#[test_case(Some("users_in_db".to_string()), false, 0, NssStatus::Unavail; "Error when shadow is not available")]
+#[test_case(Some("users_in_db".to_string()), 1, NssStatus::Success; "Successfully retrieves all entries in RO mode")]
+#[test_case(Some("users_in_db".to_string()), 2, NssStatus::Success; "Successfully retrieves all entries in RW mode")]
+#[test_case(Some("empty".to_string()), 1, NssStatus::Success; "Does not error out when cache is empty")]
+#[test_case(Some("no_cache".to_string()), -1, NssStatus::Unavail; "Error when cache is not available")]
+#[test_case(Some("users_in_db".to_string()), 0, NssStatus::Unavail; "Error when shadow is not available")]
 fn test_get_all_entries(
     initial_state: Option<String>,
-    no_cache: bool,
     force_shadow_mode: i32,
     want_status: NssStatus,
 ) {
-    let cache_dir = TempDir::new().expect("Setup: could not create temporary cache directory");
-
-    if !no_cache {
-        let opts = vec![testutils::with_initial_state(initial_state)];
-        if let Err(err) = testutils::prepare_db_for_tests(cache_dir.path(), opts) {
-            panic!("Setup: Failed to prepare db for tests: {err:?}");
-        }
-    }
+    let opts = vec![testutils::with_initial_state(initial_state)];
+    let cache_dir = testutils::prepare_db_for_tests(opts)
+        .expect("Setup: failed to prepare db for tests")
+        .unwrap();
 
     std::env::set_var("NSS_AAD_CACHEDIR", cache_dir.path().to_str().unwrap());
     if force_shadow_mode > -1 {
@@ -57,26 +51,21 @@ fn test_get_all_entries(
     testutils::load_and_update_golden(&module_path, parsed_values);
 }
 
-#[test_case("myuser@domain.com", Some("users_in_db".to_string()), false, 1, NssStatus::Success; "Successfully retrieves existing entry in RO mode")]
-#[test_case("myuser@domain.com", Some("users_in_db".to_string()), false, 2, NssStatus::Success; "Successfully retrieves existing entry in RW mode")]
-#[test_case("does not exist", Some("users_in_db".to_string()), false, 1, NssStatus::NotFound; "Error when entry does not exist")]
-#[test_case("myuser@domain.com", None, true, 1, NssStatus::Unavail; "Error when cache is not available")]
-#[test_case("myuser@domain.com", Some("users_in_db".to_string()), false, 0, NssStatus::Unavail; "Error when shadow is not available")]
+#[test_case("myuser@domain.com", Some("users_in_db".to_string()), 1, NssStatus::Success; "Successfully retrieves existing entry in RO mode")]
+#[test_case("myuser@domain.com", Some("users_in_db".to_string()), 2, NssStatus::Success; "Successfully retrieves existing entry in RW mode")]
+#[test_case("does not exist", Some("users_in_db".to_string()), 1, NssStatus::NotFound; "Error when entry does not exist")]
+#[test_case("myuser@domain.com", Some("no_cache".to_string()), 1, NssStatus::Unavail; "Error when cache is not available")]
+#[test_case("myuser@domain.com", Some("users_in_db".to_string()), 0, NssStatus::Unavail; "Error when shadow is not available")]
 fn test_get_entry_by_name(
     name: &str,
     initial_state: Option<String>,
-    no_cache: bool,
     force_shadow_mode: i32,
     want_status: NssStatus,
 ) {
-    let cache_dir = TempDir::new().expect("Setup: could not create temporary cache directory");
-
-    if !no_cache {
-        let opts = vec![testutils::with_initial_state(initial_state)];
-        if let Err(err) = testutils::prepare_db_for_tests(cache_dir.path(), opts) {
-            panic!("Setup: Failed to prepare db for tests: {err:?}");
-        }
-    }
+    let opts = vec![testutils::with_initial_state(initial_state)];
+    let cache_dir = testutils::prepare_db_for_tests(opts)
+        .expect("Setup: failed to prepare db for tests")
+        .unwrap();
 
     std::env::set_var("NSS_AAD_CACHEDIR", cache_dir.path().to_str().unwrap());
     if force_shadow_mode > -1 {

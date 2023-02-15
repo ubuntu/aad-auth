@@ -2,11 +2,11 @@ use rusqlite::{self, Connection};
 use std::{
     boxed::Box,
     collections::HashMap,
-    ffi::CString,
     fs::{self, Permissions},
     os::unix::prelude::PermissionsExt,
     path::Path,
 };
+use tempfile::TempDir;
 use time::{Duration, OffsetDateTime};
 
 use crate::{
@@ -31,12 +31,6 @@ const DB_NAMES: [&str; 2] = ["passwd", "shadow"];
 pub struct OptionalArgs {
     /// initial_state defines a path containing dump files to be loaded into the databases.
     pub initial_state: Option<String>,
-    /// root_uid defines the uid to be used as root_uid when setting the database file permissions.
-    pub root_uid: u32,
-    /// root_gid defines the gid to be used as root_gid when setting the database file permissions.
-    pub root_gid: u32,
-    /// shadow_gid defines the gid to be used as shadow_gid when setting the database file permissions.
-    pub shadow_gid: u32,
     /// passwd_perms defines the unix permissions that will be set to the passwd database.
     pub passwd_perms: u32,
     /// shadow_perms defines the unix permissions that will be set to the shadow database.
@@ -44,12 +38,8 @@ pub struct OptionalArgs {
 }
 impl Default for OptionalArgs {
     fn default() -> Self {
-        let (uid, gid) = (users::get_current_uid(), users::get_current_gid());
         Self {
             initial_state: None,
-            root_uid: uid,
-            root_gid: gid,
-            shadow_gid: gid,
             passwd_perms: PASSWD_PERMS,
             shadow_perms: SHADOW_PERMS,
         }
@@ -66,24 +56,6 @@ pub fn with_initial_state(state: Option<String>) -> OptionalArgFn {
 }
 
 #[allow(dead_code)]
-/// with_root_uid overrides the default root_uid for the test database.
-pub fn with_root_uid(uid: u32) -> OptionalArgFn {
-    Box::new(move |o| o.root_uid = uid)
-}
-
-#[allow(dead_code)]
-/// with_root_uid overrides the default root_gid for the test database.
-pub fn with_root_gid(gid: u32) -> OptionalArgFn {
-    Box::new(move |o| o.root_gid = gid)
-}
-
-#[allow(dead_code)]
-/// with_root_uid overrides the default shadow_gid for the test database.
-pub fn with_shadow_gid(gid: u32) -> OptionalArgFn {
-    Box::new(move |o| o.shadow_gid = gid)
-}
-
-#[allow(dead_code)]
 /// with_passwd_perms overrides the default passwd permissions for the test database.
 pub fn with_passwd_perms(mode: u32) -> OptionalArgFn {
     Box::new(move |o| o.passwd_perms = mode)
@@ -95,85 +67,78 @@ pub fn with_shadow_perms(mode: u32) -> OptionalArgFn {
     Box::new(move |o| o.shadow_perms = mode)
 }
 
-/// prepare_db_for_tests creates instances of the databases and initializes it with a inital state if requested.
-pub fn prepare_db_for_tests(cache_dir: &Path, opts: Vec<OptionalArgFn>) -> Result<(), Error> {
+/// prepare_db_for_tests creates instances of the databases and initializes it based on the initial_state.
+/// The following states are supported:
+/// - None: Does not create the databases;
+/// - Some(state): Creates the database(s) and load the contents from states/state/ into it.
+pub fn prepare_db_for_tests(opts: Vec<OptionalArgFn>) -> Result<Option<TempDir>, Error> {
     init_logger();
-    create_dbs_for_tests(cache_dir)?;
 
     let mut args = OptionalArgs {
         ..Default::default()
     };
-
     for o in opts {
         o(&mut args);
     }
 
-    // Loads saved state into the database.
-    if let Some(state) = args.initial_state {
-        let states_path = Path::new(&super::get_module_path(file!()))
-            .join("states")
-            .join(state);
-
-        for db in DB_NAMES {
-            let db_path = cache_dir.join(db.to_owned() + ".db");
-            load_dump_into_db(&states_path.join(format!("{db}.db.dump")), &db_path)?;
-        }
+    if args.initial_state.is_none() {
+        return Ok(None);
     }
 
-    // Fix database permissions
-    for db in DB_NAMES {
-        let db_path = cache_dir.join(db.to_owned() + ".db");
-        let (perm, gid) = match db {
-            "passwd" => (args.passwd_perms, args.root_gid),
-            "shadow" => (args.shadow_perms, args.shadow_gid),
-            _ => (0o000000, args.root_gid),
-        };
+    let state = args.initial_state.unwrap();
+    let states_path = Path::new(&super::get_module_path(file!()))
+        .join("states")
+        .join(&state);
 
-        // libc functions are unstable and, thus, require a unsafe block.
-        unsafe {
-            // Sets the correct ownership for the db files after loading the dumps.
-            // Need to use unsafe libc function while https://doc.rust-lang.org/std/os/unix/fs/fn.chown.html
-            // is still in nightly.
-            let c_path = CString::new(db_path.to_str().unwrap()).unwrap();
-            // In order to use libc::chown, we need to run the process with sudo privileges.
-            match libc::chown(c_path.as_ptr(), args.root_uid, gid) {
-                ok if ok <= 0 => (),
-                err if err > 0 => {
-                    return Err(Error::Creation(format!(
-                        "failed to change ownership of {db_path:?}: {err}"
-                    )))
-                }
-                _ => (),
-            };
+    let cache_dir = match TempDir::new() {
+        Ok(dir) => dir,
+        Err(err) => return Err(Error::Creation(err.to_string())),
+    };
+    let cache_path = cache_dir.path();
+
+    for db in DB_NAMES {
+        let dump_path = states_path.join(format!("{db}.db.dump"));
+        if !dump_path.exists() {
+            continue;
         }
+        create_db_for_tests(cache_path, db)?;
+
+        let db_path = cache_path.join(db.to_owned() + ".db");
+        load_dump_into_db(&states_path.join(format!("{db}.db.dump")), &db_path)?;
+
+        // Fix database permissions
+        let db_path = cache_path.join(db.to_owned() + ".db");
+        let perm = match db {
+            "passwd" => args.passwd_perms,
+            "shadow" => args.shadow_perms,
+            _ => 0o000000,
+        };
 
         if let Err(err) = fs::set_permissions(db_path, Permissions::from_mode(perm)) {
             return Err(Error::Creation(err.to_string()));
         }
     }
 
-    Ok(())
+    Ok(Some(cache_dir))
 }
 
-/// create_dbs_for_tests creates a database for testing purposes.
-fn create_dbs_for_tests(cache_dir: &Path) -> Result<(), Error> {
+/// create_db_for_tests creates a database for testing purposes.
+fn create_db_for_tests(cache_dir: &Path, db: &str) -> Result<(), Error> {
     debug!("Creating dabatase for tests");
 
-    for db in DB_NAMES {
-        let sql_path = Path::new(&super::get_module_path(file!()))
-            .join("sql")
-            .join(db.to_owned() + ".sql");
+    let sql_path = Path::new(&super::get_module_path(file!()))
+        .join("sql")
+        .join(db.to_string() + ".sql");
 
-        let sql = match fs::read_to_string(sql_path) {
-            Ok(s) => s,
-            Err(err) => return Err(Error::Creation(err.to_string())),
-        };
+    let sql = match fs::read_to_string(sql_path) {
+        Ok(s) => s,
+        Err(err) => return Err(Error::Creation(err.to_string())),
+    };
 
-        let conn = get_db_connection(&cache_dir.join(db.to_owned() + ".db"))?;
+    let conn = get_db_connection(&cache_dir.join(db.to_string() + ".db"))?;
 
-        if let Err(err) = conn.execute_batch(&sql) {
-            return Err(Error::Creation(err.to_string()));
-        }
+    if let Err(err) = conn.execute_batch(&sql) {
+        return Err(Error::Creation(err.to_string()));
     }
 
     Ok(())
