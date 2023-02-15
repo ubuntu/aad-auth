@@ -1,0 +1,18 @@
+passwd
+login,password,uid,gid,gecos,home,shell,last_online_auth
+otheruser@domain.com,x,165119648,165119648,Other User,/home/otheruser@domain.com,/bin/bash,RECENT_TIME
+myuser@domain.com,x,1929326240,1929326240,My User,/home/myuser@domain.com,/bin/bash,RECENT_TIME
+user@otherdomain.com,x,165119649,165119649,User,/home/user@otherdomain.com,/bin/bash,RECENT_TIME
+
+groups
+name,password,gid
+myuser@domain.com,x,1929326240
+otheruser@domain.com,x,165119648
+user@otherdomain.com,x,165119649
+
+uid_gid
+uid,gid
+1929326240,1929326240
+165119648,165119648
+165119649,165119649
+
