@@ -17,6 +17,8 @@ use crate::CacheDB;
 #[test_case(None, None, None, None, Some(0o444), None, None, None, -1, Some("users_in_db".to_string()), true; "Error when shadow.db has invalid permissions")]
 #[test_case(None, None, None, None, None, None, None, Some(0o444), 2, Some("users_in_db".to_string()), true; "Error when cache dir has RO perms and shadow mode is RW")]
 #[test_case(None, None, None, None, None, None, None, None, -1, Some("no_cache".to_string()), true; "Error when there is no cache")]
+#[test_case(None, None, None, None, None, None, None, None, -1, Some("passwd_only".to_string()), true; "Error when there is only passwd")]
+#[test_case(None, None, None, None, None, None, None, None, -1, Some("shadow_only".to_string()), true; "Error when there is only shadow")]
 fn test_build(
     root_uid: Option<u32>,
     root_gid: Option<u32>,
