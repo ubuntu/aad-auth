@@ -58,7 +58,7 @@ fn cache_shadow_to_nss_shadow(entry: CacheShadow) -> Shadow {
         change_warn_days: entry.pwd_warn_period,
         change_inactive_days: entry.pwd_inactivity,
         expire_date: entry.expiration_date,
-        reserved: u64::MAX,
+        reserved: usize::MAX,
     }
 }
 
