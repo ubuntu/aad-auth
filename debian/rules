@@ -48,6 +48,9 @@ override_dh_auto_configure:
 		CARGO_HOME=$(CURDIR)/debian/cargo_home DEB_CARGO_CRATE=nss_aad_$(shell dpkg-parsechangelog --show-field Version) \
 		$(CARGO) prepare-debian $(CARGO_VENDOR_DIR)
 
+	# By default, dh-cargo only replaces the crates-io source, which means we have to replace the git source manually
+	cat debian/cargo-config-patch >> $(CURDIR)/debian/cargo_home/config
+
 override_dh_auto_build:
 	# Build PAM library
 	go build -ldflags='-extldflags -Wl,-soname,pam_aad.so' -buildmode=c-shared -o pam_aad.so ./pam
