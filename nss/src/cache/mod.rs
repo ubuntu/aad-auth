@@ -75,12 +75,12 @@ pub struct Group {
 pub struct Shadow {
     pub name: String,
     pub passwd: String,
-    pub last_pwd_change: i64,
-    pub min_pwd_age: i64,
-    pub max_pwd_age: i64,
-    pub pwd_warn_period: i64,
-    pub pwd_inactivity: i64,
-    pub expiration_date: i64,
+    pub last_pwd_change: isize,
+    pub min_pwd_age: isize,
+    pub max_pwd_age: isize,
+    pub pwd_warn_period: isize,
+    pub pwd_inactivity: isize,
+    pub expiration_date: isize,
 }
 
 impl Debug for Shadow {

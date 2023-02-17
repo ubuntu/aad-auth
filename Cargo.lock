@@ -227,8 +227,7 @@ checksum = "201de327520df007757c1f0adce6e827fe8562fbc28bfd9c15571c66ca1f5f79"
 [[package]]
 name = "libnss"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "48b67ef5ebef2a035ac8106c9b71176b6246be2a580ff4ee94bb80919e55b34c"
+source = "git+https://github.com/ubuntu/libnss-rs/?branch=fixing-struct-types#02e0fa4ad1beb62fd450bb34075125c11dbd44a6"
 dependencies = [
  "lazy_static",
  "libc",
