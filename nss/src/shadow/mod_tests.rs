@@ -103,7 +103,9 @@ fn nss_shadow_to_bmap(entry: Shadow) -> BTreeMap<&'static str, String> {
         entry.change_inactive_days.to_string(),
     );
     parsed_entry.insert("expire_date", entry.expire_date.to_string());
-    parsed_entry.insert("reserved", entry.reserved.to_string());
+    // The reserved field value is arch dependent, which means its value will change depending on the
+    // build, so we should use a symbolic value to avoid diff when building on 32 and 64 archs.
+    parsed_entry.insert("reserved", "RESERVED".to_string());
 
     parsed_entry
 }
