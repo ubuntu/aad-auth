@@ -1,0 +1,14 @@
+- name: expireduser@domain.com
+  passwd: x
+  uid: 2128709280
+  gid: 2128709280
+  gecos: Expired User
+  home: /home/expireduser@domain.com
+  shell: /bin/bash
+- name: futureuser@domain.com
+  passwd: x
+  uid: 80938656
+  gid: 80938656
+  gecos: Future User
+  home: /home/futureuser@domain.com
+  shell: /bin/bash

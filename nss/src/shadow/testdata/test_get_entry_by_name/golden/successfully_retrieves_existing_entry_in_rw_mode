@@ -1,0 +1,9 @@
+change_inactive_days: '-1'
+change_max_days: '-1'
+change_min_days: '-1'
+change_warn_days: '-1'
+expire_date: '-1'
+last_change: '-1'
+name: myuser@domain.com
+passwd: '*'
+reserved: RESERVED

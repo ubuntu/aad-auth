@@ -1,0 +1,58 @@
+name: Rust QA
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - '*'
+  pull_request:
+
+jobs:
+  quality:
+    name: Code quality assessment
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+      - name: Build crate
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args:  --all-features
+      - name: Check code format with rustfmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+      - name: Check code format with clippy
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features
+
+  tests:
+    name: Tests and Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-features
+      # TODO: Right now, tarpaulin is having some problems that we'll have to debug in the future.
+      #       Since codecov does not support private repositories, we should just keep checking the
+      #       coverage locally and fix this action before opening the repository again.
+      # - name: Get code coverage
+      #   id: rust-coverage
+      #   uses: actions-rs/tarpaulin@v0.1
+      #   with:
+      #     out-type: Json
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@v3
+      #   with:
+      #     token: ${{ secrets.CODECOV_TOKEN }}

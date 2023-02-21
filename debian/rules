@@ -12,29 +12,69 @@ export DPKG_GENSYMBOLS_CHECK_LEVEL := 4
 # Copy in build directory all content to embed
 export DH_GOLANG_INSTALL_ALL := 1
 
-# Copy in build directory all content to embed
-export DH_GOLANG_INSTALL_ALL := 1
+# The following definitions are necessary because of the manual steps
+# we need to do to work around some issues with either dh-cargo,
+# the wrapper, or cargo
+include /usr/share/rustc/architecture.mk
+CARGO := /usr/share/cargo/bin/cargo
+
+# Needed for Rust vendored sources tracking
+DH_CARGO_VENDORED_SOURCES := /usr/share/cargo/bin/dh-cargo-vendored-sources
+export CARGO_VENDOR_DIR = vendor_rust
 
 %:
 	dh $@ --buildsystem=golang --with=golang,apport
 
 override_dh_auto_clean:
 	dh_auto_clean
+	dh_auto_clean --buildsystem=cargo
+
 	# Create the vendor directory when building the source package
 	[ -d vendor/ ] || go mod vendor
+
+	# vcpkg has the same issue as system-deps, with .a files that are trimmed by dpkg-source.
+	# so we need to replace the crate checksum to avoid build errors.
+	if [ ! -d $(CARGO_VENDOR_DIR)/ ]; then \
+		$(CARGO) vendor $(CARGO_VENDOR_DIR); \
+		cp debian/cargo-checksum.json $(CARGO_VENDOR_DIR)/vcpkg/.cargo-checksum.json; \
+		[ ! -e $(DH_CARGO_VENDORED_SOURCES) ] || $(DH_CARGO_VENDORED_SOURCES); \
+	fi
+
+override_dh_auto_configure:
+	dh_auto_configure
+
+	[ ! -e $(DH_CARGO_VENDORED_SOURCES) ] || $(DH_CARGO_VENDORED_SOURCES)
+	DEB_HOST_GNU_TYPE=$(DEB_HOST_GNU_TYPE) DEB_HOST_RUST_TYPE=$(DEB_HOST_RUST_TYPE) \
+		CARGO_HOME=$(CURDIR)/debian/cargo_home DEB_CARGO_CRATE=nss_aad_$(shell dpkg-parsechangelog --show-field Version) \
+		$(CARGO) prepare-debian $(CARGO_VENDOR_DIR)
+
+	# By default, dh-cargo only replaces the crates-io source, which means we have to replace the git source manually
+	cat debian/cargo-config-patch >> $(CURDIR)/debian/cargo_home/config
 
 override_dh_auto_build:
 	# Build PAM library
 	go build -ldflags='-extldflags -Wl,-soname,pam_aad.so' -buildmode=c-shared -o pam_aad.so ./pam
 
-	# Build NSS library
-	make -C nss/
+	# Build the NSS library
+	DEB_HOST_GNU_TYPE=$(DEB_HOST_GNU_TYPE) \
+	DEB_HOST_RUST_TYPE=$(DEB_HOST_RUST_TYPE) \
+	CARGO_HOME=$(CURDIR)/debian/cargo_home \
+	$(CARGO) build --release
 
 	# Build the CLI
 	DH_GOLANG_BUILDPKG=github.com/ubuntu/aad-auth/cmd/aad-cli dh_auto_build
 
-	# Build the NSS helper binary
-	DH_GOLANG_BUILDPKG=github.com/ubuntu/aad-auth/nss/aad-auth dh_auto_build
+override_dh_auto_test:
+	dh_auto_test --buildsystem=cargo -- test --all
+
+	# We need to specify these Rust related variables to the Go tests in order to build the NSS lib
+	# with the cargo wrapper in the integration tests in order to force cargo to use vendored deps
+	# instead of querying crates.io for them.
+	DEB_HOST_GNU_TYPE=$(DEB_HOST_GNU_TYPE) \
+	DEB_HOST_RUST_TYPE=$(DEB_HOST_RUST_TYPE) \
+	CARGO_HOME=$(CURDIR)/debian/cargo_home \
+	CARGO_PATH=$(CARGO) \
+	dh_auto_test
 
 override_dh_auto_install:
 	dh_auto_install -- --no-source
@@ -47,14 +87,15 @@ override_dh_auto_install:
 	mkdir -p debian/tmp/etc
 	cp conf/aad.conf.template debian/tmp/etc/aad.conf
 
-	# Install PAM and NSS libraries
+	# Install PAM
 	mkdir -p debian/tmp/usr/lib/$(DEB_HOST_GNU_TYPE)/security
 	cp pam_aad.so debian/tmp/usr/lib/$(DEB_HOST_GNU_TYPE)/security
-	make install -C nss/ DESTDIR=$(CURDIR)/debian/tmp
 
-	# Install NSS helper to /usr/libexec
-	mkdir -p debian/tmp/usr/libexec
-	mv debian/tmp/usr/bin/aad-auth debian/tmp/usr/libexec
+	# Install NSS
+	install -dm 0755 debian/tmp/usr/lib/$(DEB_HOST_GNU_TYPE)
+	cp target/$(DEB_HOST_RUST_TYPE)/release/libnss_aad.so target/$(DEB_HOST_RUST_TYPE)/release/libnss_aad.so.2
+	install -m 0644 target/$(DEB_HOST_RUST_TYPE)/release/libnss_aad.so.2 debian/tmp/usr/lib/$(DEB_HOST_GNU_TYPE)
+
 
 	# Generate and install translations and shell completions
 	GENERATE_ONLY_INSTALL_TO_DESTDIR=$(CURDIR)/debian/tmp go generate -x ./internal/i18n ./cmd/aad-cli

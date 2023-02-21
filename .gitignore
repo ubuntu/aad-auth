@@ -6,6 +6,8 @@
 *.so
 *.so.*
 *.dylib
+target/
+obj-x86_64-linux-gnu/
 
 # Editor exclusions
 .vsls.json
@@ -24,6 +26,7 @@ generated/
 
 # Dependency directories (remove the comment below to include it)
 vendor/
+vendor_rust/
 
 # Various files
 conf/aad.conf

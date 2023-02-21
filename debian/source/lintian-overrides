@@ -1,0 +1,2 @@
+# We must specify the XS-Vendored-Sources-Rust field in control to use the vendored dependencies.
+aad-auth source: unknown-field Vendored-Sources-Rust

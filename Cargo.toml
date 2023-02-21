@@ -1,0 +1,17 @@
+[workspace]
+members = ["nss"]
+exclude = ["vendor_rust/"]
+
+[profile.release]
+# According to https://github.com/rust-lang/rust/issues/66118, enabling LTO results in some problems
+# with dwz. Comments in the issue said that setting the LTO to thin didn't result in the same issues
+# and the Cargo reference book https://doc.rust-lang.org/cargo/reference/profiles.html states:
+# '''
+# "thin": Performs "thin" LTO. This is similar to "fat", but takes substantially less time to run
+# while still achieving performance gains similar to "fat".
+# '''
+# So setting LTO to thin seems like a win-win situation.
+lto = "thin"
+
+[patch.crates-io]
+libnss = { git = "https://github.com/ubuntu/libnss-rs/", branch = "fixing-struct-types" }

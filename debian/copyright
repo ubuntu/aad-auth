@@ -144,6 +144,93 @@ Files: vendor/github.com/spf13/pflag/*
 Copyright: Copyright: 2012 The Go Authors. / 2012 Alex Ogier.
 License: BSD-3
 
+Files: vendor_rust/ahash/*
+       vendor_rust/hashbrown/*
+Copyright: 2016 Amanieu d'Antras
+License: MIT
+
+Files: vendor_rust/memchr/*
+       vendor_rust/bstr/*
+       vendor_rust/regex-automata/*
+Copyright: 2015-2019 Andrew Gallant
+License: MIT
+
+Files: vendor_rust/autocfg/*
+Copyright: 2018 Josh Stone
+License: MIT
+
+Files: vendor_rust/bitflags/*
+       vendor_rust/hashlink/*
+       vendor_rust/lazy_static/*
+       vendor_rust/libc/*
+       vendor_rust/log/*
+       vendor_rust/unicode-segmentation/*
+Copyright: 2010-2020 The Rust Project Developers
+License: MIT
+
+Files: vendor_rust/cc/*
+       vendor_rust/cfg-if/*
+       vendor_rust/match_cfg/*
+       vendor_rust/pkg-config/*
+Copyright: 2014 Alex Crichton
+License: MIT
+
+Files: vendor_rust/error-chain/*
+Copyright: 2017 The Error-Chain Project Developers
+License: MIT
+
+Files: vendor_rust/fallible-iterator/*
+Copyright: 2015 The rust-openssl-verify Developers
+License: MIT
+
+Files: vendor_rust/fallible-streaming-iterator/*
+Copyright: 2016 The fallible-streaming-iterator Developers
+License: MIT
+
+Files: vendor_rust/getrandom/*
+Copyright: 2018 Developers of the Rand project
+           2014 The Rust Project Developers
+License: MIT
+
+Files: vendor_rust/num_threads/*
+Copyright: 2021 Jacob Pratt
+License: MIT
+
+Files: vendor_rust/time/*
+       vendor_rust/time-core/*
+       vendor_rust/time-macros/*
+Copyright: 2022 Jacob Pratt et al.
+License: MIT
+
+Files: vendor_rust/proc-macro-error-attr/*
+       vendor_rust/proc-macro-error/*
+Copyright: 2019-2020 CreepySkeleton
+License: MIT
+
+Files: vendor_rust/proc-macro-hack/*
+Copyright: 2018 David Tolnay
+License: MIT
+
+Files: vendor_rust/smallvec/*
+Copyright: 2018 The Servo Project Developers
+License: MIT
+
+Files: vendor_rust/tempfile/*
+Copyright: 2015 Steven Allen
+License: MIT
+
+Files: vendor_rust/vcpkg/*
+Copyright: 2017 Jim McGrath
+License: MIT
+
+Files: vendor_rust/version_check/*
+Copyright: 2017-2018 Sergio Benitez
+License: MIT
+
+Files: vendor_rust/winapi/*
+Copyright: 2015-2018 The winapi-rs Developers
+License: MIT
+
 License: Apache-2.0
  Unless required by applicable law or agreed to in writing, software
  distributed under the License is distributed on an "AS IS" BASIS,
