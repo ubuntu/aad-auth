@@ -1,3 +1,12 @@
+aad-auth (0.4) lunar; urgency=medium
+
+  * First upload to ubuntu
+  * Rewrite NSS module in Rust: we can’t use Go to implicit use of threads
+    which is incompatible with binaries linking against use and only using
+    fork() without exec().
+
+ -- Didier Roche <didrocks@ubuntu.com>  Tue, 21 Feb 2023 10:22:47 +0100
+
 aad-auth (0.3) kinetic; urgency=medium
 
   [ Gabriel Nagy ]
