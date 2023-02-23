@@ -8,8 +8,8 @@ on:
   pull_request:
 
 jobs:
-  quality:
-    name: Code quality and mod files up to date
+  go:
+    name: Go - Code quality and mod files up to date
     runs-on: ubuntu-latest
     steps:
       - name: Install dependencies
@@ -47,39 +47,28 @@ jobs:
           # Build PAM library
           go build -ldflags='-s -w' -buildmode=c-shared -o pam_aad.so ./pam
         if: ${{ always() }}
-
-  tests:
-    name: Tests
+  rust:
+    name: Rust - Code quality
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions-rs/toolchain@v1
         with:
-          go-version-file: go.mod
-          cache: true
-      - name: Install dependencies
-        run: |
-          sudo DEBIAN_FRONTEND=noninteractive apt update
-          sudo DEBIAN_FRONTEND=noninteractive apt install -y gcc libpam-dev curl gettext libsqlite3-dev
-      - name: Install cargo (nightly to get coverage)
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
+          profile: minimal
+          toolchain: stable
           override: true
-          components: llvm-tools-preview
-      - name: Install grcov
-        run: cargo install grcov
-      - name: Run tests
-        run: |
-          set -eu
-          go test -coverpkg=./... -coverprofile=/tmp/coverage.out -covermode=set ./...
-
-          # Filter out test utilities
-          grep -hv -e "testutils" /tmp/coverage.out > /tmp/coverage.filtered.out
-      - name: Run tests (with race detector)
-        run: go test -race ./...
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+          components: rustfmt, clippy
+      - name: Build crate
+        uses: actions-rs/cargo@v1
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          file: /tmp/coverage.filtered.out
+          command: build
+          args:  --all-features
+      - name: Check code format with rustfmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+      - name: Check code format with clippy
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features
