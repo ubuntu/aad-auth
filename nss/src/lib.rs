@@ -1,9 +1,9 @@
 #[cfg(feature = "integration-tests")]
 use cache::CacheDBBuilder;
 #[cfg(feature = "integration-tests")]
-use ctor::ctor;
-#[cfg(feature = "integration-tests")]
 use std::env;
+
+use ctor::ctor;
 
 #[macro_use]
 extern crate lazy_static; // used by libnss_*_hooks macros
@@ -25,7 +25,6 @@ mod cache;
 use crate::cache::{CacheDB, CacheError};
 
 mod logs;
-use logs::init_logger;
 
 // cache_result_to_nss_status converts our internal CacheError to a nss-compatible Response.
 fn cache_result_to_nss_status<T>(r: Result<T, CacheError>) -> Response<T> {
@@ -70,6 +69,13 @@ fn new_cache() -> Result<CacheDB, CacheError> {
     }
 
     c.build()
+}
+
+#[ctor]
+/// init_logger is a constructor that ensures the logger object initialization only happens once per
+/// library invocation in order to avoid races to the log file.
+fn init_logger() {
+    logs::init_logger();
 }
 
 /// override_cache_options parses the NSS_AAD env variables and overrides the cache default options

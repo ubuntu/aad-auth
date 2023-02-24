@@ -5,7 +5,7 @@ use libnss::interop::Response;
 
 use crate::{
     cache::{CacheError, Group as CacheGroup},
-    debug, init_logger,
+    debug,
 };
 
 pub struct AADGroup;
@@ -13,7 +13,6 @@ pub struct AADGroup;
 impl GroupHooks for AADGroup {
     /// get_all_entries retrieves all group entries from the cache database.
     fn get_all_entries() -> Response<Vec<Group>> {
-        init_logger();
         debug!("get_all_entries for group");
 
         let c = match super::new_cache() {
@@ -27,7 +26,6 @@ impl GroupHooks for AADGroup {
 
     /// get_entry_by_gid retrieves a group entry by gid.
     fn get_entry_by_gid(gid: gid_t) -> Response<Group> {
-        init_logger();
         debug!("get_entry_by_gid for group with gid: {gid}");
 
         let c = match super::new_cache() {
@@ -41,7 +39,6 @@ impl GroupHooks for AADGroup {
 
     /// get_entry_by_name retrieves a group entry by name.
     fn get_entry_by_name(name: String) -> Response<Group> {
-        init_logger();
         debug!("get_entry_by_gid for group with name: {name}");
 
         let c = match super::new_cache() {
