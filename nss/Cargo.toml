@@ -31,7 +31,7 @@ simple_logger = { version = "4.0.0", default-features = false, features = [
 [dev-dependencies]
 goldenfile = "^1.4"
 serde_yaml = "0.9.16"
-tempfile = "3.3.0"
+tempfile = "3.4.0"
 test-case = "^3.0"
 
 [build-dependencies]
