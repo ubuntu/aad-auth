@@ -2,9 +2,9 @@ package testutils
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -65,16 +65,19 @@ func TrackTestCoverage(t *testing.T) (testCoverFile string) {
 // MergeCoverages append all coverage files marked for merging to main Go Cover Profile.
 // This has to be called after m.Run() in TestMain so that the main go cover profile is created.
 // This has no action if profiling is not enabled.
-func MergeCoverages() {
+func MergeCoverages() error {
 	coveragesToMergeMu.Lock()
 	defer coveragesToMergeMu.Unlock()
+	var err error
 	for _, cov := range coveragesToMerge {
-		fmt.Printf("COVERAGE: %s", cov)
-		if err := appendToFile(cov, goMainCoverProfile); err != nil {
-			log.Fatalf("Teardown: can’t inject coverage into the golang one: %v", err)
-		}
+		err = errors.Join(err, appendToFile(cov, goMainCoverProfile))
+	}
+
+	if err != nil {
+		err = fmt.Errorf("Teardown: couldn't inject coverages into the golang one: %w", err)
 	}
 	coveragesToMerge = nil
+	return err
 }
 
 // WantCoverage returns true if coverage was requested in test.
