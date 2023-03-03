@@ -1,6 +1,6 @@
 module github.com/ubuntu/aad-auth
 
-go 1.18
+go 1.20
 
 require (
 	github.com/AzureAD/microsoft-authentication-library-for-go v0.8.1
