@@ -10,7 +10,7 @@ on:
 jobs:
   quality:
     name: Code quality and mod files up to date
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: Install dependencies
         run: |
@@ -50,7 +50,7 @@ jobs:
 
   tests:
     name: Tests
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
