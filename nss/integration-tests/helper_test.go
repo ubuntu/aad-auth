@@ -7,11 +7,18 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/ubuntu/aad-auth/internal/testutils"
 )
 
-var targetDir, libPath string
+// rustCovEnv defines the environment variables that need to used when running / building the rust code
+// with coverage enabled.
+var rustCovEnv []string
+var libPath string
 
 // outNSSCommandForLib returns the specific part for the nss command, filtering originOut.
 // It uses the locally build aad nss module for the integration tests.
@@ -20,6 +27,7 @@ func outNSSCommandForLib(t *testing.T, rootUID, rootGID, shadowMode int, cacheDi
 
 	// #nosec:G204 - we control the command arguments in tests
 	cmd := exec.Command(cmds[0], cmds[1:]...)
+	cmd.Env = append(cmd.Env, rustCovEnv...)
 	cmd.Env = append(cmd.Env,
 		"NSS_AAD_DEBUG=stderr",
 		fmt.Sprintf("NSS_AAD_ROOT_UID=%d", rootUID),
@@ -44,44 +52,46 @@ func outNSSCommandForLib(t *testing.T, rootUID, rootGID, shadowMode int, cacheDi
 	return got, err
 }
 
-// createTempDir creates a temporary directory with a cleanup teardown not having a testing.T.
-func createTempDir() (tmp string, cleanup func(), err error) {
-	if tmp, err = os.MkdirTemp("", "aad-auth-integration-tests-nss"); err != nil {
-		fmt.Fprintf(os.Stderr, "Can not create temporary directory %q", tmp)
-		return "", nil, err
-	}
-	return tmp, func() {
-		if err := os.RemoveAll(tmp); err != nil {
-			fmt.Fprintf(os.Stderr, "Can not clean up temporary directory %q", tmp)
-		}
-	}, nil
-}
-
 // buildRustNSSLib builds the NSS library with the feature integration-tests enabled and copies the
 // compiled file to libPath.
-func buildRustNSSLib() error {
-	aadPath, err := filepath.Abs("../..")
-	if err != nil {
-		return err
-	}
-	// Builds the nss library.
-	args := []string{"build", "--verbose", "--features", "integration-tests", "--target-dir", targetDir}
+func buildRustNSSLib(t *testing.T) {
+	t.Helper()
+
+	// Gets the path to the integration-tests.
+	_, p, _, _ := runtime.Caller(0)
+	l := strings.Split(filepath.Dir(p), "/")
+	// Walk up the tree to get the path of the project root
+	aadPath := "/" + filepath.Join(l[:len(l)-2]...)
+
+	rustDir := filepath.Join(aadPath, "nss")
+	testutils.MarkRustFilesForTestCache(t, rustDir)
+	var target string
+	rustCovEnv, target = testutils.TrackRustCoverage(t, rustDir)
 
 	cargo := os.Getenv("CARGO_PATH")
 	if cargo == "" {
 		cargo = "cargo"
 	}
+
+	// Builds the nss library.
+	args := []string{"build", "--verbose", "--all-features", "--target-dir", target}
 	// #nosec:G204 - we control the command arguments in tests
 	cmd := exec.Command(cargo, args...)
+	cmd.Env = append(os.Environ(), rustCovEnv...)
 	cmd.Dir = aadPath
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("could not build rust nss library (%s): %w", out, err)
-	}
-	targetDir = filepath.Join(targetDir, os.Getenv("DEB_HOST_RUST_TYPE"))
 
-	// Renames the compiled library to have the expected versioned name.
-	if err = os.Rename(filepath.Join(targetDir, "debug", "libnss_aad.so"), libPath); err != nil {
-		return fmt.Errorf("Setup: could not rename the Rust NSS library: %w", err)
-	}
-	return nil
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, err, "Setup: could not build Rust NSS library: %s", out)
+
+	// When building the crate with dh-cargo, this env is set to indicate which arquitecture the code
+	// is being compiled to. When it's set, the compiled is stored under target/$(DEB_HOST_RUST_TYPE)/debug,
+	// rather than under target/debug, so we need to append at the end of target to ensure we use
+	// the right path.
+	// If the env is not set, the target stays the same.
+	target = filepath.Join(target, os.Getenv("DEB_HOST_RUST_TYPE"))
+
+	// Creates a symlink for the compiled library with the expected versioned name.
+	libPath = filepath.Join(target, "libnss_aad.so.2")
+	err = os.Symlink(filepath.Join(target, "debug", "libnss_aad.so"), libPath)
+	require.NoError(t, err, "Setup: failed to create versioned link to the library")
 }

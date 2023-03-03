@@ -2,10 +2,9 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -14,6 +13,8 @@ import (
 
 func TestIntegration(t *testing.T) {
 	t.Parallel()
+
+	buildRustNSSLib(t)
 
 	originOuts := make(map[string]string)
 	for _, db := range []string{"passwd", "group", "shadow"} {
@@ -153,23 +154,17 @@ func TestIntegration(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	// Build the NSS library and executable in a temporary directory and allow linking to it.
-	tmpDir, cleanup, err := createTempDir()
-	if err != nil {
-		os.Exit(1)
-	}
-	defer cleanup()
-
-	targetDir, libPath = tmpDir, filepath.Join(tmpDir, "libnss_aad.so.2")
-	// Builds the NSS Library.
-	if err = buildRustNSSLib(); err != nil {
-		cleanup()
-		fmt.Fprintf(os.Stderr, "Can not build rust nss library: %v", err)
-		os.Exit(1)
-	}
-
 	testutils.InstallUpdateFlag()
 	flag.Parse()
 
-	m.Run()
+	code := m.Run()
+	if err := testutils.MergeCoverages(); err != nil {
+		log.Printf("Teardown: failed to merge coverage files: %v", err)
+
+		// This ensures that we fail the test if we can't merge the coverage files, if the test
+		// was successful, otherwise we exit with the code returned by m.Run()
+		if code == 0 {
+			defer os.Exit(24)
+		}
+	}
 }
