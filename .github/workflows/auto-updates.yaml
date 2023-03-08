@@ -1,4 +1,4 @@
-name: Update translations in main branch automatically
+name: Update translations and debian/control in main automatically
 on:
   push:
     branches:
@@ -40,6 +40,7 @@ jobs:
           fi
           echo "modified=${hasModif}" >> $GITHUB_ENV
       - name: Create Pull Request
+        id: create-pr
         if: ${{ env.modified == 'true' }}
         uses: peter-evans/create-pull-request@v4
         with:
@@ -48,6 +49,7 @@ jobs:
           labels: po, automated pr
           body: "[Auto-generated pull request](https://github.com/ubuntu/aad-auth/actions/workflows/auto-updates.yaml) by GitHub Action"
           branch: auto-update-po
+          delete-branch: true
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Push branch
         if: ${{ env.modified == 'true' }}
@@ -58,6 +60,10 @@ jobs:
     name: Update XS-Vendored-Sources-Rust on debian/control
     needs: update-po
     runs-on: ubuntu-latest
+    # Right now, ubuntu 22.04 does not have the dh-cargo-vendored-sources script that is needed to
+    # run this job, so we need to run it inside a rolling container to get the latest version possible.
+    # This should be updated as soon as the dh-cargo version with the mentioned script gets ported to
+    # 22.04 or ubuntu-latest changes to a more recent version.
     container:
       image: ubuntu:rolling
     steps:
@@ -79,6 +85,7 @@ jobs:
           VENDORED_SOURCES=$(/usr/share/cargo/bin/dh-cargo-vendored-sources 2>&1 || true)
           OUTPUT=$(echo "$VENDORED_SOURCES" | grep ^XS-Vendored-Sources-Rust: || true)
           if [ -z "$OUTPUT" ]; then
+            echo "XS-Vendored-Sources-Rust is up to date. No change is needed.";
             exit 0
           fi
           sed -i "s/^XS-Vendored-Sources-Rust:.*/$OUTPUT/" debian/control
@@ -91,14 +98,17 @@ jobs:
       - name: work around permission issue with git vulnerability (we are local here). TO REMOVE
         run: git config --global --add safe.directory /__w/aad-auth/aad-auth
       - name: Create Pull Request
+        id: create-pr
         if: ${{ env.modified == 'true' }}
-        # V5 Beta needed because of https://github.com/peter-evans/create-pull-request/issues/1170
+        # V5 Beta needed because of some problems between this action and container runners.
+        # See more on: https://github.com/peter-evans/create-pull-request/issues/1170
         uses: peter-evans/create-pull-request@v5-beta
         with:
           commit-message: Auto update Rust vendored sources in debian/control
           title: Auto update Rust vendored sources in debian/control
           labels: control, automated pr
           branch: auto-update-rust-vendored-sources
+          delete-branch: true
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Push branch
         if: ${{ env.modified == 'true' }}
@@ -154,15 +164,16 @@ jobs:
             console.info("Checksum file updated.");
             return true;
       - name: Create Pull Request
+        id: create-pr
         if: ${{ steps.update-checksum.outputs.result == 'true' }}
-        # V5 Beta needed because of https://github.com/peter-evans/create-pull-request/issues/1170
-        uses: peter-evans/create-pull-request@v5-beta
+        uses: peter-evans/create-pull-request@v4
         with:
           commit-message: Auto update Rust vendored sources checksums
           title: Auto update Rust vendored sources checksums
           labels: control, automated pr
           body: "[Auto-generated pull request](https://github.com/ubuntu/adsys/actions/workflows/auto-updates.yaml) by GitHub Action"
           branch: auto-update-rust-checksum
+          delete-branch: true
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Push branch
         if: ${{ steps.update-checksum.outputs.result == 'true' }}
