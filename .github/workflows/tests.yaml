@@ -1,0 +1,71 @@
+name: Tests
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - '*'
+  pull_request:
+
+jobs:
+  tests:
+      name: Tests
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v3
+        - uses: actions/setup-go@v3
+          with:
+            go-version-file: go.mod
+            cache: true
+        - name: Install dependencies
+          run: |
+            set -eu
+            sudo DEBIAN_FRONTEND=noninteractive apt update
+            sudo DEBIAN_FRONTEND=noninteractive apt install -y gcc libpam-dev curl gettext libsqlite3-dev
+        - name: Rust - Setup Cargo (nightly to get coverage)
+          uses: actions-rs/toolchain@v1
+          with:
+            toolchain: nightly
+            override: true
+            components: llvm-tools-preview
+        - name: Rust - Install grcov
+          run: cargo install grcov
+        - name: Go - Run tests
+          run: |
+            set -eu
+            go test -coverpkg=./... -coverprofile=/tmp/coverage.out -covermode=set ./...
+
+            # Filter out test utilities
+            grep -hv -e "testutils" /tmp/coverage.out > /tmp/coverage.filtered.out
+        - name: Go - Run tests (with race detector)
+          run: go test -race ./...
+        - name: Rust - Run tests
+          uses: actions-rs/cargo@v1
+          with:
+            command: test
+            args: --all-features --no-fail-fast
+          env:
+            CARGO_INCREMENTAL: '0'
+            RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cinstrument-coverage'
+        - name: Rust - Collect coverage
+          run: |
+            grcov target/debug/ \
+              --branch \
+              --llvm \
+              --output-type lcov \
+              --source-dir . \
+              --output-path /tmp/lcov.info \
+              --keep-only='**/nss/src/**' \
+              --ignore='**/**/*_tests.rs' \
+              --ignore='**/testutils/**' \
+              --ignore-not-existing \
+              --excl-line "#\\[derive\\(" \
+              --excl-br-line "#\\[derive\\(" \
+              --excl-start "#\\[cfg\\((test|feature = \"integration-tests\")\\)\\)\\]" \
+              --excl-br-start "#\\[cfg\\((test|feature = \"integration-tests\")\\)\\)\\]" \
+        - name: Upload coverage to Codecov
+          uses: codecov/codecov-action@v3
+          with:
+            token: ${{ secrets.CODECOV_TOKEN }}
+            files: /tmp/coverage.filtered.out, /tmp/lcov.info
+            fail_ci_if_error: true
