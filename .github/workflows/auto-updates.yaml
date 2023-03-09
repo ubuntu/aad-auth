@@ -1,8 +1,8 @@
-name: Update translations and debian/control in main automatically
+name: Update translations and debian/control in testing-merges automatically
 on:
   push:
     branches:
-      - main
+      - testing-merges
     paths-ignore:
       - po/*
       - debian/control
@@ -20,7 +20,7 @@ jobs:
       # Checkout code with git
       - uses: actions/checkout@v3
         with:
-          ref: main
+          ref: testing-merges
       # Install go
       - uses: actions/setup-go@v3
         with:
@@ -49,16 +49,8 @@ jobs:
           title: Auto update po files
           labels: po, automated pr
           body: "[Auto-generated pull request](https://github.com/ubuntu/aad-auth/actions/workflows/auto-updates.yaml) by GitHub Action"
-          branch: auto-update-po
-          delete-branch: true
+          branch: auto-updates
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Automerge created Pull Request
-        if: steps.create-pr.outputs.pull-request-operation == 'created'
-        uses: peter-evans/enable-pull-request-automerge@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          pull-request-number: ${{ steps.create-pr.outputs.pull-request-number }}
-          merge-method: merge
 
   update-rust-vendored-sources:
     name: Update XS-Vendored-Sources-Rust on debian/control
@@ -77,7 +69,7 @@ jobs:
           DEBIAN_FRONTEND=noninteractive apt install -y cargo dh-cargo git
       - uses: actions/checkout@v3
         with:
-          ref: main
+          ref: testing-merges
       - name: Vendoring the dependencies
         run: |
           cargo vendor vendor_rust/
@@ -111,16 +103,8 @@ jobs:
           commit-message: Auto update Rust vendored sources in debian/control
           title: Auto update Rust vendored sources in debian/control
           labels: control, automated pr
-          branch: auto-update-rust-vendored-sources
-          delete-branch: true
+          branch: auto-updates
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Automerge created Pull Request
-        if: steps.create-pr.outputs.pull-request-operation == 'created'
-        uses: peter-evans/enable-pull-request-automerge@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          pull-request-number: ${{ steps.create-pr.outputs.pull-request-number }}
-          merge-method: merge
 
   update-fake-checksum-file:
     name: 'Update the fake checksum file at d/cargo-checksum.json'
@@ -133,7 +117,7 @@ jobs:
           sudo DEBIAN_FRONTEND=noninteractive apt install -y git nodejs
       - uses: actions/checkout@v3
         with:
-          ref: main
+          ref: testing-merges
       - name: 'Install GitHub script dependencies'
         run: npm install -D toml @types/node
       - name: 'Update the checksum file'
@@ -179,13 +163,5 @@ jobs:
           title: Auto update Rust vendored sources checksums
           labels: control, automated pr
           body: "[Auto-generated pull request](https://github.com/ubuntu/adsys/actions/workflows/auto-updates.yaml) by GitHub Action"
-          branch: auto-update-rust-checksum
-          delete-branch: true
+          branch: auto-updates
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Automerge created Pull Request
-        if: steps.create-pr.outputs.pull-request-operation == 'created'
-        uses: peter-evans/enable-pull-request-automerge@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          pull-request-number: ${{ steps.create-pr.outputs.pull-request-number }}
-          merge-method: merge
