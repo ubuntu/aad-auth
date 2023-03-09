@@ -6,6 +6,7 @@ on:
     paths-ignore:
       - po/*
       - debian/control
+concurrency: auto-update
 
 jobs:
   update-po:
