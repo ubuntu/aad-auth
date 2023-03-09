@@ -1,8 +1,6 @@
-name: Update translations and debian/control in main automatically
+name: Update translations and debian/control in testing-action automatically
 on:
   push:
-    branches:
-      - main
     paths-ignore:
       - po/*
       - debian/control
@@ -20,7 +18,7 @@ jobs:
       # Checkout code with git
       - uses: actions/checkout@v3
         with:
-          ref: main
+          ref: testing-action
       # Install go
       - uses: actions/setup-go@v3
         with:
@@ -55,7 +53,7 @@ jobs:
       - name: Push branch
         if: ${{ env.modified == 'true' }}
         run: |
-          git push origin auto-update-po:main
+          git push origin auto-update-po:testing-action
 
   update-rust-vendored-sources:
     name: Update XS-Vendored-Sources-Rust on debian/control
@@ -74,7 +72,7 @@ jobs:
           DEBIAN_FRONTEND=noninteractive apt install -y cargo dh-cargo git
       - uses: actions/checkout@v3
         with:
-          ref: main
+          ref: testing-action
       - name: Vendoring the dependencies
         run: |
           cargo vendor vendor_rust/
@@ -114,7 +112,7 @@ jobs:
       - name: Push branch
         if: ${{ env.modified == 'true' }}
         run: |
-          git push origin auto-update-rust-vendored-sources:main
+          git push origin auto-update-rust-vendored-sources:testing-action
 
   update-fake-checksum-file:
     name: 'Update the fake checksum file at d/cargo-checksum.json'
@@ -127,7 +125,7 @@ jobs:
           sudo DEBIAN_FRONTEND=noninteractive apt install -y git nodejs
       - uses: actions/checkout@v3
         with:
-          ref: main
+          ref: testing-action
       - name: 'Install GitHub script dependencies'
         run: npm install -D toml @types/node
       - name: 'Update the checksum file'
@@ -179,4 +177,4 @@ jobs:
       - name: Push branch
         if: ${{ steps.update-checksum.outputs.result == 'true' }}
         run: |
-          git push origin auto-update-rust-checksum:main
+          git push origin auto-update-rust-checksum:testing-action
