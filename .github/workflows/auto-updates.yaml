@@ -115,56 +115,44 @@ jobs:
           git push origin auto-update-rust-vendored-sources:testing-action
 
   update-fake-checksum-file:
-    name: 'Update the fake checksum file at d/cargo-checksum.json'
+    name: Update the fake checksum file at d/cargo-checksum.json
     needs: update-rust-vendored-sources
     runs-on: ubuntu-latest
     steps:
       - name: Install dependencies
         run: |
           sudo DEBIAN_FRONTEND=noninteractive apt update
-          sudo DEBIAN_FRONTEND=noninteractive apt install -y git nodejs
+          sudo DEBIAN_FRONTEND=noninteractive apt install -y git jq
       - uses: actions/checkout@v3
         with:
           ref: testing-action
-      - name: 'Install GitHub script dependencies'
-        run: npm install -D toml @types/node
-      - name: 'Update the checksum file'
-        uses: actions/github-script@v6
-        id: update-checksum
+      - uses: actions-rs/toolchain@v1
         with:
-          script: |
-            const toml = require("toml");
-            const fs = require("fs");
-            const checksum_path = "./debian/cargo-checksum.json";
-            /** @typedef LockEntry @prop {string} name @prop {string} checksum @prop {string} version */
-            /** Read and parse the lock file
-            * @param {string} path
-            * @returns {any} */
-            function readLock(path) {
-              const lock = fs.readFileSync(path, { encoding: "utf-8" });
-              return toml.parse(lock);
-            }
-            const lockfile = readLock("./Cargo.lock");
-            /** @type {LockEntry?} */ const sd_block = lockfile.package.find(
-              (/** @type {LockEntry} */ x) => x.name === "vcpkg"
-            );
-            if (!sd_block) throw new Error("vcpkg not found in the lock file");
-            const old_cksum_file = require(checksum_path);
-            if (old_cksum_file.package === sd_block.checksum) {
-                console.info("Checksum is up-to-date. No update needed.");
-                return false;
-            }
-            const new_cksum_file =
-              JSON.stringify({
-                package: sd_block.checksum,
-                files: {},
-              }) + "\n";
-            fs.writeFileSync(checksum_path, new_cksum_file);
-            console.info("Checksum file updated.");
-            return true;
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Vendor the dependencies
+        run: |
+          cargo vendor vendor_rust/
+      - name: Update the fake checksum file
+        run: |
+          set -eu
+
+          # Reads the checksum of both files
+          FAKE_CHECKSUM=$(cat debian/cargo-checksum.json | jq .package)
+          CRATE_CHECKSUM=$(cat vendor_rust/vcpkg/.cargo-checksum.json | jq .package)
+          if [ $FAKE_CHECKSUM == $CRATE_CHECKSUM ]; then
+            echo "debian/cargo-checksum.json is up to date. No change is needed.";
+            exit 0
+          fi
+          # Formats in a way where we can replace the line using sed
+          CRATE_CHECKSUM="\"package\": $CRATE_CHECKSUM,"
+          # Replaces the fake checksum with the correct value
+          sed -i "s/\"package\":.*/$CRATE_CHECKSUM/" debian/cargo-checksum.json
+          echo "modified=true" >>$GITHUB_ENV
+        shell: bash
       - name: Create Pull Request
-        id: create-pr
-        if: ${{ steps.update-checksum.outputs.result == 'true' }}
+        if: ${{ env.modified == 'true' }}
         uses: peter-evans/create-pull-request@v4
         with:
           commit-message: Auto update Rust vendored sources checksums
@@ -175,6 +163,6 @@ jobs:
           delete-branch: true
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Push branch
-        if: ${{ steps.update-checksum.outputs.result == 'true' }}
+        if: ${{ env.modified == 'true' }}
         run: |
           git push origin auto-update-rust-checksum:testing-action
