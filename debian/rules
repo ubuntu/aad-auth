@@ -58,6 +58,7 @@ override_dh_auto_configure:
 	[ ! -e $(DH_CARGO_VENDORED_SOURCES) ] || $(DH_CARGO_VENDORED_SOURCES)
 	DEB_HOST_GNU_TYPE=$(DEB_HOST_GNU_TYPE) DEB_HOST_RUST_TYPE=$(DEB_HOST_RUST_TYPE) \
 		CARGO_HOME=$(CURDIR)/debian/cargo_home DEB_CARGO_CRATE=nss_aad_$(shell dpkg-parsechangelog --show-field Version) \
+		RUSTFLAGS="--cfg=rustix_use_libc" \
 		$(CARGO) prepare-debian $(CARGO_VENDOR_DIR)
 
 	# By default, dh-cargo only replaces the crates-io source, which means we have to replace the git source manually
