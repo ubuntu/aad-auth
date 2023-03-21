@@ -3,13 +3,14 @@ package group
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/ubuntu/aad-auth/internal/cache"
+	"github.com/ubuntu/aad-auth/internal/i18n"
 	"github.com/ubuntu/aad-auth/internal/logger"
 	"github.com/ubuntu/aad-auth/internal/nss"
+	"github.com/ubuntu/decorate"
 )
 
 // Group is the nss group object.
@@ -22,11 +23,7 @@ type Group struct {
 
 // NewByName returns a passwd entry from a name.
 func NewByName(ctx context.Context, name string, cacheOpts ...cache.Option) (g Group, err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("failed to get group entry from name %q: %w", name, err)
-		}
-	}()
+	defer decorate.OnError(&err, i18n.G("failed to get group entry from name %q"), name)
 
 	logger.Debug(ctx, "Requesting a group entry matching name %q", name)
 
@@ -56,11 +53,7 @@ func NewByName(ctx context.Context, name string, cacheOpts ...cache.Option) (g G
 
 // NewByGID returns a group entry from a GID.
 func NewByGID(ctx context.Context, gid uint, cacheOpts ...cache.Option) (g Group, err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("failed to get group entry from GID %d: %w", gid, err)
-		}
-	}()
+	defer decorate.OnError(&err, i18n.G("failed to get group entry from GID %d"), gid)
 
 	logger.Debug(ctx, "Requesting an group entry matching GID %d", gid)
 
@@ -125,11 +118,8 @@ func EndEntryIteration(ctx context.Context) error {
 
 // NextEntry returns next available entry in Group. It will returns ENOENT from cache when the iteration is done.
 func NextEntry(ctx context.Context) (g Group, err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("failed to get group entry: %w", err)
-		}
-	}()
+	defer decorate.OnError(&err, i18n.G("failed to get group entry"))
+
 	logger.Debug(ctx, "get next group entry")
 
 	if groupIterationCache == nil {

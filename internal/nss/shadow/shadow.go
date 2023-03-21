@@ -3,13 +3,14 @@ package shadow
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/ubuntu/aad-auth/internal/cache"
+	"github.com/ubuntu/aad-auth/internal/i18n"
 	"github.com/ubuntu/aad-auth/internal/logger"
 	"github.com/ubuntu/aad-auth/internal/nss"
+	"github.com/ubuntu/decorate"
 )
 
 // Shadow is the nss shadow object.
@@ -26,11 +27,7 @@ type Shadow struct {
 
 // NewByName returns a passwd entry from a name.
 func NewByName(ctx context.Context, name string, cacheOpts ...cache.Option) (s Shadow, err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("failed to get a shadow entry from name %q: %w", name, err)
-		}
-	}()
+	defer decorate.OnError(&err, i18n.G("failed to get a shadow entry from name %q"), name)
 
 	logger.Debug(ctx, "Requesting a shadow entry matching name %q", name)
 
@@ -106,11 +103,8 @@ func EndEntryIteration(ctx context.Context) error {
 // NextEntry returns next available entry in Shadow. It will returns ENOENT from cache when the iteration is done.
 // It automatically opens and close the cache on first/last iteration.
 func NextEntry(ctx context.Context) (sp Shadow, err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("failed to get a shadow entry: %w", err)
-		}
-	}()
+	defer decorate.OnError(&err, i18n.G("failed to get a shadow entry"))
+
 	logger.Debug(ctx, "get next shadow entry")
 
 	if shadowIterationCache == nil {

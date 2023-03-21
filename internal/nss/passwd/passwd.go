@@ -3,13 +3,14 @@ package passwd
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/ubuntu/aad-auth/internal/cache"
+	"github.com/ubuntu/aad-auth/internal/i18n"
 	"github.com/ubuntu/aad-auth/internal/logger"
 	"github.com/ubuntu/aad-auth/internal/nss"
+	"github.com/ubuntu/decorate"
 )
 
 // Passwd is the nss passwd object.
@@ -25,11 +26,7 @@ type Passwd struct {
 
 // NewByName returns a passwd entry from a name.
 func NewByName(ctx context.Context, name string, cacheOpts ...cache.Option) (p Passwd, err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("failed to get passwd entry from name %q: %w", name, err)
-		}
-	}()
+	defer decorate.OnError(&err, i18n.G("failed to get passwd entry from name %q"), name)
 
 	logger.Debug(ctx, "Requesting a passwd entry matching name %q", name)
 
@@ -57,11 +54,7 @@ func NewByName(ctx context.Context, name string, cacheOpts ...cache.Option) (p P
 
 // NewByUID returns a passwd entry from an UID.
 func NewByUID(ctx context.Context, uid uint, cacheOpts ...cache.Option) (p Passwd, err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("failed to get passwd entry from UID %d: %w", uid, err)
-		}
-	}()
+	defer decorate.OnError(&err, i18n.G("failed to get passwd entry from UID %d"), uid)
 
 	logger.Debug(ctx, "Requesting a passwd entry matching UID %d", uid)
 
@@ -134,11 +127,8 @@ func EndEntryIteration(ctx context.Context) error {
 // NextEntry returns next available entry in Passwd. It will returns ENOENT from cache when the iteration is done.
 // You need to open StartEntryIteration prior to get to any Entry.
 func NextEntry(ctx context.Context) (p Passwd, err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("failed to get passwd entry: %w", err)
-		}
-	}()
+	defer decorate.OnError(&err, i18n.G("failed to get passwd entry"))
+
 	logger.Debug(ctx, "get next passwd entry")
 
 	if passwdIterationCache == nil {

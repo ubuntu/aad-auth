@@ -11,8 +11,10 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/ubuntu/aad-auth/internal/cache"
+	"github.com/ubuntu/aad-auth/internal/i18n"
 	"github.com/ubuntu/aad-auth/internal/logger"
 	"github.com/ubuntu/aad-auth/internal/user"
+	"github.com/ubuntu/decorate"
 	"golang.org/x/exp/slices"
 	"golang.org/x/sys/unix"
 )
@@ -175,11 +177,7 @@ func runUser(ctx context.Context, args []string, c *cache.Cache, procFs, usernam
 // updateUserAttribute updates the given attribute for an user to the specified value.
 // For some attributes such as home, additional actions are performed.
 func updateUserAttribute(ctx context.Context, c *cache.Cache, procFs, username, key string, value any, moveHome bool) (err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("Cannot update attribute: %w", err)
-		}
-	}()
+	defer decorate.OnError(&err, i18n.G("couldn't update attribute"))
 
 	prevValue, err := c.QueryPasswdAttribute(ctx, username, key)
 	if err != nil {
@@ -223,11 +221,7 @@ func updateUserAttribute(ctx context.Context, c *cache.Cache, procFs, username, 
 
 // moveUserHome moves the home directory of an user from the previous location to the new one.
 func moveUserHome(ctx context.Context, username, prevValue, value string) (err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("Unable to move home directory for %s: %w", username, err)
-		}
-	}()
+	defer decorate.OnError(&err, i18n.G("unable to move home directory for %s"), username)
 
 	// Does the target directory exist?
 	if unix.Access(value, unix.F_OK) == nil {
