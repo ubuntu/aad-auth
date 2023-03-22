@@ -7,7 +7,9 @@ import (
 	"path/filepath"
 
 	"github.com/go-ini/ini"
+	"github.com/ubuntu/aad-auth/internal/i18n"
 	"github.com/ubuntu/aad-auth/internal/logger"
+	"github.com/ubuntu/decorate"
 )
 
 const (
@@ -47,12 +49,8 @@ type Option func(*options)
 // If there is no section for the specified domain, the values on the beginning of p are used as default.
 // Should some required values not exist, an error is returned.
 func Load(ctx context.Context, p, domain string, opts ...Option) (config AAD, err error) {
-	// adding more info to the error message
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("could not load valid configuration from %s: %w", p, err)
-		}
-	}()
+	defer decorate.OnError(&err, i18n.G("could not load valid configuration from %s"), p)
+
 	logger.Debug(ctx, "Loading configuration from %s", p)
 
 	o := options{

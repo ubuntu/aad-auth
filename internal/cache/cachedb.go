@@ -14,7 +14,9 @@ import (
 
 	// register sqlite3 as our database driver.
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/ubuntu/aad-auth/internal/i18n"
 	"github.com/ubuntu/aad-auth/internal/logger"
+	"github.com/ubuntu/decorate"
 	"golang.org/x/exp/slices"
 	"golang.org/x/sys/unix"
 )
@@ -38,11 +40,8 @@ type rowScanner interface {
 }
 
 func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGID, forceShadowMode int, passwdPermission, shadowPermission fs.FileMode) (db *sql.DB, shadowMode int, err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("can't initiate database: %w", err)
-		}
-	}()
+	defer decorate.OnError(&err, i18n.G("couldn't initiate database"))
+
 	logger.Debug(ctx, "Opening cache in %s", cacheDir)
 
 	passwdPath := filepath.Join(cacheDir, passwdDB)
@@ -133,11 +132,8 @@ func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGID, f
 
 // insertUser insert newUser in cache databases.
 func (c *Cache) insertUser(ctx context.Context, newUser UserRecord) (err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("failed to insert user %q in local cache: %w", newUser.Name, err)
-		}
-	}()
+	defer decorate.OnError(&err, i18n.G("failed to insert user %q in local cache"), newUser.Name)
+
 	logger.Debug(ctx, "inserting in cache user %q", newUser.Name)
 
 	if c.shadowMode != shadowRWMode {
@@ -189,11 +185,8 @@ func userExists(db *sql.DB, login string) (bool, error) {
 
 // updateOnlineAuthAndPassword updates password and last_online_auth.
 func (c *Cache) updateOnlineAuthAndPassword(ctx context.Context, uid int64, username, shadowPasswd string) (err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("failed to update user %q in local cache: %w", username, err)
-		}
-	}()
+	defer decorate.OnError(&err, i18n.G("failed to update user %q in local cache"), username)
+
 	logger.Debug(ctx, "updating from last online login information for user %q", username)
 
 	if c.shadowMode != shadowRWMode {
@@ -254,11 +247,7 @@ func updateGid()   {}*/
 // UpdateUserAttribute updates an attribute to a specified value for a given user.
 // If the attribute is not permitted or the value is invalid, an error is returned.
 func (c *Cache) UpdateUserAttribute(ctx context.Context, login, attr string, value any) (err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("could not update %s for %s: %w", attr, login, err)
-		}
-	}()
+	defer decorate.OnError(&err, i18n.G("could not update %s for %s"), attr, login)
 
 	if !slices.Contains(PasswdUpdateAttributes, attr) {
 		return errors.New("invalid attribute")
@@ -289,11 +278,7 @@ func (c *Cache) UpdateUserAttribute(ctx context.Context, login, attr string, val
 // QueryPasswdAttribute searches the passwd table for the given attribute for a user.
 // If no attribute is provided, the entire row is returned.
 func (c *Cache) QueryPasswdAttribute(ctx context.Context, login, attr string) (value any, err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("could not query %s for %s: %w", attr, login, err)
-		}
-	}()
+	defer decorate.OnError(&err, i18n.G("could not query %s for %s"), attr, login)
 
 	if !slices.Contains(PasswdQueryAttributes, attr) {
 		return "", errors.New("invalid attribute")

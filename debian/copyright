@@ -25,6 +25,10 @@ Files: vendor/github.com/AzureAD/*
 Copyright: Microsoft Corporation
 License: MIT
 
+Files: vendor/github.com/ubuntu/*
+Copyright: Canonical
+License: MIT
+
 Files: vendor/github.com/davecgh/*
 Copyright: 2012-2016 Dave Collins <dave@davec.name>
 License: ISC
