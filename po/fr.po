@@ -41,8 +41,43 @@ msgstr ""
 msgid "Unhandled error of type: %v. Denying access."
 msgstr ""
 
-#: internal/cache/cache.go:151
-msgid "can't open/create cache: %w"
+#: internal/cache/cache.go:299
+msgid "authenticating user %q from cache failed"
+msgstr ""
+
+#: internal/config/config.go:52
+#, c-format
+msgid "could not load valid configuration from %s"
+msgstr ""
+
+#: internal/cache/cachedb.go:281
+#, c-format
+msgid "could not query %s for %s"
+msgstr ""
+
+#: internal/cache/cachedb.go:250
+#, c-format
+msgid "could not update %s for %s"
+msgstr ""
+
+#: internal/cache/cache.go:334
+msgid "couldn't create/open cache for nss database"
+msgstr ""
+
+#: internal/cache/cachedb.go:43
+msgid "couldn't initiate database"
+msgstr ""
+
+#: internal/cache/cache.go:150
+msgid "couldn't open/create cache"
+msgstr ""
+
+#: internal/cache/cache.go:446
+msgid "couldn't parse home directory"
+msgstr ""
+
+#: cmd/aad-cli/cli/user.go:180
+msgid "couldn't update attribute"
 msgstr ""
 
 #: internal/cache/passwddb.go:156
@@ -53,20 +88,71 @@ msgstr ""
 msgid "error when getting user %q from cache: %w"
 msgstr ""
 
+#: internal/cache/cache.go:373
+#, c-format
+msgid "failed checking file permission for %s"
+msgstr ""
+
 #: internal/cache/passwddb.go:203
 msgid "failed to close passwd iterator in db: %w"
 msgstr ""
 
-#: internal/cache/cache.go:198
+#: internal/cache/cache.go:195
 msgid "failed to find group id for group shadow: %w"
+msgstr ""
+
+#: internal/cache/cache.go:409
+msgid "failed to generate uid for user %q"
+msgstr ""
+
+#: internal/nss/shadow/shadow.go:106
+msgid "failed to get a shadow entry"
+msgstr ""
+
+#: internal/nss/shadow/shadow.go:30
+msgid "failed to get a shadow entry from name %q"
+msgstr ""
+
+#: internal/nss/group/group.go:121
+msgid "failed to get group entry"
+msgstr ""
+
+#: internal/nss/group/group.go:56
+#, c-format
+msgid "failed to get group entry from GID %d"
+msgstr ""
+
+#: internal/nss/group/group.go:26
+msgid "failed to get group entry from name %q"
+msgstr ""
+
+#: internal/nss/passwd/passwd.go:130
+msgid "failed to get passwd entry"
+msgstr ""
+
+#: internal/nss/passwd/passwd.go:57
+#, c-format
+msgid "failed to get passwd entry from UID %d"
+msgstr ""
+
+#: internal/nss/passwd/passwd.go:29
+msgid "failed to get passwd entry from name %q"
+msgstr ""
+
+#: internal/cache/cachedb.go:135
+msgid "failed to insert user %q in local cache"
 msgstr ""
 
 #: internal/cache/passwddb.go:167
 msgid "failed to read passwd entry in db: %w"
 msgstr ""
 
-#: internal/cache/cache.go:202
+#: internal/cache/cache.go:199
 msgid "failed to read shadow group id: %w"
+msgstr ""
+
+#: internal/cache/cachedb.go:188
+msgid "failed to update user %q in local cache"
 msgstr ""
 
 #: internal/cache/passwddb.go:232
@@ -79,6 +165,11 @@ msgstr ""
 
 #: pam/utils_c.go:61
 msgid "no user found"
+msgstr ""
+
+#: cmd/aad-cli/cli/user.go:224
+#, c-format
+msgid "unable to move home directory for %s"
 msgstr ""
 
 #: pam/pam_c.go:57
