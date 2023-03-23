@@ -1,3 +1,4 @@
+//nolint:revive // This package contains functions that are exported to C, we need the arg names.
 package main
 
 /*

@@ -1,7 +1,6 @@
 package user_test
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -70,7 +69,7 @@ func TestIsBusy(t *testing.T) {
 			err = os.Symlink(tc.chroot, filepath.Join(procFs, "2", "root"))
 			require.NoError(t, err, "Setup: failed to create symlink")
 
-			err = user.IsBusy(context.Background(), procFs, 1000)
+			err = user.IsBusy(procFs, 1000)
 			if tc.wantErr {
 				require.Error(t, err, "expected error but got none")
 				return

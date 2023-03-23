@@ -19,7 +19,7 @@ func NewWithMockClient() AAD {
 	}
 }
 
-func publicNewMockClient(clientID string, options ...public.Option) (publicClient, error) {
+func publicNewMockClient(clientID string, _ ...public.Option) (publicClient, error) {
 	var forceOffline bool
 	switch clientID {
 	case "connection failed":
@@ -34,7 +34,7 @@ type publicClientMock struct {
 	forceOffline bool
 }
 
-func (m publicClientMock) AcquireTokenByUsernamePassword(ctx context.Context, scopes []string, username string, password string, opts ...public.AcquireByUsernamePasswordOption) (public.AuthResult, error) {
+func (m publicClientMock) AcquireTokenByUsernamePassword(_ context.Context, _ []string, username string, _ string, _ ...public.AcquireByUsernamePasswordOption) (public.AuthResult, error) {
 	r := public.AuthResult{}
 	callErr := msalErrors.CallErr{
 		Resp: &http.Response{},
@@ -84,6 +84,6 @@ func (m publicClientMock) AcquireTokenByUsernamePassword(ctx context.Context, sc
 
 type errorReader struct{}
 
-func (errorReader) Read(p []byte) (n int, err error) {
+func (errorReader) Read(_ []byte) (n int, err error) {
 	return 0, errors.New("invalid READ")
 }
