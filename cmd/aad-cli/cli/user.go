@@ -200,7 +200,7 @@ func updateUserAttribute(ctx context.Context, c *cache.Cache, procFs, username, 
 		if !ok {
 			return fmt.Errorf("invalid uid type: %T", uid)
 		}
-		if err := user.IsBusy(ctx, procFs, uint64(id)); err != nil {
+		if err := user.IsBusy(procFs, uint64(id)); err != nil {
 			return err
 		}
 	}

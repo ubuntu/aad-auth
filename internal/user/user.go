@@ -3,7 +3,6 @@ package user
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -19,7 +18,7 @@ func NormalizeName(name string) string {
 }
 
 // IsBusy returns an error if the given UID is in use by any running process.
-func IsBusy(ctx context.Context, procFs string, id uint64) error {
+func IsBusy(procFs string, id uint64) error {
 	uid := strconv.FormatUint(id, 10)
 	root, err := os.Stat("/")
 	if err != nil {
