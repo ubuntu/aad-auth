@@ -18,7 +18,7 @@ libc = "0.2.140"
 log = "0.4.17"
 lazy_static = "^1.4"
 paste = "^1"
-rusqlite = "0.28.0"
+rusqlite = "0.29.0"
 serde = { version = "^1", features = ["derive"] }
 syslog = "^6"
 time = "0.3.20"
