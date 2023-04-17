@@ -32,7 +32,7 @@ simple_logger = { version = "4.1.0", default-features = false, features = [
 goldenfile = "^1.4"
 serde_yaml = "0.9.19"
 tempfile = "3.5.0"
-test-case = "^3.0"
+test-case = "^3.1"
 
 [build-dependencies]
 cc = "^1"
