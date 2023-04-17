@@ -264,7 +264,7 @@ checksum = "99227334921fae1a979cf0bfdfcc6b3e5ce376ef57e16fb6fb3ea2ed6095f80c"
 [[package]]
 name = "libnss"
 version = "0.4.0"
-source = "git+https://github.com/ubuntu/libnss-rs/?branch=fixing-struct-types#02e0fa4ad1beb62fd450bb34075125c11dbd44a6"
+source = "git+https://github.com/ubuntu/libnss-rs/?branch=misc-fixes#84599b3fc81def21ea9c8372d626d6d129a8e744"
 dependencies = [
  "lazy_static",
  "libc",
