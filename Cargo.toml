@@ -14,4 +14,4 @@ exclude = ["vendor_rust/"]
 lto = "thin"
 
 [patch.crates-io]
-libnss = { git = "https://github.com/ubuntu/libnss-rs/", branch = "fixing-struct-types" }
+libnss = { git = "https://github.com/ubuntu/libnss-rs/", branch = "misc-fixes" }
