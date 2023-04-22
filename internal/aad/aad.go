@@ -101,6 +101,12 @@ func (auth AAD) Authenticate(ctx context.Context, cfg config.AAD, username, pass
 			}
 		}
 		logger.Err(ctx, "Unknown error code(s) from server: %v", addErrWithCodes.ErrorCodes)
+
+		logger.Debug(ctx, "For more information about the error code(s), see:")
+		for _, errcode := range addErrWithCodes.ErrorCodes {
+			logger.Debug(ctx, "- Error code %d: https://login.microsoftonline.com/error?code=%d", errcode, errcode)
+		}
+
 		return ErrDeny
 	}
 
