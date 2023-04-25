@@ -17,9 +17,11 @@ import (
 const (
 	endpoint = "https://login.microsoftonline.com"
 
-	invalidCredCode = 50126
-	requiresMFACode = 50076
-	noSuchUserCode  = 50034
+	invalidCredCode    = 50126
+	requiresMFACode    = 50076
+	noSuchUserCode     = 50034
+	noConsentCode      = 65001
+	noClientSecretCode = 7000218
 )
 
 var (
@@ -86,8 +88,25 @@ func (auth AAD) Authenticate(ctx context.Context, cfg config.AAD, username, pass
 				logger.Debug(ctx, "Authentication successful even if requiring MFA")
 				return nil
 			}
+			if errcode == noConsentCode {
+				logger.Err(ctx, "Azure AD application requires consent, either from tenant, or from user. "+
+					"If you're a tenant's administrator, go to: %s/adminconsent?client_id=%s",
+					authority, cfg.AppID)
+				return ErrDeny
+			}
+			if errcode == noClientSecretCode {
+				logger.Err(ctx, "Azure AD application requires enabling 'Allow public client flows'. "+
+					"https://learn.microsoft.com/en-us/azure/active-directory/develop/scenario-desktop-app-registration#redirect-uris")
+				return ErrDeny
+			}
 		}
 		logger.Err(ctx, "Unknown error code(s) from server: %v", addErrWithCodes.ErrorCodes)
+
+		logger.Debug(ctx, "For more information about the error code(s), see:")
+		for _, errcode := range addErrWithCodes.ErrorCodes {
+			logger.Debug(ctx, "- Error code %d: https://login.microsoftonline.com/error?code=%d", errcode, errcode)
+		}
+
 		return ErrDeny
 	}
 

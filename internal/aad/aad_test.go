@@ -24,6 +24,8 @@ func TestAuthenticate(t *testing.T) {
 
 		// error cases
 		"can't connect to authority": {appID: "connection failed", wantErr: aad.ErrNoNetwork},
+		"public client disallowed":   {appID: "public client disallowed", wantErr: aad.ErrDeny},
+		"no tenant-wide consent":     {appID: "no tenant-wide consent", wantErr: aad.ErrDeny},
 		"unreadable server response": {username: "unreadable server response", wantErr: aad.ErrDeny},
 		"invalid server response":    {username: "invalid server response", wantErr: aad.ErrDeny},
 		"invalid credentials":        {username: "invalid credentials", wantErr: aad.ErrDeny},

@@ -21,17 +21,31 @@ func NewWithMockClient() AAD {
 
 func publicNewMockClient(clientID string, _ ...public.Option) (publicClient, error) {
 	var forceOffline bool
+	var publicClientDisallowed bool
+	var noTenantWideConsent bool
+
 	switch clientID {
 	case "connection failed":
 		return publicClientMock{}, errors.New("connection failed")
 	case "force offline":
 		forceOffline = true
+	case "public client disallowed":
+		publicClientDisallowed = true
+	case "no tenant-wide consent":
+		noTenantWideConsent = true
 	}
-	return publicClientMock{forceOffline: forceOffline}, nil
+
+	return publicClientMock{
+		forceOffline:           forceOffline,
+		publicClientDisallowed: publicClientDisallowed,
+		noTenantWideConsent:    noTenantWideConsent,
+	}, nil
 }
 
 type publicClientMock struct {
-	forceOffline bool
+	forceOffline           bool
+	publicClientDisallowed bool
+	noTenantWideConsent    bool
 }
 
 func (m publicClientMock) AcquireTokenByUsernamePassword(_ context.Context, _ []string, username string, _ string, _ ...public.AcquireByUsernamePasswordOption) (public.AuthResult, error) {
@@ -42,6 +56,16 @@ func (m publicClientMock) AcquireTokenByUsernamePassword(_ context.Context, _ []
 
 	if m.forceOffline {
 		return r, fmt.Errorf("Offline")
+	}
+
+	if m.publicClientDisallowed {
+		callErr.Resp.Body = io.NopCloser(strings.NewReader(fmt.Sprintf("{\"error_codes\": [%d]}", noClientSecretCode)))
+		return r, callErr
+	}
+
+	if m.noTenantWideConsent {
+		callErr.Resp.Body = io.NopCloser(strings.NewReader(fmt.Sprintf("{\"error_codes\": [%d]}", noConsentCode)))
+		return r, callErr
 	}
 
 	switch username {
