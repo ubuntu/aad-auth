@@ -1,4 +1,4 @@
 [source."https://github.com/ubuntu/libnss-rs/"]
 git = "https://github.com/ubuntu/libnss-rs/"
-branch = "fixing-struct-types"
+branch = "misc-fixes"
 replace-with = "dh-cargo-registry"
