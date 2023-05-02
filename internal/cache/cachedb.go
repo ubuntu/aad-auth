@@ -113,11 +113,12 @@ func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGID, f
 	// Attach shadow if our user has access to the file (even read-only)
 	shadowMode = forceShadowMode
 	if forceShadowMode == -1 {
-		shadowMode = 0
-		if unix.Access(shadowPath, unix.W_OK) == nil {
-			shadowMode = shadowRWMode
-		} else if unix.Access(shadowPath, unix.R_OK) == nil {
+		shadowMode = shadowNotAvailableMode
+		if unix.Faccessat(unix.AT_FDCWD, shadowPath, unix.R_OK, unix.AT_EACCESS) == nil {
 			shadowMode = shadowROMode
+		}
+		if unix.Faccessat(unix.AT_FDCWD, shadowPath, unix.W_OK, unix.AT_EACCESS) == nil {
+			shadowMode = shadowRWMode
 		}
 	}
 	if shadowMode > shadowNotAvailableMode {
