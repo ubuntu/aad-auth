@@ -1,4 +1,4 @@
-name: QA
+name: QA & sanity checks
 on:
   push:
     branches:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   go:
-    name: Go - Code quality and mod files up to date
+    name: Go - Code sanity
     runs-on: ubuntu-latest
     steps:
       - name: Install dependencies
@@ -17,37 +17,14 @@ jobs:
           sudo DEBIAN_FRONTEND=noninteractive apt update
           sudo DEBIAN_FRONTEND=noninteractive apt install -y libpam-dev libglib2.0-dev gcc
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
+      - name: Go code sanity check
+        uses: canonical/desktop-engineering/gh-actions/go/code-sanity@main
         with:
-          go-version-file: go.mod
-      - name: Get version of golanci-lint to use
-        id: cilint-version-fetch
-        # This handles "require foo version" and "require (\nfoo version\n)"" formats
-        run: echo "version=$(grep golangci-lint tools/go.mod | rev | cut -f1 -d' ' | rev)" >> $GITHUB_OUTPUT
-      - name: Code formatting, vet, static checker Security…
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: ${{ steps.cilint-version-fetch.outputs.version }}
-          args: "--config .golangci-ci.yaml"
-      - name: Module files are up to date
-        run: |
-          set -eu
-
-          go mod tidy
-          MODIFIED=`git status --porcelain go.sum go.mod`
-          if [ -n "$MODIFIED" ]; then
-              echo "ERROR: go module files aren't up to date:"
-              git --no-pager diff go.mod go.sum
-              exit 1
-          fi
-        if: ${{ always() }}
-      - name: Building PAM
-        run: |
-          # Build PAM library
-          go build -ldflags='-s -w' -buildmode=c-shared -o pam_aad.so ./pam
-        if: ${{ always() }}
+          go-build-script: go build -ldflags='-s -w' -buildmode=c-shared -o pam_aad.so ./pam
+          golangci-lint-configfile: ".golangci-ci.yaml"
+          tools-directory: "tools"
   rust:
-    name: Rust - Code quality
+    name: Rust - Code sanity
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
