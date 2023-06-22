@@ -61,7 +61,7 @@ func (auth AAD) Authenticate(ctx context.Context, cfg config.AAD, username, pass
 	}
 
 	// Authentify the user
-	_, errAcquireToken = app.AcquireTokenByUsernamePassword(ctx, nil, username, password)
+	_, errAcquireToken = app.AcquireTokenByUsernamePassword(ctx, []string{"openid", "profile"}, username, password)
 
 	var callErr msalErrors.CallErr
 	if errors.As(errAcquireToken, &callErr) {
