@@ -105,11 +105,23 @@ Debugging can be enabled:
 
 * For PAM: by adding ```debug``` to the line containing the module ```pam_aad``` in ```/etc/pam.d/common-auth```.
 
-```
+```text
 auth [success=1 default=ignore] pam_aad.so debug
 ```
 
 * For NSS: by adding the line ```NSS_AAD_DEBUG=1``` to ```/etc/environment```. Then reboot the machine to make it effective to the entire system.
+
+After the previous steps, you can try logging in again and check the logs with the commands:
+Remember that the logs will be printed on the system logs, so you will need sudo privileges.
+
+```bash
+# You can use the -b flag to control how many boots the log will show (e.g. -b 0 will show the current boot only)
+journalctl -b0 | grep pam_aad # this will show the PAM module logs
+
+journalctl -b0 | grep nss_aad # this will show the NSS module logs
+
+journalctl -b0 | grep _aad # this will show both logs
+```
 
 ### Offline Cache
 
