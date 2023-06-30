@@ -1,6 +1,7 @@
 [workspace]
 members = ["nss"]
 exclude = ["vendor_rust/"]
+resolver = "2"
 
 [profile.release]
 # According to https://github.com/rust-lang/rust/issues/66118, enabling LTO results in some problems
