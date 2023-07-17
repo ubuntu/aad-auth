@@ -52,7 +52,9 @@ fn test_get_all_entries(
 }
 
 #[test_case("myuser@domain.com", Some("users_in_db".to_string()), 1, NssStatus::Success; "Successfully retrieves existing entry in RO mode")]
+#[test_case("MyUser@Domain.Com", Some("users_in_db".to_string()), -1, NssStatus::Success; "Successfully retrieves existing entry with capitalized letters in RO mode")]
 #[test_case("myuser@domain.com", Some("users_in_db".to_string()), 2, NssStatus::Success; "Successfully retrieves existing entry in RW mode")]
+#[test_case("MyUser@Domain.Com", Some("users_in_db".to_string()), -1, NssStatus::Success; "Successfully retrieves existing entry with capitalized letters in RW mode")]
 #[test_case("does not exist", Some("users_in_db".to_string()), 1, NssStatus::NotFound; "Error when entry does not exist")]
 #[test_case("myuser@domain.com", Some("no_cache".to_string()), 1, NssStatus::Unavail; "Error when cache is not available")]
 #[test_case("myuser@domain.com", Some("users_in_db".to_string()), 0, NssStatus::Unavail; "Error when shadow is not available")]
