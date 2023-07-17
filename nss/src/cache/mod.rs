@@ -704,4 +704,9 @@ impl CacheDB {
         tx.commit()?;
         Ok(())
     }
+
+    /// normalize_username lowercases the username that is going to be used in a cache query.
+    fn normalize_username(username: &str) -> String {
+        username.to_lowercase()
+    }
 }
