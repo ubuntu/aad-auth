@@ -36,9 +36,12 @@ func TestIntegration(t *testing.T) {
 		wantErr bool
 	}{
 		// List entry by name
-		"list entry from passwd by name": {db: "passwd", key: "myuser@domain.com"},
-		"list entry from group by name":  {db: "group", key: "myuser@domain.com"},
-		"list entry from shadow by name": {db: "shadow", key: "myuser@domain.com"},
+		"list entry from passwd by name":               {db: "passwd", key: "myuser@domain.com"},
+		"list entry from passwd with capitalized name": {db: "passwd", key: "MyUser@Domain.Com"},
+		"list entry from group by name":                {db: "group", key: "myuser@domain.com"},
+		"list entry from group with capitalized name":  {db: "group", key: "MyUser@Domain.Com"},
+		"list entry from shadow by name":               {db: "shadow", key: "myuser@domain.com"},
+		"list entry from shadow with capitalized name": {db: "shadow", key: "MyUser@Domain.Com"},
 
 		// List entry by UID/GID
 		"list entry from passwd by uid":               {db: "passwd", key: "165119649"},

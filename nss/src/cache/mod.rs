@@ -435,7 +435,7 @@ impl CacheDB {
             "SELECT login, password, uid, gid, gecos, home, shell FROM passwd WHERE login = ?", // Last empty field is the shadow password
         )?;
 
-        let rows = match stmt.query([login]) {
+        let rows = match stmt.query([&Self::normalize_username(login)]) {
             Ok(rows) => rows,
             Err(err) => return Err(CacheError::QueryError(err.to_string())),
         };
@@ -501,7 +501,7 @@ impl CacheDB {
             ",
         )?;
 
-        let rows = match stmt.query([name]) {
+        let rows = match stmt.query([&Self::normalize_username(name)]) {
             Ok(rows) => rows,
             Err(err) => return Err(CacheError::QueryError(err.to_string())),
         };
@@ -551,7 +551,7 @@ impl CacheDB {
             "
         )?;
 
-        let rows = match stmt.query([name]) {
+        let rows = match stmt.query([&Self::normalize_username(name)]) {
             Ok(rows) => rows,
             Err(err) => return Err(CacheError::QueryError(err.to_string())),
         };
@@ -703,5 +703,10 @@ impl CacheDB {
 
         tx.commit()?;
         Ok(())
+    }
+
+    /// normalize_username lowercases the username that is going to be used in a cache query.
+    fn normalize_username(username: &str) -> String {
+        username.to_lowercase()
     }
 }
