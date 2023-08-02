@@ -3,7 +3,7 @@ module github.com/ubuntu/aad-auth
 go 1.20
 
 require (
-	github.com/AzureAD/microsoft-authentication-library-for-go v0.9.0
+	github.com/AzureAD/microsoft-authentication-library-for-go v1.1.0
 	github.com/go-ini/ini v1.67.0
 	github.com/mattn/go-sqlite3 v1.14.17
 	github.com/stretchr/testify v1.8.4
@@ -25,7 +25,7 @@ require (
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/golang-jwt/jwt/v4 v4.4.3 // indirect
+	github.com/golang-jwt/jwt/v5 v5.0.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
