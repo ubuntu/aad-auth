@@ -1,3 +1,50 @@
+aad-auth (0.5) mantic; urgency=medium
+
+  * Update Go version to 1.20
+  * Update MSAL version to 1.1
+  * Specify default scopes for authentication
+    - After MSAL 1.0, the API no longer provides a set of default scopes in
+      case none was specified. So now we specify the authentication scopes
+      manually.
+  * Normalize names used in NSS queries
+    - Lowercase the names used in all queries to account for the case
+      insensitivity of AAD.
+  * Consider effective UID/GID when evaluating access to Shadow database:
+    - This fixes the issue where AAD users could not open sudo sessions, even
+      though they were part of the sudo group
+  * Improved errors messages
+    - Show link(s) to error code(s) description on Microsoft's site
+  * Update dependencies to latest:
+    ** Go
+      - github.com/mattn/go-sqlite3
+      - github.com/sirupsen/logrus
+      - github.com/spf13/cobra
+      - github.com/stretchr/testify
+      - golang.org/x/crypto
+      - golang.org/x/sys
+    ** Rust
+      - cc
+      - ctor
+      - goldenfile
+      - libc
+      - log
+      - paste
+      - proc-macro2
+      - rusqlite
+      - serde
+      - serde_yaml
+      - simple_logger
+      - syslog
+      - tempfile
+      - test-case
+      - time
+  * Update CI dependencies not related to package functionality:
+    - github.com/golangci/golangci-lint
+    - actions/setup-go
+    - peter-evans/create-pull-request
+
+ -- Denison Barbosa <denison.barbosa@canonical.com>  Mon, 14 Aug 2023 09:48:57 -0400
+
 aad-auth (0.4) lunar; urgency=medium
 
   * First upload to ubuntu
