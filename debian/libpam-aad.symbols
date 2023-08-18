@@ -29,3 +29,4 @@ pam_aad.so libpam-aad #MINVER#
  (regex|optional)"sqlite3_*" 0.1
  (regex|optional)"x_cgo.*" 0.1
  (regex|optional)"_cgo.*" 0.1
+ x_crosscall2_ptr@Base 0.5
