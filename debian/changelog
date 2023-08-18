@@ -1,5 +1,12 @@
+aad-auth (0.5.1) mantic; urgency=medium
+
+  * Fix FTBFS due to missing new required symbol
+
+ -- Denison Barbosa <denison.barbosa@canonical.com>  Fri, 18 Aug 2023 06:24:12 -0400
+
 aad-auth (0.5) mantic; urgency=medium
 
+  * New release (LP: #2031534)
   * Update Go version to 1.20
   * Update MSAL version to 1.1
   * Specify default scopes for authentication
