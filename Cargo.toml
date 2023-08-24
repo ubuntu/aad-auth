@@ -13,6 +13,3 @@ resolver = "2"
 # '''
 # So setting LTO to thin seems like a win-win situation.
 lto = "thin"
-
-[patch.crates-io]
-libnss = { git = "https://github.com/ubuntu/libnss-rs/", branch = "misc-fixes" }
