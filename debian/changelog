@@ -1,3 +1,23 @@
+aad-auth (0.5.2) mantic; urgency=medium
+
+  * Update Go version to 1.21
+    - This is not a new feature breakage. The previous build introduced
+      a new symbol required by golang-go-1.21, so we need to bump the
+      minimal required Go version to 1.21.
+  * Update MSAL version to 1.1.1
+  * Update dependencies to latest:
+    ** Rust
+      - cc
+      - libnss
+      - time
+  * Clean up some packaging steps
+    - Some workarounds were necessary due to unmerged upstream changes. Now
+      the fixes are merged and released, so packaging could be cleaned up.
+  * Update CI dependencies not related to package functionality:
+    - github.com/golangci/golangci-lint
+
+ -- Denison Barbosa <denison.barbosa@canonical.com>  Thu, 24 Aug 2023 06:03:22 -0400
+
 aad-auth (0.5.1) mantic; urgency=medium
 
   * Fix FTBFS due to missing new required symbol
