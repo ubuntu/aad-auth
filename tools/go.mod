@@ -1,6 +1,6 @@
 module github.com/ubuntu/aad-auth/tools
 
-go 1.18
+go 1.21.0
 
 require github.com/golangci/golangci-lint v1.54.2
 
