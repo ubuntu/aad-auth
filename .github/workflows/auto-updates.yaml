@@ -18,7 +18,7 @@ jobs:
           sudo DEBIAN_FRONTEND=noninteractive apt update
           sudo DEBIAN_FRONTEND=noninteractive apt install -y gettext
       # Checkout code with git
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: main
       # Install go
@@ -69,7 +69,7 @@ jobs:
         run: |
           DEBIAN_FRONTEND=noninteractive apt update
           DEBIAN_FRONTEND=noninteractive apt install -y cargo dh-cargo git jq
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: main
       - name: Vendor the dependencies
