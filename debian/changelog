@@ -4,12 +4,14 @@ aad-auth (0.5.2) mantic; urgency=medium
     - This is not a new feature breakage. The previous build introduced
       a new symbol required by golang-go-1.21, so we need to bump the
       minimal required Go version to 1.21.
-  * Update MSAL version to 1.1.1
+  * Update MSAL version to 1.2.0
   * Update dependencies to latest:
     ** Rust
       - cc
       - libnss
       - time
+    ** Go
+      - golang.org/x/sys
   * Clean up some packaging steps
     - Some workarounds were necessary due to unmerged upstream changes. Now
       the fixes are merged and released, so packaging could be cleaned up.
