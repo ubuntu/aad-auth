@@ -33,7 +33,7 @@ proc-macro2 = "1.0.67"
 goldenfile = "^1.5"
 serde_yaml = "0.9.25"
 tempfile = "3.6.0"
-test-case = "^3.1"
+test-case = "^3.2"
 
 [build-dependencies]
 cc = "^1"
