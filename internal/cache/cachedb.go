@@ -3,7 +3,6 @@ package cache
 import (
 	"context"
 	"database/sql"
-
 	// needed to embed the sql files for the creation of the cache db.
 	_ "embed"
 	"errors"

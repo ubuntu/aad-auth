@@ -296,12 +296,11 @@ impl CacheDBBuilder {
                 shadow_mode = ShadowMode::ReadWrite;
             }
         }
-        
+
         let open_flags = match shadow_mode {
             ShadowMode::ReadWrite => OpenFlags::SQLITE_OPEN_READ_WRITE,
             _ => OpenFlags::SQLITE_OPEN_READ_ONLY,
         };
-        
 
         let passwd_db = &db_path.join(PASSWD_DB);
         let passwd_db = passwd_db.to_str().unwrap();
@@ -321,6 +320,7 @@ impl CacheDBBuilder {
         // Attaches shadow to the connection if the shadow db is at least ReadOnly for the current user.
         if shadow_mode >= ShadowMode::ReadOnly {
             let shadow_db = shadow_db.to_str().unwrap();
+
             debug!("attaching shadow database");
             let stmt_str = format!("attach database '{shadow_db}' as shadow;");
             if let Err(err) = conn.execute_batch(&stmt_str) {
