@@ -26,6 +26,10 @@ pub const PASSWD_PERMS: u32 = 0o644;
 const SHADOW_DB: &str = "shadow.db"; // Ownership: root:shadow
 pub const SHADOW_PERMS: u32 = 0o640;
 
+const DB_CON_PREFIX: &str = "file:"; // Specify "file" as access mode, so that we can use connection options.
+const DB_CON_OPT_RW: &str = "?journal_mode=wal"; // Use Write Ahead Log journaling mode, so that we can operate paralell with the PAM module.
+const DB_CON_OPT_RO: &str = "?immutable=1"; // When using immutable=1, we can still read the passwd_db, even if there is an db lock.
+
 /// ShadowMode enum represents the status of the shadow database.
 #[derive(PartialEq, PartialOrd, Debug, Clone, Copy)]
 pub enum ShadowMode {
@@ -292,15 +296,24 @@ impl CacheDBBuilder {
                 shadow_mode = ShadowMode::ReadWrite;
             }
         }
-
+        
         let open_flags = match shadow_mode {
             ShadowMode::ReadWrite => OpenFlags::SQLITE_OPEN_READ_WRITE,
             _ => OpenFlags::SQLITE_OPEN_READ_ONLY,
         };
+        
 
         let passwd_db = &db_path.join(PASSWD_DB);
         let passwd_db = passwd_db.to_str().unwrap();
-        let conn = match Connection::open_with_flags(passwd_db, open_flags) {
+    
+        let mut passwd_db_args = DB_CON_OPT_RO;
+        if shadow_mode == ShadowMode::ReadWrite { 
+            passwd_db_args = DB_CON_OPT_RW;
+        }
+        let passwd_db_con = format!("{}{}{}", DB_CON_PREFIX.to_string(), passwd_db, passwd_db_args);
+
+        debug!("Opening database: {passwd_db_con}");
+        let conn = match Connection::open_with_flags(passwd_db_con, open_flags) {
             Ok(conn) => conn,
             Err(err) => return Err(CacheError::DatabaseError(err.to_string())),
         };
@@ -308,7 +321,7 @@ impl CacheDBBuilder {
         // Attaches shadow to the connection if the shadow db is at least ReadOnly for the current user.
         if shadow_mode >= ShadowMode::ReadOnly {
             let shadow_db = shadow_db.to_str().unwrap();
-
+            debug!("attaching shadow database");
             let stmt_str = format!("attach database '{shadow_db}' as shadow;");
             if let Err(err) = conn.execute_batch(&stmt_str) {
                 return Err(CacheError::DatabaseError(err.to_string()));

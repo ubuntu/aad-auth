@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"database/sql"
+
 	// needed to embed the sql files for the creation of the cache db.
 	_ "embed"
 	"errors"
@@ -25,6 +26,7 @@ const (
 	defaultCachePath = "/var/lib/aad/cache"
 	passwdDB         = "passwd.db" // root:root 644
 	shadowDB         = "shadow.db" // root:shadow 640
+	db_con_args      = "?_journal_mode=wal"
 )
 
 var (
@@ -105,7 +107,7 @@ func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGID, f
 	}
 
 	// Open existing cache
-	db, err = sql.Open("sqlite3", passwdPath)
+	db, err = sql.Open("sqlite3", passwdPath+db_con_args)
 	if err != nil {
 		return nil, 0, err
 	}
