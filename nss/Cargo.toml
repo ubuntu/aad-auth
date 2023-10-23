@@ -27,7 +27,7 @@ faccess = "0.2.4"
 simple_logger = { version = "4.2.0", default-features = false, features = [
     "stderr",
 ] }
-proc-macro2 = "1.0.67"
+proc-macro2 = "1.0.69"
 
 [dev-dependencies]
 goldenfile = "^1.5"
