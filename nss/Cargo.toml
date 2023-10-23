@@ -14,7 +14,7 @@ integration-tests = []
 [dependencies]
 ctor = "0.2.5"
 libnss = "0.5.0"
-libc = "0.2.148"
+libc = "0.2.149"
 log = "0.4.20"
 lazy_static = "^1.4"
 paste = "^1"
