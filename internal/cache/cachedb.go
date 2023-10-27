@@ -25,6 +25,7 @@ const (
 	defaultCachePath = "/var/lib/aad/cache"
 	passwdDB         = "passwd.db" // root:root 644
 	shadowDB         = "shadow.db" // root:shadow 640
+	dbConnArgs       = "?_journal_mode=wal"
 )
 
 var (
@@ -105,7 +106,7 @@ func initDB(ctx context.Context, cacheDir string, rootUID, rootGID, shadowGID, f
 	}
 
 	// Open existing cache
-	db, err = sql.Open("sqlite3", passwdPath)
+	db, err = sql.Open("sqlite3", passwdPath+dbConnArgs)
 	if err != nil {
 		return nil, 0, err
 	}

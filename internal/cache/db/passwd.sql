@@ -1,3 +1,4 @@
+PRAGMA journal_mode=wal;
 CREATE TABLE IF NOT EXISTS passwd (
 	login				TEXT NOT NULL UNIQUE,
 	password			TEXT DEFAULT 'x',

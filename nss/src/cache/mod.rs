@@ -26,6 +26,10 @@ pub const PASSWD_PERMS: u32 = 0o644;
 const SHADOW_DB: &str = "shadow.db"; // Ownership: root:shadow
 pub const SHADOW_PERMS: u32 = 0o640;
 
+const DB_CONN_PREFIX: &str = "file:"; // Specify "file" as access mode, so that we can use connection options.
+const DB_CONN_OPT_RW: &str = "?journal_mode=wal"; // Use Write Ahead Log journaling mode, so that we can operate paralell with the PAM module.
+const DB_CONN_OPT_RO: &str = "?immutable=1"; // When using immutable=1, we can still read the passwd_db, even if there is an db lock.
+
 /// ShadowMode enum represents the status of the shadow database.
 #[derive(PartialEq, PartialOrd, Debug, Clone, Copy)]
 pub enum ShadowMode {
@@ -299,8 +303,19 @@ impl CacheDBBuilder {
         };
 
         let passwd_db = &db_path.join(PASSWD_DB);
+
+        let mut passwd_db_args = DB_CONN_OPT_RO;
+        if passwd_db.writable(){ 
+            // db_path must also be writeable for 'journal_mode=wal';
+            if db_path.writable(){
+                passwd_db_args = DB_CONN_OPT_RW;
+            }
+        }
         let passwd_db = passwd_db.to_str().unwrap();
-        let conn = match Connection::open_with_flags(passwd_db, open_flags) {
+        let passwd_db_conn = format!("{}{}{}", DB_CONN_PREFIX, passwd_db, passwd_db_args);
+
+        debug!("Opening database: {passwd_db_conn}");
+        let conn = match Connection::open_with_flags(passwd_db_conn, open_flags) {
             Ok(conn) => conn,
             Err(err) => return Err(CacheError::DatabaseError(err.to_string())),
         };
