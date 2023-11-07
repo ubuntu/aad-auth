@@ -18,7 +18,7 @@ require (
 	github.com/muesli/roff v0.1.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/snapcore/go-gettext v0.0.0-20201130093759-38740d1bd3d2
-	github.com/spf13/cobra v1.7.0
+	github.com/spf13/cobra v1.8.0
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
 	golang.org/x/sys v0.14.0
 )
