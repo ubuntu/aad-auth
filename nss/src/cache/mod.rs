@@ -366,16 +366,19 @@ impl CacheDBBuilder {
                 )));
             }
 
-            // Checks ownership
-            if stat.uid() != file.expected_uid || stat.gid() != file.expected_gid {
-                return Err(CacheError::DatabaseError(format!(
-                    "invalid ownership for {}, expected {}:{} but got {}:{}",
-                    file.path.to_str().unwrap(),
-                    file.expected_uid,
-                    file.expected_gid,
-                    stat.uid(),
-                    stat.gid()
-                )));
+            // skip ownership check if detected owned by nobody.
+            if stat.uid() != 65534 {
+                // Checks ownership
+                if stat.uid() != file.expected_uid || stat.gid() != file.expected_gid {
+                    return Err(CacheError::DatabaseError(format!(
+                        "invalid ownership for {}, expected {}:{} but got {}:{}",
+                        file.path.to_str().unwrap(),
+                        file.expected_uid,
+                        file.expected_gid,
+                        stat.uid(),
+                        stat.gid()
+                    )));
+                }
             }
         }
 
