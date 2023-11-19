@@ -345,6 +345,23 @@ impl CacheDBBuilder {
         Ok(c)
     }
 
+    fn read_file_as_u32(file_path: &str) -> u32 {
+        match fs::read_to_string(file_path) {
+            Ok(contents) => {
+                match contents.trim().parse::<u32>() {
+                    Ok(num) => num,
+                    Err(err) => {
+                        eprintln!("Parsing to u32 fail: {}", err);
+                        0 // fallback to 0
+                    },
+                }
+            },
+            Err(err) => {
+                eprintln!("error reading file: {}", err);
+                0 // fallback to 0
+            },
+        }
+    }
     /// check_file_permissions checks the database files and compares the current ownership and
     /// permissions with the expected ones.
     fn check_file_permissions(files: &Vec<DbFileInfo>) -> Result<(), CacheError> {
@@ -366,10 +383,12 @@ impl CacheDBBuilder {
                 )));
             }
 
-            // skip ownership check if detected owned by nobody.
-            if stat.uid() != 65534 {
-                // Checks ownership
-                if stat.uid() != file.expected_uid || stat.gid() != file.expected_gid {
+            // Checks ownership
+            if stat.uid() != file.expected_uid || stat.gid() != file.expected_gid {
+                let overflowuid = Self::read_file_as_u32("/proc/sys/kernel/overflowuid");
+                let overflowgid = Self::read_file_as_u32("/proc/sys/kernel/overflowgid");
+                // check and don't fail if the file ownership matches kernel overflow uid/gid values
+                if stat.uid() != overflowuid && stat.gid() != overflowgid {
                     return Err(CacheError::DatabaseError(format!(
                         "invalid ownership for {}, expected {}:{} but got {}:{}",
                         file.path.to_str().unwrap(),
@@ -378,6 +397,14 @@ impl CacheDBBuilder {
                         stat.uid(),
                         stat.gid()
                     )));
+                }else{
+                    debug!("unexpected ownership for {}, expected {}:{} but got {}:{}",
+                           file.path.to_str().unwrap(),
+                           file.expected_uid,
+                           file.expected_gid,
+                           stat.uid(),
+                           stat.gid()
+                           );
                 }
             }
         }
