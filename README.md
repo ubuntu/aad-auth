@@ -6,7 +6,7 @@
 [![License CLI](https://img.shields.io/badge/License-GPL3.0-blue.svg)](https://github.com/ubuntu/aad-auth/blob/main/COPYING)
 [![License libraries](https://img.shields.io/badge/License-LGPL3.0-blue.svg)](https://github.com/ubuntu/aad-auth/blob/main/COPYING.LESSER)
 
-Azure AD User Authentication will be included as part of an Ubuntu Pro subscription in Ubuntu 23.04 before being backported to Ubuntu 22.04 LTS and future LTS releases from 2023.
+Azure AD User Authentication is only included in Ubuntu 23.04 and 23.10.
 
 This project allows users to sign in an Ubuntu machine using Azure Active Directory credentials. It relies on [Microsoft Authentication Library](https://github.com/AzureAD/microsoft-authentication-library-for-go) to communicate with Microsoft service.
 
