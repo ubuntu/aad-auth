@@ -24,7 +24,7 @@ syslog = "^6"
 time = "0.3.30"
 users = "0.11.0"
 faccess = "0.2.4"
-simple_logger = { version = "4.2.0", default-features = false, features = [
+simple_logger = { version = "4.3.0", default-features = false, features = [
     "stderr",
 ] }
 proc-macro2 = "1.0.69"
