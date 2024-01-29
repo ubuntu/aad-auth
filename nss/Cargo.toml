@@ -31,7 +31,7 @@ proc-macro2 = "1.0.78"
 
 [dev-dependencies]
 goldenfile = "^1.6"
-serde_yaml = "0.9.30"
+serde_yaml = "0.9.31"
 tempfile = "3.6.0"
 test-case = "^3.3"
 
