@@ -41,7 +41,7 @@ jobs:
           echo "modified=${hasModif}" >> $GITHUB_ENV
       - name: Create Pull Request
         if: ${{ env.modified == 'true' }}
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@v6
         with:
           commit-message: Auto update po files
           title: Auto update po files
@@ -97,7 +97,7 @@ jobs:
         run: git config --global --add safe.directory /__w/aad-auth/aad-auth
       - name: Create Pull Request
         if: ${{ env.modified == 'true' }}
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@v6
         with:
           commit-message: Auto update packaging related Rust files
           title: Auto update packaging related Rust files
