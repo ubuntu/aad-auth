@@ -12,7 +12,7 @@ crate-type = ["cdylib"]
 integration-tests = []
 
 [dependencies]
-ctor = "0.2.6"
+ctor = "0.2.7"
 libnss = "0.6.0"
 libc = "0.2.152"
 log = "0.4.20"
