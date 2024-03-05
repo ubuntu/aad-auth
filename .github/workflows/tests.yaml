@@ -63,7 +63,7 @@ jobs:
               --excl-start "#\\[cfg\\((test|feature = \"integration-tests\")\\)\\)\\]" \
               --excl-br-start "#\\[cfg\\((test|feature = \"integration-tests\")\\)\\)\\]" \
         - name: Upload coverage to Codecov
-          uses: codecov/codecov-action@v3
+          uses: codecov/codecov-action@v4
           with:
             token: ${{ secrets.CODECOV_TOKEN }}
             files: /tmp/coverage.filtered.out, /tmp/lcov.info
