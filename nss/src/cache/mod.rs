@@ -345,6 +345,34 @@ impl CacheDBBuilder {
         Ok(c)
     }
 
+    /// check_overflow_uid_gid checks if numbers provided matches with kernel overflow values
+    /// this is when we are checking owner of cache db, but are running in a namespace, and false values
+    /// are handed to us.
+    fn check_overflow_uid_gid(filestat_uid: u32, filestat_gid: u32) -> bool {
+
+        let overflowuid_content = match fs::read_to_string("/proc/sys/kernel/overflowuid") {
+            Ok(c) => c,
+            Err(_) => return false,
+        };
+
+        let overflowuid = match overflowuid_content.trim().parse::<u32>() {
+            Ok(n) => n,
+            Err(_) => return false,
+        };
+
+        let overflowgid_content = match fs::read_to_string("/proc/sys/kernel/overflowgid") {
+            Ok(c) => c,
+            Err(_) => return false,
+        };
+
+        let overflowgid = match overflowgid_content.trim().parse::<u32>() {
+            Ok(n) => n,
+            Err(_) => return false,
+        };
+
+        filestat_uid == overflowuid && filestat_gid == overflowgid
+    }
+
     /// check_file_permissions checks the database files and compares the current ownership and
     /// permissions with the expected ones.
     fn check_file_permissions(files: &Vec<DbFileInfo>) -> Result<(), CacheError> {
@@ -368,14 +396,17 @@ impl CacheDBBuilder {
 
             // Checks ownership
             if stat.uid() != file.expected_uid || stat.gid() != file.expected_gid {
-                return Err(CacheError::DatabaseError(format!(
-                    "invalid ownership for {}, expected {}:{} but got {}:{}",
-                    file.path.to_str().unwrap(),
-                    file.expected_uid,
-                    file.expected_gid,
-                    stat.uid(),
-                    stat.gid()
-                )));
+                // check and don't fail if the file ownership matches kernel overflow uid/gid values
+                if ! Self::check_overflow_uid_gid(stat.uid(), stat.gid()) {
+                    return Err(CacheError::DatabaseError(format!(
+                        "invalid ownership for {}, expected {}:{} but got {}:{}",
+                        file.path.to_str().unwrap(),
+                        file.expected_uid,
+                        file.expected_gid,
+                        stat.uid(),
+                        stat.gid()
+                    )));
+                }
             }
         }
 
