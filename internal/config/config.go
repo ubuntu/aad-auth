@@ -26,6 +26,7 @@ type AAD struct {
 	OfflineCredentialsExpiration *int   `ini:"offline_credentials_expiration"`
 	HomeDirPattern               string `ini:"homedir"`
 	Shell                        string `ini:"shell"`
+	LoginDomain                  string `ini:"login_domain"`
 }
 
 // ToIni reflects the configuration values to an ini.File representation.

@@ -57,6 +57,9 @@ func Authenticate(ctx context.Context, username, password, conf string, opts ...
 	username = user.NormalizeName(username)
 
 	// Load configuration.
+	// This line shouldn't be a problem because in the config we are not defining anything
+	// In case the config file is still found then we can ignore this check and assume the config file was loaded correctly
+	// In case it fail to find the config, then we need to hardcode or use some source for the right value
 	_, domain, _ := strings.Cut(username, "@")
 	cfg, err := config.Load(ctx, conf, domain)
 	if err != nil {
@@ -74,6 +77,8 @@ func Authenticate(ctx context.Context, username, password, conf string, opts ...
 	for _, opt := range opts {
 		opt(&o)
 	}
+
+	username := username + cfg.LoginDomain
 
 	// Authentication. Note that the errors are AAD errors for now, but we can decorelate them in the future.
 	errAAD := o.auth.Authenticate(ctx, cfg, username, password)
