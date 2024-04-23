@@ -23,6 +23,7 @@ const (
 type AAD struct {
 	TenantID                     string `ini:"tenant_id"`
 	AppID                        string `ini:"app_id"`
+	AzureEnvironment             string `ini:"azure_environment"`
 	OfflineCredentialsExpiration *int   `ini:"offline_credentials_expiration"`
 	HomeDirPattern               string `ini:"homedir"`
 	Shell                        string `ini:"shell"`
@@ -92,6 +93,9 @@ func Load(ctx context.Context, p, domain string, opts ...Option) (config AAD, er
 	}
 	if config.AppID == "" {
 		return AAD{}, fmt.Errorf("missing required 'app_id' entry in configuration file")
+	}
+	if config.AzureEnvironment == "" {
+		config.AzureEnvironment = "Commercial"
 	}
 
 	return config, nil
