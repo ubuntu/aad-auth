@@ -29,6 +29,8 @@ var (
 	ErrOfflineCredentialsExpired = errors.New("offline credentials expired")
 	// ErrOfflineAuthDisabled is returned when offline authentication is disabled by using a negative value in aad.conf.
 	ErrOfflineAuthDisabled = errors.New("offline authentication is disabled")
+	// ErrNoUIDAvailable is returned when there is no available UID within the specified range
+	ErrNoUIDAvailable = errors.New("no uid available")
 )
 
 const (
@@ -330,13 +332,13 @@ func (c *Cache) CanAuthenticate(ctx context.Context, username, password string) 
 }
 
 // Update creates and update user nss cache when there has been an online verification.
-func (c *Cache) Update(ctx context.Context, username, password, homeDirPattern, shell string) (err error) {
+func (c *Cache) Update(ctx context.Context, username, password, homeDirPattern, shell string, minUID, maxUID uint32) (err error) {
 	defer decorate.OnError(&err, i18n.G("couldn't create/open cache for nss database"))
 
 	user, err := c.GetUserByName(ctx, username)
 	if errors.Is(err, ErrNoEnt) {
 		// Try creating the user
-		id, err := c.generateUIDForUser(ctx, username)
+		id, err := c.generateUIDForUser(ctx, username, minUID, maxUID)
 		if err != nil {
 			return err
 		}
@@ -405,25 +407,30 @@ func encryptPassword(ctx context.Context, username, password string) (string, er
 }
 
 // generateUIDForUser returns an unique uid for the user to create.
-func (c *Cache) generateUIDForUser(ctx context.Context, username string) (uid uint32, err error) {
+func (c *Cache) generateUIDForUser(ctx context.Context, username string, minUID, maxUID uint32) (uid uint32, err error) {
 	defer decorate.OnError(&err, i18n.G("failed to generate uid for user %q"), username)
 
-	logger.Debug(ctx, "generate user id for user %q", username)
+	logger.Debug(ctx, "generate user id for user %q (min %d, max %d)", username, minUID, maxUID)
 
 	// compute uid for user
-	var offset uint32 = 100000
 	uid = 1
 	for _, c := range username {
 		uid = (uid * uint32(c)) % math.MaxUint32
 	}
-	uid = uid%(math.MaxUint32-offset) + offset
+	uid = uid%(maxUID-minUID) + minUID
 
 	// check collision or increment
+	initialUid := uid
 	for {
 		if exists, err := uidOrGidExists(c.db, uid, username); err != nil {
 			return 0, err
 		} else if exists {
-			uid++
+			// Loop round between offset and modulus until a uid is found
+			uid = (uid-minUID+1)%(maxUID-minUID) + minUID
+			// If we've cycled all the way round, we should error
+			if uid == initialUid {
+				return 0, ErrNoUIDAvailable
+			}
 			continue
 		}
 
