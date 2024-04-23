@@ -94,10 +94,18 @@ func Load(ctx context.Context, p, domain string, opts ...Option) (config AAD, er
 	if config.AppID == "" {
 		return AAD{}, fmt.Errorf("missing required 'app_id' entry in configuration file")
 	}
+
 	if config.AzureEnvironment == "" {
 		config.AzureEnvironment = "Commercial"
 	}
-
+	switch config.AzureEnvironment {
+	case "Commercial":
+                logger.Debug(ctx, "Using Azure Commercial environment")
+	case "GCC-H":
+                logger.Debug(ctx, "Using Azure GCC-H environment")
+	default:
+		return AAD{}, fmt.Errorf("unknown value '%s' for 'azure_environment'", config.AzureEnvironment)
+	}
 	return config, nil
 }
 
