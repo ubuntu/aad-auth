@@ -15,8 +15,6 @@ import (
 )
 
 const (
-	endpoint = "https://login.microsoftonline.com"
-
 	invalidCredCode    = 50126
 	requiresMFACode    = 50076
 	noSuchUserCode     = 50034
@@ -25,6 +23,8 @@ const (
 )
 
 var (
+	endpoint = "https://login.microsoftonline.com"
+
 	// ErrNoNetwork is returned in case of no network available.
 	ErrNoNetwork = errors.New("NO NETWORK")
 	// ErrDeny is returned in case of denial returned by AAD.
@@ -46,6 +46,9 @@ type AAD struct {
 
 // Authenticate tries to authenticate username against AAD.
 func (auth AAD) Authenticate(ctx context.Context, cfg config.AAD, username, password string) error {
+	if cfg.AzureEnvironment == "GCC-H" {
+		endpoint = "https://login.microsoftonline.us"
+	}
 	authority := fmt.Sprintf("%s/%s", endpoint, cfg.TenantID)
 	logger.Debug(ctx, "Connecting to %q, with clientID %q for user %q", authority, cfg.AppID, username)
 
@@ -104,7 +107,7 @@ func (auth AAD) Authenticate(ctx context.Context, cfg config.AAD, username, pass
 
 		logger.Debug(ctx, "For more information about the error code(s), see:")
 		for _, errcode := range addErrWithCodes.ErrorCodes {
-			logger.Debug(ctx, "- Error code %d: https://login.microsoftonline.com/error?code=%d", errcode, errcode)
+			logger.Debug(ctx, "- Error code %d: %s/error?code=%d", errcode, endpoint, errcode)
 		}
 
 		return ErrDeny

@@ -23,6 +23,7 @@ const (
 type AAD struct {
 	TenantID                     string `ini:"tenant_id"`
 	AppID                        string `ini:"app_id"`
+	AzureEnvironment             string `ini:"azure_environment"`
 	OfflineCredentialsExpiration *int   `ini:"offline_credentials_expiration"`
 	HomeDirPattern               string `ini:"homedir"`
 	Shell                        string `ini:"shell"`
@@ -94,6 +95,17 @@ func Load(ctx context.Context, p, domain string, opts ...Option) (config AAD, er
 		return AAD{}, fmt.Errorf("missing required 'app_id' entry in configuration file")
 	}
 
+	if config.AzureEnvironment == "" {
+		config.AzureEnvironment = "Commercial"
+	}
+	switch config.AzureEnvironment {
+	case "Commercial":
+                logger.Debug(ctx, "Using Azure Commercial environment")
+	case "GCC-H":
+                logger.Debug(ctx, "Using Azure GCC-H environment")
+	default:
+		return AAD{}, fmt.Errorf("unknown value '%s' for 'azure_environment'", config.AzureEnvironment)
+	}
 	return config, nil
 }
 
