@@ -14,7 +14,7 @@
 > 
 > Moving forward, we are excited to introduce a broader and more versatile project, authd, which replaces  aad-auth. This new initiative will extend the capabilities beyond Azure, supporting a wider range of platforms and services, such as OpenID Connect-based providers. 
 >
-> You can find the new project here: authd GitHub Repository
+> You can find the new project here: [authd GitHub Repository](https://github.com/ubuntu/authd)
 >
 > The aad-auth repository will be set to read-only and will remain available for archival purposes.
 >
