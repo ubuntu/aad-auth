@@ -6,6 +6,23 @@
 [![License CLI](https://img.shields.io/badge/License-GPL3.0-blue.svg)](https://github.com/ubuntu/aad-auth/blob/main/COPYING)
 [![License libraries](https://img.shields.io/badge/License-LGPL3.0-blue.svg)](https://github.com/ubuntu/aad-auth/blob/main/COPYING.LESSER)
 
+
+> ***
+> **_NOTICE:_**
+> 
+> The project aad-auth, which has been our first draft implementation limited to Azure, is being archived. We are grateful for your support, contributions and feedback. It has been invaluable to the project's development and informed our future direction.
+> 
+> Moving forward, we are excited to introduce a broader and more versatile project, authd, which replaces  aad-auth. This new initiative will extend the capabilities beyond Azure, supporting a wider range of platforms and services, such as OpenID Connect-based providers. 
+>
+> You can find the new project here: authd GitHub Repository
+>
+> The aad-auth repository will be set to read-only and will remain available for archival purposes.
+>
+> Thank you once again for your dedication and contributions to the aad-auth project. We look forward to your continued support and enthusiasm at our new home on the authd project.
+>
+> The Ubuntu Enterprise Desktop Team
+> ***
+
 Azure AD User Authentication is only included in Ubuntu 23.04 and 23.10.
 
 This project allows users to sign in an Ubuntu machine using Azure Active Directory credentials. It relies on [Microsoft Authentication Library](https://github.com/AzureAD/microsoft-authentication-library-for-go) to communicate with Microsoft service.
