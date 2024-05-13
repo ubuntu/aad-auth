@@ -4,6 +4,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"math"
 	"path/filepath"
 
 	"github.com/go-ini/ini"
@@ -26,6 +27,10 @@ type AAD struct {
 	OfflineCredentialsExpiration *int   `ini:"offline_credentials_expiration"`
 	HomeDirPattern               string `ini:"homedir"`
 	Shell                        string `ini:"shell"`
+	// MinUID is the minimum allowed UID to be assigned
+	MinUID uint32 `ini:"min_uid"`
+	// MaxUID is one above the maximum UID to be assigned
+	MaxUID uint32 `ini:"max_uid"`
 }
 
 // ToIni reflects the configuration values to an ini.File representation.
@@ -64,6 +69,8 @@ func Load(ctx context.Context, p, domain string, opts ...Option) (config AAD, er
 	config = AAD{
 		HomeDirPattern: defaultHomePattern,
 		Shell:          defaultShell,
+		MinUID:         100000,
+		MaxUID:         math.MaxUint32,
 	}
 
 	// Tries to load the defaults from the adduser.conf
@@ -92,6 +99,9 @@ func Load(ctx context.Context, p, domain string, opts ...Option) (config AAD, er
 	}
 	if config.AppID == "" {
 		return AAD{}, fmt.Errorf("missing required 'app_id' entry in configuration file")
+	}
+	if config.MinUID >= config.MaxUID {
+		return AAD{}, fmt.Errorf("'min_uid' must be less than 'max_uid' in configuration file")
 	}
 
 	return config, nil

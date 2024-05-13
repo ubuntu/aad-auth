@@ -16,6 +16,13 @@
 #                    ; %d - domain
 # shell = /bin/bash ; default shell for the user
 
+## UID range configuration
+## WARNING! Changing these values may effect existing users.
+min_uid = 100000 ; minimum UID to assign (inclusive)
+max_uid = 2147483647 ; maximum UID to assign (exclusive)
+                     ; the default max_uid is 4294967295 (max uint32), however this causes issues with commonly used software, such as xdg-desktop-portal-gnome
+                     ; this value (max int32) works with most software, while still providing a large UID space.
+
 ### overriding values for a specific domain, every value inside a section is optional
 # [domain.com]
 # tenant_id = aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa

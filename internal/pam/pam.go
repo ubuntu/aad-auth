@@ -107,7 +107,7 @@ func Authenticate(ctx context.Context, username, password, conf string, opts ...
 	}
 
 	// Successful online login, update cache.
-	if err := c.Update(ctx, username, password, cfg.HomeDirPattern, cfg.Shell); err != nil {
+	if err := c.Update(ctx, username, password, cfg.HomeDirPattern, cfg.Shell, cfg.MinUID, cfg.MaxUID); err != nil {
 		logError(ctx, i18n.G("%w. Denying access."), err)
 		return ErrPamAuth
 	}

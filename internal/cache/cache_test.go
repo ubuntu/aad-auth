@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io/fs"
+	"math"
 	"os"
 	"path/filepath"
 	"testing"
@@ -293,7 +294,7 @@ func TestUpdate(t *testing.T) {
 			var lastUID int64
 			for _, n := range tc.userNames {
 				start := time.Now()
-				err := c.Update(context.Background(), n, "my password", "/home/%f", "/bin/bash")
+				err := c.Update(context.Background(), n, "my password", "/home/%f", "/bin/bash", 100000, math.MaxUint32)
 				end := time.Now()
 				if tc.wantErr {
 					require.Error(t, err, "Update should have returned an error but hasn't")
@@ -327,7 +328,7 @@ func TestUpdate(t *testing.T) {
 				// we need one second as we are storing an unix timestamp for last online auth
 				time.Sleep(time.Second)
 
-				err = c.Update(context.Background(), n, "other password", "/home/%f", "/bin/bash")
+				err = c.Update(context.Background(), n, "other password", "/home/%f", "/bin/bash", 100000, math.MaxUint32)
 				if tc.wantErrRefresh {
 					require.Error(t, err, "Second update should have returned an error but hasn't")
 					return
@@ -538,6 +539,122 @@ func TestQueryPasswdAttribute(t *testing.T) {
 
 			want := testutils.LoadWithUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "expected output to match golden file")
+		})
+	}
+}
+
+func TestGenerateUIDForUser(t *testing.T) {
+	t.Parallel()
+
+	cacheDir := t.TempDir()
+	cacheDB := "users_in_db"
+	testutils.PrepareDBsForTests(t, cacheDir, cacheDB)
+	c := testutils.NewCacheForTests(t, cacheDir)
+
+	tests := []struct {
+		username string
+		offset   uint32
+		modulus  uint32
+		expected uint32
+	}{
+		// Default offset and modulus
+		{"jacob.otoole@mevitae.com", 100000, math.MaxUint32, 1982826144},
+		{"frederick.shaw@mevitae.com", 100000, math.MaxUint32, 155813536},
+		// An example of a collision
+		{"frankie.fisher@mevitae.com", 100000, math.MaxUint32, 155813536},
+
+		// Test a smaller UID range
+		{"frankie.fisher@mevitae.com", 2000, 3000, 0},
+		{"frederick.shaw@mevitae.com", 2000, 3000, 0},
+		{"jacob.otoole@mevitae.com", 2000, 3000, 0},
+		{"a", 2000, 30000, 0},
+		{"aa", 2000, 30000, 0},
+		{"aaa", 2000, 30000, 0},
+		{"aaaa", 2000, 30000, 0},
+		{"aaaaa", 2000, 30000, 0},
+		{"aaaaaa", 2000, 30000, 0},
+		{"aaaaaaa", 2000, 30000, 0},
+		{"aaaaaaaa", 2000, 30000, 0},
+	}
+	for _, tc := range tests {
+		tc := tc
+		t.Run(fmt.Sprint("generateUidFor ", tc.username, " from ", tc.offset, " to ", tc.modulus), func(t *testing.T) {
+			uid, err := c.GenerateUIDForUser(context.Background(), tc.username, tc.offset, tc.modulus)
+			require.NoError(t, err)
+			if tc.expected != 0 {
+				require.Equal(t, tc.expected, uid)
+			}
+			require.LessOrEqual(t, tc.offset, uid)
+			require.Greater(t, tc.modulus, uid)
+		})
+	}
+}
+
+func TestUpdateUIDs(t *testing.T) {
+	t.Parallel()
+
+	cacheDir := t.TempDir()
+	cacheDB := "users_in_db"
+	testutils.PrepareDBsForTests(t, cacheDir, cacheDB)
+	c := testutils.NewCacheForTests(t, cacheDir)
+
+	tests := []struct {
+		username string
+		offset   uint32
+		modulus  uint32
+		expected uint32
+		err      error
+	}{
+		// Default offset and modulus
+		{"jacob.otoole@mevitae.com", 100000, math.MaxUint32, 1982826144, nil},
+		{"frederick.shaw@mevitae.com", 100000, math.MaxUint32, 155813536, nil},
+		// A collision example, since it's using the database, it is incremented
+		{"frankie.fisher@mevitae.com", 100000, math.MaxUint32, 155813537, nil},
+
+		// Test a smaller UID range
+		{"frankie.fisher1@mevitae.com", 2000, 30000, 0, nil},
+		{"frederick.shaw1@mevitae.com", 2000, 30000, 0, nil},
+		{"jacob.otoole1@mevitae.com", 2000, 30000, 0, nil},
+		{"a", 2000, 30000, 0, nil},
+		{"aa", 2000, 30000, 0, nil},
+		{"aaa", 2000, 30000, 0, nil},
+		{"aaaa", 2000, 30000, 0, nil},
+		{"aaaaa", 2000, 30000, 0, nil},
+		{"aaaaaa", 2000, 30000, 0, nil},
+		{"aaaaaaa", 2000, 30000, 0, nil},
+		{"aaaaaaaa", 2000, 30000, 0, nil},
+
+		// A short UID range causes an overflow
+		{"b", 1000, 1002, 1000, nil},
+		{"bb", 1000, 1002, 1001, nil},
+		{"bbb", 1000, 1002, 1002, cache.ErrNoUIDAvailable},
+
+		// We should also be able to handle overflow at the top of the uint32 space, and certainly not overflow to be root!!!
+		{"c", math.MaxUint32 - 2, math.MaxUint32, math.MaxUint32 - 1, nil},
+		{"cc", math.MaxUint32 - 2, math.MaxUint32, math.MaxUint32 - 2, nil},
+		{"ccc", math.MaxUint32 - 2, math.MaxUint32, 0, cache.ErrNoUIDAvailable},
+		{"cccc", math.MaxUint32 - 2, math.MaxUint32, 1, cache.ErrNoUIDAvailable},
+	}
+	for _, tc := range tests {
+		tc := tc
+		t.Run(fmt.Sprint("Update UID test for ", tc.username, " from ", tc.offset, " to ", tc.modulus), func(t *testing.T) {
+			// Update the user
+			err := c.Update(context.Background(), tc.username, "", "/home/%U", "/bin/sh", tc.offset, tc.modulus)
+			if tc.err == nil {
+				require.NoError(t, err, "Update should not error")
+			} else {
+				require.ErrorAs(t, err, &tc.err)
+				return
+			}
+			// Check the UID which was generated
+			uidInterface, err := c.QueryPasswdAttribute(context.Background(), tc.username, "uid")
+			uid := uint32(uidInterface.(int64))
+			require.NoError(t, err, "QueryPasswdAttribute should not error")
+			if tc.expected != 0 {
+				require.Equal(t, tc.expected, uid)
+			}
+			require.LessOrEqual(t, tc.offset, uid)
+			require.Greater(t, tc.modulus, uid)
 		})
 	}
 }
