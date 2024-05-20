@@ -30,7 +30,7 @@ simple_logger = { version = "4.3.3", default-features = false, features = [
 proc-macro2 = "1.0.79"
 
 [dev-dependencies]
-goldenfile = "^1.6"
+goldenfile = "^1.7"
 serde_yaml = "0.9.34"
 tempfile = "3.10.1"
 test-case = "^3.3"
