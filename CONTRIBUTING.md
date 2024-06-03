@@ -82,7 +82,10 @@ On Ubuntu system, you can refer to `debian/control` and install them with `apt b
 
 ### Building and running the binaries
 
-TBD
+Packages can be built with the standard `debuild` tool, e.g.:
+
+```debuild -i -us -uc -b
+```
 
 ### About the testsuite
 
